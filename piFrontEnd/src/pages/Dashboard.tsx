@@ -7,10 +7,13 @@ import {
   MessageSquare, 
   Settings,
   Search,
-  Bell
+  Bell,
+  User
 } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
 
 const Dashboard = () => {
+  const navigate = useNavigate();
   const skillExchanges = [
     {
       id: 1,
@@ -63,11 +66,12 @@ const Dashboard = () => {
                 <Bell className="h-6 w-6" />
                 <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
               </button>
-              <img
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop"
-                alt="Profile"
-                className="h-8 w-8 rounded-full cursor-pointer"
-              />
+              <button 
+                onClick={() => navigate('/profile')}
+                className="flex items-center space-x-2 p-2 text-gray-400 hover:text-indigo-500"
+              >
+                <User className="h-6 w-6" />
+              </button>
             </div>
           </div>
         </div>
@@ -77,30 +81,34 @@ const Dashboard = () => {
         {/* Sidebar */}
         <div className="w-64 min-h-[calc(100vh-4rem)] bg-white border-r border-gray-200">
           <nav className="mt-8 space-y-1 px-4">
-            <a href="#" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
+            <Link to="/dashboard" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
               <Home className="h-5 w-5 mr-3" />
               Overview
-            </a>
-            <a href="#" className="flex items-center px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg">
+            </Link>
+            <Link to="/dashboard" className="flex items-center px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg">
               <Layout className="h-5 w-5 mr-3" />
               Dashboard
-            </a>
-            <a href="#" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
+            </Link>
+            <Link to="/dashboard/skills" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
               <BookOpen className="h-5 w-5 mr-3" />
               My Skills
-            </a>
-            <a href="#" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
+            </Link>
+            <Link to="/dashboard/connections" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
               <Users className="h-5 w-5 mr-3" />
               Connections
-            </a>
-            <a href="#" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
+            </Link>
+            <Link to="/dashboard/messages" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
               <MessageSquare className="h-5 w-5 mr-3" />
               Messages
-            </a>
-            <a href="#" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
+            </Link>
+            <Link to="/profile" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
+              <User className="h-5 w-5 mr-3" />
+              Profile
+            </Link>
+            <Link to="/dashboard/settings" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
               <Settings className="h-5 w-5 mr-3" />
               Settings
-            </a>
+            </Link>
           </nav>
         </div>
 

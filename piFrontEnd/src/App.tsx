@@ -5,14 +5,16 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import Dashboard from './pages/Dashboard';
+import Profile from './pages/Profile';
 
 function App() {
   return (
     <Router>
       <div className="min-h-screen bg-gray-50">
-        {/* Only show the main nav on non-dashboard pages */}
+        {/* Only show the main nav on non-dashboard/profile pages */}
         <Routes>
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard/*" element={<Dashboard />} />
+          <Route path="/profile" element={<Profile />} />
           <Route
             path="*"
             element={
@@ -51,4 +53,4 @@ function App() {
   );
 }
 
-export default App;
+export default App
