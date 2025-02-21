@@ -1,0 +1,37 @@
+1. Navigation sur la page d’accueil
+Q : Peux-tu me dire ce que tu comprends en arrivant sur cette page ?
+🗣 Thomas : "Je vois une barre de navigation en haut avec des catégories comme ‘Bibliothèque’, ‘Communauté’, ‘Récompenses’... Ça ressemble à ce que j’ai l’habitude d’utiliser sur Steam."
+
+Q : Trouves-tu facilement où chercher un jeu ?
+🗣 Thomas : "Oui, le champ de recherche est bien visible. J’aurais peut-être ajouté une section ‘Top ventes’ pour voir rapidement les tendances."
+
+2. Ajout d’un jeu au panier
+Q : Ajoute un jeu à ton panier et finalise l’achat. Y as-tu rencontré des difficultés ?
+🗣 Thomas : "Non, c’est assez clair. Mais le bouton ‘Paiement’ pourrait être plus visible, il se confond un peu avec le reste de la page."
+
+3. Consultation des collections
+Q : Peux-tu organiser tes jeux en collections ?
+🗣 Thomas : "Oui, j’aime bien cette fonctionnalité. Ça me rappelle les listes de jeux sur d’autres plateformes. Mais j’aimerais voir une option pour partager mes collections avec des amis."
+
+4. Exploration de la communauté
+Q : Que penses-tu de l’espace communautaire ?
+🗣 Thomas : "J’adore l’idée d’avoir un forum intégré et des guides créés par les joueurs. Par contre, l’organisation des catégories pourrait être plus claire."
+
+III. ÉVALUATION DU PRODUIT
+Q : Penses-tu utiliser cette plateforme pour acheter tes jeux ?
+🗣 Thomas : "Oui, si les prix sont compétitifs et qu’il y a des exclusivités. Sinon, je resterais sur Steam."
+
+Q : À qui recommanderais-tu cette plateforme ?
+🗣 Thomas : "Aux joueurs qui aiment organiser leur collection et interagir avec la communauté."
+
+Q : Si tu devais décrire cette plateforme à un ami, que dirais-tu ?
+🗣 Thomas : "C’est une alternative à Steam avec une meilleure gestion des collections et une vraie dimension communautaire."
+
+IV. AUTRES QUESTIONS
+Q : Une amélioration que tu aimerais voir ?
+🗣 Thomas : "Une fonctionnalité de wishlist partagée pour voir ce que mes amis veulent acheter."
+
+Q : Quelque chose qui t’a posé problème ?
+🗣 Thomas : "Pas vraiment, mais je mettrais plus en avant les promotions et les jeux populaires."
+
+
