@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import Dashboard from './pages/Dashboard';
 import ProfilePage from './pages/Profile';
+import Profile from './pages/Profile1';
 import SkillMarketplace from './pages/MarketPlace';
 import PostSkill from './pages/PostSkill';
 import '../src/css/App.css'
@@ -48,6 +49,7 @@ function App() {
         </nav>
 
         <Routes>
+        <Route path="/profile1" element={<Profile />} />
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
