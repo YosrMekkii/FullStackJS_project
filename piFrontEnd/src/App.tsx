@@ -10,7 +10,7 @@ import Profile from './pages/Profile1';
 import SkillMarketplace from './pages/MarketPlace';
 import PostSkill from './pages/PostSkill';
 import '../src/css/App.css'
-
+import Interests from './pages/interests';
 const user = {
   name: 'John Doe',
   profilePicture: 'https://via.placeholder.com/150', // Use a valid image URL
@@ -57,6 +57,7 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/marketplace" element={<SkillMarketplace />} />
           <Route path="/postskill" element={<PostSkill />} />
+          <Route path="/interests" element={<Interests />} />
 
 
         </Routes>

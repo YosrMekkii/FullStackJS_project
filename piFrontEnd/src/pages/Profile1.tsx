@@ -7,11 +7,24 @@ import {
   Award, 
   Edit2, 
   Save,
-  X
+  X,
+  Eye,
+  EyeOff,
+  Globe,
+  Lock,
+  Shield,
+  AlertTriangle,
+  Download,
+  Trash2
 } from 'lucide-react';
 
 const Profile = () => {
   const [isEditing, setIsEditing] = useState(false);
+  const [isVisible, setIsVisible] = useState(true);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [showGDPRInfo, setShowGDPRInfo] = useState(false);
   const [profile, setProfile] = useState({
     firstName: "Sarah",
     lastName: "Miller",
@@ -27,7 +40,17 @@ const Profile = () => {
       "Helped 20+ students learn JavaScript",
       "Completed Advanced French Course",
       "5-star rating as a mentor"
-    ]
+    ],
+    visibilitySettings: {
+      email: true,
+      age: true,
+      location: true,
+      education: true,
+      achievements: true,
+      skills: true,
+      interests: true,
+      matches: true
+    }
   });
 
   const matches = [
@@ -60,9 +83,105 @@ const Profile = () => {
     // Here you would typically save the changes to your backend
   };
 
+  const toggleVisibility = () => {
+    setShowConfirm(true);
+  };
+
+  const confirmToggleVisibility = () => {
+    setIsVisible(!isVisible);
+    setShowConfirm(false);
+  };
+
+  const toggleFieldVisibility = (field: keyof typeof profile.visibilitySettings) => {
+    setProfile(prev => ({
+      ...prev,
+      visibilitySettings: {
+        ...prev.visibilitySettings,
+        [field]: !prev.visibilitySettings[field]
+      }
+    }));
+  };
+
+  const handleDeleteProfile = () => {
+    setShowDeleteConfirm(true);
+  };
+
+  const confirmDeleteProfile = () => {
+    if (deleteConfirmText.toLowerCase() === 'delete my account') {
+      // Here you would handle the actual deletion
+      console.log('Profile deleted');
+      // Redirect to home or login page
+    }
+  };
+
+  const downloadPersonalData = () => {
+    const data = {
+      personalInfo: {
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        email: profile.email,
+        age: profile.age,
+        location: `${profile.city}, ${profile.country}`,
+        education: profile.education
+      },
+      skills: profile.skills,
+      interests: profile.interests,
+      achievements: profile.achievements,
+      matches: matches
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'my-personal-data.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        
+
+        {/* Profile Status Banner */}
+        <div className={`mb-4 p-4 rounded-lg ${isVisible ? 'bg-green-50' : 'bg-yellow-50'}`}>
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              {isVisible ? (
+                <Globe className="h-5 w-5 text-green-500 mr-2" />
+              ) : (
+                <Lock className="h-5 w-5 text-yellow-500 mr-2" />
+              )}
+              <span className={isVisible ? 'text-green-700' : 'text-yellow-700'}>
+                Your profile is currently {isVisible ? 'visible to everyone' : 'hidden from other users'}
+              </span>
+            </div>
+            <button
+              onClick={toggleVisibility}
+              className={`flex items-center space-x-2 px-4 py-2 rounded-lg transition-colors ${
+                isVisible 
+                  ? 'bg-green-100 text-green-700 hover:bg-green-200'
+                  : 'bg-yellow-100 text-yellow-700 hover:bg-yellow-200'
+              }`}
+            >
+              {isVisible ? (
+                <>
+                  <Eye className="h-5 w-5" />
+                  <span>Public Profile</span>
+                </>
+              ) : (
+                <>
+                  <EyeOff className="h-5 w-5" />
+                  <span>Hidden Profile</span>
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+
         {/* Profile Header */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-6">
           <div className="p-8">
@@ -124,67 +243,107 @@ const Profile = () => {
                     )}
                   </div>
                   <div className="mt-4 space-y-2">
-                    <div className="flex items-center text-gray-600">
-                      <Mail className="h-5 w-5 mr-2" />
-                      {isEditing ? (
-                        <input
-                          type="email"
-                          value={profile.email}
-                          onChange={(e) => setProfile({...profile, email: e.target.value})}
-                          className="border rounded px-2 py-1"
-                        />
-                      ) : (
-                        profile.email
-                      )}
+                    <div className="flex items-center justify-between text-gray-600 group">
+                      <div className="flex items-center">
+                        <Mail className="h-5 w-5 mr-2" />
+                        {isEditing ? (
+                          <input
+                            type="email"
+                            value={profile.email}
+                            onChange={(e) => setProfile({...profile, email: e.target.value})}
+                            className="border rounded px-2 py-1"
+                          />
+                        ) : (
+                          profile.email
+                        )}
+                      </div>
+                      <button
+                        onClick={() => toggleFieldVisibility('email')}
+                        className={`ml-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity ${
+                          profile.visibilitySettings.email ? 'text-green-600' : 'text-gray-400'
+                        }`}
+                      >
+                        {profile.visibilitySettings.email ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      </button>
                     </div>
-                    <div className="flex items-center text-gray-600">
-                      <MapPin className="h-5 w-5 mr-2" />
-                      {isEditing ? (
-                        <div className="flex space-x-2">
+                    <div className="flex items-center justify-between text-gray-600 group">
+                      <div className="flex items-center">
+                        <MapPin className="h-5 w-5 mr-2" />
+                        {isEditing ? (
+                          <div className="flex space-x-2">
+                            <input
+                              type="text"
+                              value={profile.city}
+                              onChange={(e) => setProfile({...profile, city: e.target.value})}
+                              className="border rounded px-2 py-1"
+                              placeholder="City"
+                            />
+                            <input
+                              type="text"
+                              value={profile.country}
+                              onChange={(e) => setProfile({...profile, country: e.target.value})}
+                              className="border rounded px-2 py-1"
+                              placeholder="Country"
+                            />
+                          </div>
+                        ) : (
+                          `${profile.city}, ${profile.country}`
+                        )}
+                      </div>
+                      <button
+                        onClick={() => toggleFieldVisibility('location')}
+                        className={`ml-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity ${
+                          profile.visibilitySettings.location ? 'text-green-600' : 'text-gray-400'
+                        }`}
+                      >
+                        {profile.visibilitySettings.location ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between text-gray-600 group">
+                      <div className="flex items-center">
+                        <Calendar className="h-5 w-5 mr-2" />
+                        {isEditing ? (
                           <input
                             type="text"
-                            value={profile.city}
-                            onChange={(e) => setProfile({...profile, city: e.target.value})}
+                            value={profile.age}
+                            onChange={(e) => setProfile({...profile, age: e.target.value})}
                             className="border rounded px-2 py-1"
-                            placeholder="City"
                           />
+                        ) : (
+                          `${profile.age} years old`
+                        )}
+                      </div>
+                      <button
+                        onClick={() => toggleFieldVisibility('age')}
+                        className={`ml-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity ${
+                          profile.visibilitySettings.age ? 'text-green-600' : 'text-gray-400'
+                        }`}
+                      >
+                        {profile.visibilitySettings.age ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      </button>
+                    </div>
+                    <div className="flex items-center justify-between text-gray-600 group">
+                      <div className="flex items-center">
+                        <Book className="h-5 w-5 mr-2" />
+                        {isEditing ? (
                           <input
                             type="text"
-                            value={profile.country}
-                            onChange={(e) => setProfile({...profile, country: e.target.value})}
+                            value={profile.education}
+                            onChange={(e) => setProfile({...profile, education: e.target.value})}
                             className="border rounded px-2 py-1"
-                            placeholder="Country"
                           />
-                        </div>
-                      ) : (
-                        `${profile.city}, ${profile.country}`
-                      )}
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <Calendar className="h-5 w-5 mr-2" />
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={profile.age}
-                          onChange={(e) => setProfile({...profile, age: e.target.value})}
-                          className="border rounded px-2 py-1"
-                        />
-                      ) : (
-                        `${profile.age} years old`
-                      )}
-                    </div>
-                    <div className="flex items-center text-gray-600">
-                      <Book className="h-5 w-5 mr-2" />
-                      {isEditing ? (
-                        <input
-                          type="text"
-                          value={profile.education}
-                          onChange={(e) => setProfile({...profile, education: e.target.value})}
-                          className="border rounded px-2 py-1"
-                        />
-                      ) : (
-                        profile.education
-                      )}
+                        ) : (
+                          profile.education
+                        )}
+                      </div>
+                      <button
+                        onClick={() => toggleFieldVisibility('education')}
+                        className={`ml-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity ${
+                          profile.visibilitySettings.education ? 'text-green-600' : 'text-gray-400'
+                        }`}
+                      >
+                        {profile.visibilitySettings.education ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -222,7 +381,33 @@ const Profile = () => {
 
             {/* Skills & Interests */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Skills & Interests</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Skills & Interests</h2>
+                <div className="flex space-x-4">
+                  <button
+                    onClick={() => toggleFieldVisibility('skills')}
+                    className={`flex items-center space-x-2 px-3 py-1 rounded-md ${
+                      profile.visibilitySettings.skills
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    <Shield className="h-4 w-4" />
+                    <span>Skills {profile.visibilitySettings.skills ? 'Visible' : 'Hidden'}</span>
+                  </button>
+                  <button
+                    onClick={() => toggleFieldVisibility('interests')}
+                    className={`flex items-center space-x-2 px-3 py-1 rounded-md ${
+                      profile.visibilitySettings.interests
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-gray-100 text-gray-700'
+                    }`}
+                  >
+                    <Shield className="h-4 w-4" />
+                    <span>Interests {profile.visibilitySettings.interests ? 'Visible' : 'Hidden'}</span>
+                  </button>
+                </div>
+              </div>
               <div className="space-y-4">
                 <div>
                   <h3 className="text-sm font-medium text-gray-700 mb-2">Skills</h3>
@@ -255,7 +440,20 @@ const Profile = () => {
 
             {/* Achievements */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Achievements</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Achievements</h2>
+                <button
+                  onClick={() => toggleFieldVisibility('achievements')}
+                  className={`flex items-center space-x-2 px-3 py-1 rounded-md ${
+                    profile.visibilitySettings.achievements
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  <Shield className="h-4 w-4" />
+                  <span>{profile.visibilitySettings.achievements ? 'Visible' : 'Hidden'}</span>
+                </button>
+              </div>
               <div className="space-y-4">
                 {profile.achievements.map((achievement, index) => (
                   <div key={index} className="flex items-center space-x-3">
@@ -270,7 +468,20 @@ const Profile = () => {
           {/* Right Column - Matches */}
           <div className="col-span-1">
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-              <h2 className="text-lg font-semibold text-gray-900 mb-4">Current Matches</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Current Matches</h2>
+                <button
+                  onClick={() => toggleFieldVisibility('matches')}
+                  className={`flex items-center space-x-2 px-3 py-1 rounded-md ${
+                    profile.visibilitySettings.matches
+                      ? 'bg-green-100 text-green-700'
+                      : 'bg-gray-100 text-gray-700'
+                  }`}
+                >
+                  <Shield className="h-4 w-4" />
+                  <span>{profile.visibilitySettings.matches ? 'Visible' : 'Hidden'}</span>
+                </button>
+              </div>
               <div className="space-y-6">
                 {matches.map((match) => (
                   <div key={match.id} className="border-b border-gray-200 last:border-0 pb-4 last:pb-0">
@@ -306,8 +517,190 @@ const Profile = () => {
             </div>
           </div>
         </div>
+
+        {/* Confirmation Modal */}
+        {showConfirm && (
+          <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                Change Profile Visibility
+              </h3>
+              <p className="text-gray-600 mb-4">
+                Are you sure you want to {isVisible ? "hide" : "show"} your profile? 
+                {isVisible 
+                  ? " Other users won't be able to find or view your profile."
+                  : " Your profile will be visible to all users."
+                }
+              </p>
+              <div className="flex space-x-4">
+                <button
+                  onClick={confirmToggleVisibility}
+                  className="flex-1 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition-colors"
+                >
+                  Yes, {isVisible ? "hide" : "show"} my profile
+                </button>
+                <button
+                  onClick={() => setShowConfirm(false)}
+                  className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Account Modal */}
+        {showDeleteConfirm && (
+          <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full mx-4">
+              <div className="flex items-center space-x-2 text-red-600 mb-4">
+                <AlertTriangle className="h-6 w-6" />
+                <h3 className="text-lg font-semibold">Delete Account</h3>
+              </div>
+              <div className="space-y-4">
+                <div className="bg-red-50 p-4 rounded-lg">
+                  <p className="text-red-800 font-medium">Warning: This action cannot be undone</p>
+                  <ul className="mt-2 text-sm text-red-700 list-disc list-inside">
+                    <li>Your profile will be permanently deleted</li>
+                    <li>All matches and connections will be removed</li>
+                    <li>Your data will be erased from our systems</li>
+                    <li>You'll lose access to all your learning progress</li>
+                  </ul>
+                </div>
+                <p className="text-gray-600">
+                  Please type "delete my account" to confirm deletion:
+                </p>
+                <input
+                  type="text"
+                  value={deleteConfirmText}
+                  onChange={(e) => setDeleteConfirmText(e.target.value)}
+                  className="w-full border border-gray-300 rounded-lg px-4 py-2"
+                  placeholder="Type 'delete my account'"
+                />
+                <div className="flex space-x-4">
+                  <button
+                    onClick={confirmDeleteProfile}
+                    disabled={deleteConfirmText.toLowerCase() !== 'delete my account'}
+                    className={`flex-1 px-4 py-2 rounded-lg ${
+                      deleteConfirmText.toLowerCase() === 'delete my account'
+                        ? 'bg-red-600 text-white hover:bg-red-700'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    }`}
+                  >
+                    Delete Account
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDeleteConfirm(false);
+                      setDeleteConfirmText('');
+                    }}
+                    className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* GDPR Info Modal */}
+        {showGDPRInfo && (
+          <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-2xl w-full mx-4">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-semibold text-gray-900">Your Privacy Rights</h3>
+                <button
+                  onClick={() => setShowGDPRInfo(false)}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <div className="space-y-4">
+                <div className="bg-indigo-50 p-4 rounded-lg">
+                  <h4 className="font-medium text-indigo-800 mb-2">Your Rights Under GDPR</h4>
+                  <ul className="text-sm text-indigo-700 list-disc list-inside space-y-1">
+                    <li>Right to access your personal data</li>
+                    <li>Right to rectify inaccurate personal data</li>
+                    <li>Right to erasure ("right to be forgotten")</li>
+                    <li>Right to restrict processing</li>
+                    <li>Right to data portability</li>
+                    <li>Right to object to processing</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">How We Process Your Data</h4>
+                  <p className="text-gray-600 text-sm">
+                    We collect and process your data to provide our skill exchange services. This includes your profile information,
+                    skills, interests, and interaction data. We only share your data with other users according to your visibility
+                    settings.
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Data Retention</h4>
+                  <p className="text-gray-600 text-sm">
+                    We retain your data for as long as you maintain an active account. After account deletion, we may retain certain
+                    data for legal compliance purposes for up to data for legal compliance purposes for up to 30 days before permanent deletion.
+                  </p>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-900 mb-2">Your Controls</h4>
+                  <p className="text-gray-600 text-sm">
+                    You can control your data through:
+                  </p>
+                  <ul className="mt-2 text-sm text-gray-600 list-disc list-inside space-y-1">
+                    <li>Profile visibility settings</li>
+                    <li>Field-level privacy controls</li>
+                    <li>Data download option</li>
+                    <li>Account deletion</li>
+                  </ul>
+                </div>
+                <div className="pt-4 border-t border-gray-200">
+                  <button
+                    onClick={() => setShowGDPRInfo(false)}
+                    className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                  >
+                    I Understand
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+        {/* GDPR Controls */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mt-6 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Shield className="h-6 w-6 text-indigo-600" />
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Data Privacy Controls</h2>
+                <p className="text-sm text-gray-600">Manage your personal data and privacy settings</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={handleDeleteProfile}
+                className="flex items-center space-x-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg border border-red-200"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Delete Account</span>
+              </button>
+              <button
+                onClick={() => setShowGDPRInfo(true)}
+                className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg border border-gray-200"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                <span>Privacy Info</span>
+              </button>
+            </div>
+          </div>
+        </div>
       </div>
+      
     </div>
+    
   );
 };
 
