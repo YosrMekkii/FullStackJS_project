@@ -1,50 +1,33 @@
 const express = require('express');
 const mongoose = require('mongoose');
-const bodyParser = require('body-parser');
+const userRoutes = require('./routes/userRoutes'); // Import des routes utilisateurs
 
 // Initialisation de l'application Express
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware pour parser les requêtes JSON
-app.use(bodyParser.json());
-const User = require('../piBackEnd/models/user');
+// ✅ Middleware pour parser les requêtes JSON
+app.use(express.json());
 
-
-
-// Connexion à MongoDB
+// ✅ Connexion à MongoDB
 mongoose.connect('mongodb://127.0.0.1:27017/skillexchangedb')
-  .then(async () => {
-    console.log("✅ Connected to MongoDB!");
+  .then(() => console.log("✅ Connected to MongoDB!"))
+  .catch(error => console.error("❌ Database connection error:", error));
 
-    const newUser = new User({
-      firstName: "John",
-      lastName: "Doe",
-      email: "johndoe@example.com",
-      password: "hashedpassword",
-      age: 25,
-      country: "France",
-      educationLevel: "Bachelor",
-      interests: ["Coding", "Gaming"],
-      skills: ["Node.js", "React"],
-    });
-
-    await newUser.save();
-    console.log("✅ Test user inserted!");
-    mongoose.connection.close();
-  })
-  .catch(error => console.error("❌ Error:", error));
-
-// Route de test
+// ✅ Route principale (test)
 app.get('/', (req, res) => {
-    res.send('🚀 Server is running...');
+  res.send('🚀 SkillExchange API is running...');
 });
 
-// Lancer le serveur
+// ✅ Intégration des routes utilisateurs
+app.use('/api/users', userRoutes);
+
+// ✅ Gestion des erreurs 404
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
+});
+
+// ✅ Lancement du serveur
 app.listen(PORT, () => {
-    console.log(`🚀 Server is running on http://localhost:${PORT}`);
+  console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });
-
-
-
-

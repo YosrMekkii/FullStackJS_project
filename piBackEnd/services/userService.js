@@ -1,0 +1,57 @@
+const User = require("../models/user"); 
+
+// ✅ Créer un utilisateur
+const createUser = async (userData) => {
+  try {
+    const user = new User(userData);
+    await user.save();
+    return user;
+  } catch (error) {
+    throw new Error(`❌ Erreur lors de la création de l'utilisateur: ${error.message}`);
+  }
+};
+
+// ✅ Récupérer un utilisateur par ID
+const getUserById = async (userId) => {
+  try {
+    return await User.findById(userId);
+  } catch (error) {
+    throw new Error(`❌ Erreur lors de la récupération de l'utilisateur: ${error.message}`);
+  }
+};
+
+// ✅ Mettre à jour un utilisateur
+const updateUser = async (userId, updateData) => {
+  try {
+    return await User.findByIdAndUpdate(userId, updateData, { new: true });
+  } catch (error) {
+    throw new Error(`❌ Erreur lors de la mise à jour de l'utilisateur: ${error.message}`);
+  }
+};
+
+// ✅ Supprimer un utilisateur
+const deleteUser = async (userId) => {
+  try {
+    return await User.findByIdAndDelete(userId);
+  } catch (error) {
+    throw new Error(`❌ Erreur lors de la suppression de l'utilisateur: ${error.message}`);
+  }
+};
+
+// ✅ Récupérer tous les utilisateurs
+const getAllUsers = async () => {
+  try {
+    return await User.find();
+  } catch (error) {
+    throw new Error(`❌ Erreur lors de la récupération des utilisateurs: ${error.message}`);
+  }
+};
+
+// Export des fonctions
+module.exports = {
+  createUser,
+  getUserById,
+  updateUser,
+  deleteUser,
+  getAllUsers
+};
