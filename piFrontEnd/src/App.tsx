@@ -5,12 +5,14 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import Dashboard from './pages/Dashboard';
-import ProfilePage from './pages/Profile';
+// import ProfilePage from './pages/Profile';
 import Profile from './pages/Profile1';
 import SkillMarketplace from './pages/MarketPlace';
 import PostSkill from './pages/PostSkill';
 import '../src/css/App.css'
 import Interests from './pages/interests';
+import ReCAPTCHA from "react-google-recaptcha";
+
 const user = {
   name: 'John Doe',
   profilePicture: 'https://via.placeholder.com/150', // Use a valid image URL
@@ -53,7 +55,7 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
-          <Route path="/profile" element={<ProfilePage user={user} />} /> {/* Pass the user object as a prop */}
+          {/* <Route path="/profile" element={<ProfilePage user={user} />} /> Pass the user object as a prop */}
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/marketplace" element={<SkillMarketplace />} />
           <Route path="/postskill" element={<PostSkill />} />
