@@ -57,6 +57,7 @@ const getAllUsers = async (req, res) => {
 
 
 
+
 module.exports = {
   createUser,
   getUserById,

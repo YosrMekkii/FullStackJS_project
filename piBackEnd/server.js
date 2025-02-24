@@ -48,6 +48,11 @@ app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
+
+import skillRoutes from './routes/skillRoutes.js';
+app.use('/skill', skillRoutes);
+
+
 // Lancer le serveur
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
