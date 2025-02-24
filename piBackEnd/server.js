@@ -1,10 +1,18 @@
 const express = require('express');
 const mongoose = require('mongoose');
+const cors = require('cors'); // ✅ Import CORS
 const userRoutes = require('./routes/userRoutes'); // Import des routes utilisateurs
 
 // Initialisation de l'application Express
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+// ✅ Middleware pour activer CORS AVANT les routes
+app.use(cors({
+  origin: 'http://localhost:5174', // ✅ Autoriser uniquement le frontend
+  methods: 'GET,POST,PUT,DELETE',
+  allowedHeaders: 'Content-Type,Authorization',
+}));
 
 // ✅ Middleware pour parser les requêtes JSON
 app.use(express.json());

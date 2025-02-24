@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import { 
   Mail, 
   MapPin, 
@@ -26,32 +27,50 @@ const Profile = () => {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [showGDPRInfo, setShowGDPRInfo] = useState(false);
   const [profile, setProfile] = useState({
-    firstName: "Sarah",
-    lastName: "Miller",
-    email: "sarah.miller@example.com",
-    age: "28",
-    country: "France",
-    city: "Paris",
-    education: "Master's Degree",
-    bio: "Passionate about teaching JavaScript and learning French. I believe in the power of knowledge exchange and continuous learning.",
-    skills: ["JavaScript", "React", "Node.js", "Web Development"],
-    interests: ["French Language", "Cultural Exchange", "Teaching"],
-    achievements: [
-      "Helped 20+ students learn JavaScript",
-      "Completed Advanced French Course",
-      "5-star rating as a mentor"
-    ],
+    firstName: "",
+    lastName: "",
+    email: "",
+    age: "",
+    country: "",
+    city: "",
+    educationLevel: "",
+    bio: "",
+    skills: [],
+    interests: [],
+    achievements: [],
     visibilitySettings: {
       email: true,
       age: true,
       location: true,
-      education: true,
+      educationLevel: true,
       achievements: true,
       skills: true,
       interests: true,
       matches: true
     }
   });
+
+  const userId = "67bb8dcb8135deacc39b37c6"; 
+
+  useEffect(() => {
+    const fetchUserData = async () => {
+      try {
+        const response = await axios.get(`http://localhost:3000/api/users/${userId}`);
+        console.log("User Data:", response.data);
+        setProfile(prev => ({
+          ...prev,
+          ...response.data,
+          visibilitySettings: {
+            ...prev.visibilitySettings,
+            ...(response.data.visibilitySettings || {})
+          }
+        }));
+      } catch (error) {
+        console.error("Error fetching user data:", error);
+      }
+    };
+    fetchUserData();
+  }, [userId]);
 
   const matches = [
     {
@@ -78,39 +97,65 @@ const Profile = () => {
     }
   ];
 
-  const handleSave = () => {
-    setIsEditing(false);
-    // Here you would typically save the changes to your backend
+  const handleSave = async () => {
+    try {
+      await axios.put(`http://localhost:3000/api/users/${userId}`, profile);
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error saving profile:", error);
+    }
   };
 
   const toggleVisibility = () => {
     setShowConfirm(true);
   };
 
-  const confirmToggleVisibility = () => {
-    setIsVisible(!isVisible);
-    setShowConfirm(false);
+  const confirmToggleVisibility = async () => {
+    try {
+      const newVisibility = !isVisible;
+      await axios.patch(`http://localhost:3000/api/users/${userId}/visibility`, {
+        isVisible: newVisibility
+      });
+      setIsVisible(newVisibility);
+      setShowConfirm(false);
+    } catch (error) {
+      console.error("Error updating visibility:", error);
+    }
   };
 
-  const toggleFieldVisibility = (field: keyof typeof profile.visibilitySettings) => {
-    setProfile(prev => ({
-      ...prev,
-      visibilitySettings: {
-        ...prev.visibilitySettings,
-        [field]: !prev.visibilitySettings[field]
-      }
-    }));
+  const toggleFieldVisibility = async (field: keyof typeof profile.visibilitySettings) => {
+    try {
+      const newSettings = {
+        ...profile.visibilitySettings,
+        [field]: !profile.visibilitySettings[field]
+      };
+      
+      await axios.patch(`http://localhost:3000/api/users/${userId}/visibility-settings`, {
+        visibilitySettings: newSettings
+      });
+
+      setProfile(prev => ({
+        ...prev,
+        visibilitySettings: newSettings
+      }));
+    } catch (error) {
+      console.error("Error updating field visibility:", error);
+    }
   };
 
   const handleDeleteProfile = () => {
     setShowDeleteConfirm(true);
   };
 
-  const confirmDeleteProfile = () => {
+  const confirmDeleteProfile = async () => {
     if (deleteConfirmText.toLowerCase() === 'delete my account') {
-      // Here you would handle the actual deletion
-      console.log('Profile deleted');
-      // Redirect to home or login page
+      try {
+        await axios.delete(`http://localhost:3000/api/users/${userId}`);
+        // Redirect to home page or login page after successful deletion
+        window.location.href = '/';
+      } catch (error) {
+        console.error("Error deleting profile:", error);
+      }
     }
   };
 
@@ -122,7 +167,7 @@ const Profile = () => {
         email: profile.email,
         age: profile.age,
         location: `${profile.city}, ${profile.country}`,
-        education: profile.education
+        education: profile.educationLevel
       },
       skills: profile.skills,
       interests: profile.interests,
@@ -141,10 +186,48 @@ const Profile = () => {
     URL.revokeObjectURL(url);
   };
 
+  if (!profile.firstName) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="bg-white p-8 rounded-lg shadow-md">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Loading profile...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        
+        {/* GDPR Controls */}
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 p-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <Shield className="h-6 w-6 text-indigo-600" />
+              <div>
+                <h2 className="text-lg font-semibold text-gray-900">Data Privacy Controls</h2>
+                <p className="text-sm text-gray-600">Manage your personal data and privacy settings</p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-4">
+              <button
+                onClick={handleDeleteProfile}
+                className="flex items-center space-x-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg border border-red-200"
+              >
+                <Trash2 className="h-4 w-4" />
+                <span>Delete Account</span>
+              </button>
+              <button
+                onClick={() => setShowGDPRInfo(true)}
+                className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg border border-gray-200"
+              >
+                <AlertTriangle className="h-4 w-4" />
+                <span>Privacy Info</span>
+              </button>
+            </div>
+          </div>
+        </div>
 
         {/* Profile Status Banner */}
         <div className={`mb-4 p-4 rounded-lg ${isVisible ? 'bg-green-50' : 'bg-yellow-50'}`}>
@@ -328,21 +411,21 @@ const Profile = () => {
                         {isEditing ? (
                           <input
                             type="text"
-                            value={profile.education}
-                            onChange={(e) => setProfile({...profile, education: e.target.value})}
+                            value={profile.educationLevel}
+                            onChange={(e) => setProfile({...profile, educationLevel: e.target.value})}
                             className="border rounded px-2 py-1"
                           />
                         ) : (
-                          profile.education
+                          profile.educationLevel
                         )}
                       </div>
                       <button
-                        onClick={() => toggleFieldVisibility('education')}
+                        onClick={() => toggleFieldVisibility('educationLevel')}
                         className={`ml-2 p-1 rounded-md opacity-0 group-hover:opacity-100 transition-opacity ${
-                          profile.visibilitySettings.education ? 'text-green-600' : 'text-gray-400'
+                          profile.visibilitySettings.educationLevel ? 'text-green-600' : 'text-gray-400'
                         }`}
                       >
-                        {profile.visibilitySettings.education ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
+                        {profile.visibilitySettings.educationLevel ? <Eye className="h-4 w-4" /> : <EyeOff className="h-4 w-4" />}
                       </button>
                     </div>
                   </div>
@@ -613,7 +696,7 @@ const Profile = () => {
                 <h3 className="text-lg font-semibold text-gray-900">Your Privacy Rights</h3>
                 <button
                   onClick={() => setShowGDPRInfo(false)}
-                  className="text-gray-400 hover:text-gray-500"
+                  className="text-gray-400 hover text-gray-500"
                 >
                   <X className="h-5 w-5" />
                 </button>
@@ -642,7 +725,7 @@ const Profile = () => {
                   <h4 className="font-medium text-gray-900 mb-2">Data Retention</h4>
                   <p className="text-gray-600 text-sm">
                     We retain your data for as long as you maintain an active account. After account deletion, we may retain certain
-                    data for legal compliance purposes for up to data for legal compliance purposes for up to 30 days before permanent deletion.
+                    data for legal compliance purposes for up to 30 days before permanent deletion.
                   </p>
                 </div>
                 <div>
@@ -669,38 +752,8 @@ const Profile = () => {
             </div>
           </div>
         )}
-        {/* GDPR Controls */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 mt-6 p-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <Shield className="h-6 w-6 text-indigo-600" />
-              <div>
-                <h2 className="text-lg font-semibold text-gray-900">Data Privacy Controls</h2>
-                <p className="text-sm text-gray-600">Manage your personal data and privacy settings</p>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={handleDeleteProfile}
-                className="flex items-center space-x-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg border border-red-200"
-              >
-                <Trash2 className="h-4 w-4" />
-                <span>Delete Account</span>
-              </button>
-              <button
-                onClick={() => setShowGDPRInfo(true)}
-                className="flex items-center space-x-2 px-4 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-lg border border-gray-200"
-              >
-                <AlertTriangle className="h-4 w-4" />
-                <span>Privacy Info</span>
-              </button>
-            </div>
-          </div>
-        </div>
       </div>
-      
     </div>
-    
   );
 };
 
