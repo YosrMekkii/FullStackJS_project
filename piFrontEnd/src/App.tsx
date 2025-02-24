@@ -12,7 +12,8 @@ import PostSkill from './pages/PostSkill';
 import '../src/css/App.css'
 import Interests from './pages/interests';
 import ReCAPTCHA from "react-google-recaptcha";
-
+import AdminDashboard from './pages/AdminDashboard';
+import LearningSession from './pages/LearningSession';
 const user = {
   name: 'John Doe',
   profilePicture: 'https://via.placeholder.com/150', // Use a valid image URL
@@ -60,6 +61,8 @@ function App() {
           <Route path="/marketplace" element={<SkillMarketplace />} />
           <Route path="/postskill" element={<PostSkill />} />
           <Route path="/interests" element={<Interests />} />
+          <Route path="/admindashboard" element={<AdminDashboard />} />
+          <Route path='/learningsession' element={<LearningSession />} />
 
 
         </Routes>

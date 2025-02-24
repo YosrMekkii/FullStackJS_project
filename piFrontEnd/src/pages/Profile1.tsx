@@ -14,7 +14,6 @@ import {
   Lock,
   Shield,
   AlertTriangle,
-  Download,
   Trash2
 } from 'lucide-react';
 
