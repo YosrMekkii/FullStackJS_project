@@ -17,4 +17,10 @@ router.put("/:id", userController.updateUser);
 // ✅ Route pour supprimer un utilisateur
 router.delete("/:id", userController.deleteUser);
 
+// Route d'inscription
+router.post('/signup', userController.signupUser);
+
+// Route de connexion
+router.post('/login', userController.loginUser);
+
 module.exports = router;
