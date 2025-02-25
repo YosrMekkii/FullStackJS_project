@@ -1,7 +1,9 @@
 import express from 'express';
-import mongoose from 'mongoose';
-const cors = require('cors'); // ✅ Import CORS
-const userRoutes = require('./routes/userRoutes'); // Import des routes utilisateurs
+import mongoose from 'mongoose';/*
+const cors = require('cors'); // ✅ Import CORS*/
+import cors from 'cors'; // ✅ Import CORS
+//const userRoutes = require('./routes/userRoutes'); // Import des routes utilisateurs
+import userRoutes from './routes/userRoutes.js'; // Import des routes utilisateurs
 const app = express();
 const PORT = process.env.PORT || 3000;
 
