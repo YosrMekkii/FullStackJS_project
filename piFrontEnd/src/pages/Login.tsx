@@ -1,14 +1,48 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Mail, Lock } from 'lucide-react';
+import ReCAPTCHA from "react-google-recaptcha";
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    // Handle login logic here
+
+    if (!recaptchaToken) {
+      alert("Veuillez valider le reCAPTCHA avant de continuer.");
+      return;
+    }
+
+    // Envoyer les données de connexion avec le token reCAPTCHA
+    console.log("Email:", email);
+    console.log("Password:", password);
+    console.log("reCAPTCHA Token:", recaptchaToken);
+
+    // Envoyer les données au backend
+    fetch("http://localhost:3000/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ email, password, recaptchaToken }),
+    })
+      .then((res) => res.json())
+      .then((data) => {
+        console.log("Réponse du serveur:", data);
+        if (data.success) {
+          alert("Connexion réussie !");
+        } else {
+          alert("Échec de la connexion : " + data.message);
+        }
+      })
+      .catch((err) => console.error("Erreur:", err));
+  };
+
+  const onChange = (token: string | null) => {
+    setRecaptchaToken(token);
   };
 
   return (
@@ -88,6 +122,11 @@ const Login = () => {
               </a>
             </div>
           </div>
+
+          <ReCAPTCHA
+        sitekey="6LcGAOAqAAAAAKAW6BF13HT6FCGSM_xJ5ks2Ss0D"
+        onChange={onChange}
+      />
 
           <div>
             <button
