@@ -95,6 +95,18 @@ function App() {
       }
     };
 
+<<<<<<< HEAD
+=======
+    /* Initialize Fabric.js canvas
+    if (canvasRef.current) {
+      fabricCanvasRef.current = new fabric.Canvas(canvasRef.current, {
+        isDrawingMode: true,
+        width: 800,
+        height: 600,
+      });
+    }*/
+
+>>>>>>> 564d96224ee9c112b6c3527e94b1b9cb465814af
     initializeWebRTC();
 
     return () => {
