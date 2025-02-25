@@ -27,7 +27,8 @@ const userSchema = new mongoose.Schema({
   bio: { type: String, default: "" },
   photoProfil: { type: String, default: "" },
   dateInscription: { type: Date, default: Date.now },
-
+  // 🔹 Interaction Data
+  interactions: [{ type: mongoose.Schema.Types.ObjectId, ref: "user" }],  // ✅ Users they engaged with
   // 🔹 Sécurité & Vérification
   status: { type: Boolean, default: true },
   role: { type: String, enum: ["user", "admin"], default: "user" },
