@@ -12,6 +12,7 @@
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
     "@pixi/react": "^7.1.2",
+    "axios": "^1.7.9",
     "fabric": "^6.6.1",
     "konva": "^9.3.18",
     "lucide-react": "^0.344.0",
