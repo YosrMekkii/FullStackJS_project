@@ -50,7 +50,7 @@ const Profile = () => {
     }
   });
 
-  const userId = "67bb8dcb8135deacc39b37c6"; 
+  const userId = "67bb85f5e2c453c29de65714"; 
 
   useEffect(() => {
     const fetchUserData = async () => {

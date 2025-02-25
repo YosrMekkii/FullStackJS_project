@@ -9,7 +9,7 @@ const PORT = process.env.PORT || 3000;
 
 // ✅ Middleware pour activer CORS AVANT les routes
 app.use(cors({
-  origin: 'http://localhost:5174', // ✅ Autoriser uniquement le frontend
+  origin: 'http://localhost:5173', // ✅ Autoriser uniquement le frontend
   methods: 'GET,POST,PUT,DELETE',
   allowedHeaders: 'Content-Type,Authorization',
 }));
