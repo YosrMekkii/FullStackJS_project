@@ -85,14 +85,14 @@ const LearningSession = () => {
       }
     };
 
-    // Initialize Fabric.js canvas
+    /* Initialize Fabric.js canvas
     if (canvasRef.current) {
       fabricCanvasRef.current = new fabric.Canvas(canvasRef.current, {
         isDrawingMode: true,
         width: 800,
         height: 600,
       });
-    }
+    }*/
 
     initializeWebRTC();
 
