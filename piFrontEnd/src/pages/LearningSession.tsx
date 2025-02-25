@@ -1,10 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
-//import { fabric } from 'fabric';
 import Editor from "@monaco-editor/react";
 import Peer from 'peerjs';
 import { io } from 'socket.io-client';
+import { Stage, Container, Graphics } from '@pixi/react';
+import * as PIXI from 'pixi.js';
 import { 
   Video,
   VideoOff,
@@ -18,7 +19,8 @@ import {
   Send,
   X,
   Maximize2,
-  Minimize2
+  Minimize2,
+  Eraser
 } from 'lucide-react';
 
 interface Message {
@@ -37,7 +39,14 @@ interface FileShare {
   timestamp: Date;
 }
 
-const LearningSession = () => {
+interface DrawingLine {
+  points: number[];
+  color: string;
+  width: number;
+  tool: 'pen' | 'eraser';
+}
+
+function App() {
   const { sessionId } = useParams();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
@@ -48,17 +57,19 @@ const LearningSession = () => {
   const [code, setCode] = useState('// Start coding here\n');
   const [language, setLanguage] = useState('javascript');
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [currentColor, setCurrentColor] = useState('#000000');
+  const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
+  const [lines, setLines] = useState<DrawingLine[]>([]);
+  const [currentLine, setCurrentLine] = useState<DrawingLine | null>(null);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fabricCanvasRef = useRef<fabric.Canvas | null>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const peerRef = useRef<Peer>();
   const streamRef = useRef<MediaStream>();
+  const graphicsRef = useRef<PIXI.Graphics>();
 
   useEffect(() => {
-    // Initialize WebRTC
     const initializeWebRTC = async () => {
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
@@ -67,7 +78,6 @@ const LearningSession = () => {
           localVideoRef.current.srcObject = stream;
         }
 
-        // Initialize PeerJS
         const peer = new Peer(uuidv4());
         peerRef.current = peer;
 
@@ -85,27 +95,14 @@ const LearningSession = () => {
       }
     };
 
-    // Initialize Fabric.js canvas
-    if (canvasRef.current) {
-      fabricCanvasRef.current = new fabric.Canvas(canvasRef.current, {
-        isDrawingMode: true,
-        width: 800,
-        height: 600,
-      });
-    }
-
     initializeWebRTC();
 
     return () => {
-      // Cleanup
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
       if (peerRef.current) {
         peerRef.current.destroy();
-      }
-      if (fabricCanvasRef.current) {
-        fabricCanvasRef.current.dispose();
       }
     };
   }, []);
@@ -137,7 +134,6 @@ const LearningSession = () => {
       setMessages(prev => [...prev, message]);
       setNewMessage('');
       
-      // Scroll to bottom of chat
       if (chatContainerRef.current) {
         chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
       }
@@ -167,6 +163,75 @@ const LearningSession = () => {
 
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
+  };
+
+  const clearWhiteboard = () => {
+    setLines([]);
+    if (graphicsRef.current) {
+      graphicsRef.current.clear();
+    }
+  };
+
+  const draw = (g: PIXI.Graphics) => {
+    graphicsRef.current = g;
+    g.clear();
+
+    lines.forEach(line => {
+      g.lineStyle({
+        width: line.tool === 'eraser' ? 20 : 2,
+        color: line.tool === 'eraser' ? 0xFFFFFF : parseInt(line.color.replace('#', '0x')),
+        alpha: line.tool === 'eraser' ? 0 : 1,
+        cap: PIXI.LINE_CAP.ROUND,
+        join: PIXI.LINE_JOIN.ROUND,
+      });
+
+      for (let i = 0; i < line.points.length - 2; i += 2) {
+        g.moveTo(line.points[i], line.points[i + 1]);
+        g.lineTo(line.points[i + 2], line.points[i + 3]);
+      }
+    });
+
+    if (currentLine) {
+      g.lineStyle({
+        width: currentLine.tool === 'eraser' ? 20 : 2,
+        color: currentLine.tool === 'eraser' ? 0xFFFFFF : parseInt(currentLine.color.replace('#', '0x')),
+        alpha: currentLine.tool === 'eraser' ? 0 : 1,
+        cap: PIXI.LINE_CAP.ROUND,
+        join: PIXI.LINE_JOIN.ROUND,
+      });
+
+      for (let i = 0; i < currentLine.points.length - 2; i += 2) {
+        g.moveTo(currentLine.points[i], currentLine.points[i + 1]);
+        g.lineTo(currentLine.points[i + 2], currentLine.points[i + 3]);
+      }
+    }
+  };
+
+  const handlePointerDown = (event: PIXI.FederatedPointerEvent) => {
+    const newLine: DrawingLine = {
+      points: [event.global.x, event.global.y],
+      color: currentColor,
+      width: tool === 'eraser' ? 20 : 2,
+      tool
+    };
+    setCurrentLine(newLine);
+  };
+
+  const handlePointerMove = (event: PIXI.FederatedPointerEvent) => {
+    if (currentLine) {
+      const updatedLine = {
+        ...currentLine,
+        points: [...currentLine.points, event.global.x, event.global.y]
+      };
+      setCurrentLine(updatedLine);
+    }
+  };
+
+  const handlePointerUp = () => {
+    if (currentLine) {
+      setLines([...lines, currentLine]);
+      setCurrentLine(null);
+    }
   };
 
   return (
@@ -383,7 +448,51 @@ const LearningSession = () => {
 
                 {activeTab === 'whiteboard' && (
                   <div className="h-[600px]">
-                    <canvas ref={canvasRef} className="border border-gray-200 rounded-lg" />
+                    <div className="mb-4 flex items-center space-x-4">
+                      <button
+                        onClick={() => setTool('pen')}
+                        className={`p-2 rounded ${
+                          tool === 'pen' ? 'bg-indigo-600 text-white' : 'bg-gray-200'
+                        }`}
+                      >
+                        <Pencil className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => setTool('eraser')}
+                        className={`p-2 rounded ${
+                          tool === 'eraser' ? 'bg-indigo-600 text-white' : 'bg-gray-200'
+                        }`}
+                      >
+                        <Eraser className="h-5 w-5" />
+                      </button>
+                      <input
+                        type="color"
+                        value={currentColor}
+                        onChange={(e) => setCurrentColor(e.target.value)}
+                        className="w-8 h-8 rounded cursor-pointer"
+                      />
+                      <button
+                        onClick={clearWhiteboard}
+                        className="px-3 py-1 bg-red-600 text-white rounded hover:bg-red-700"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <Stage
+                        width={800}
+                        height={520}
+                        options={{ backgroundColor: 0xFFFFFF }}
+                        onPointerDown={handlePointerDown}
+                        onPointerMove={handlePointerMove}
+                        onPointerUp={handlePointerUp}
+                        onPointerUpOutside={handlePointerUp}
+                      >
+                        <Container>
+                          <Graphics draw={draw} />
+                        </Container>
+                      </Stage>
+                    </div>
                   </div>
                 )}
               </div>
@@ -393,6 +502,6 @@ const LearningSession = () => {
       </div>
     </div>
   );
-};
+}
 
-export default LearningSession;
+export default App;
