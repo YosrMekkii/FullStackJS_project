@@ -1,13 +1,14 @@
 import express from 'express';
-import mongoose from 'mongoose';/*
-const cors = require('cors'); // ✅ Import CORS*/
-import cors from 'cors'; // ✅ Import CORS
-//const userRoutes = require('./routes/userRoutes'); // Import des routes utilisateurs
-import userRoutes from './routes/userRoutes.js'; // Import des routes utilisateurs
+import mongoose from 'mongoose';
+import cors from 'cors';
+import userRoutes from './routes/userRoutes.js';
+import skillRoutes from './routes/skillRoutes.js';
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(express.json());
+app.use(cors());
 
 // Connexion à MongoDB
 mongoose.connect('mongodb://127.0.0.1:27017/skillexchangedb')
@@ -46,17 +47,17 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+// Routes
+app.use('/api/users', userRoutes);
+app.use('/skill', skillRoutes);
+
 // Gestion des erreurs 404
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
-
-import skillRoutes from './routes/skillRoutes.js';
-app.use('/skill', skillRoutes);
-
-
 // Lancer le serveur
+
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });

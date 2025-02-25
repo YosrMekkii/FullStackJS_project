@@ -95,8 +95,8 @@ function App() {
       }
     };
 
-<<<<<<< HEAD
-=======
+//<<<<<<< HEAD
+//=======
     /* Initialize Fabric.js canvas
     if (canvasRef.current) {
       fabricCanvasRef.current = new fabric.Canvas(canvasRef.current, {
@@ -106,7 +106,7 @@ function App() {
       });
     }*/
 
->>>>>>> 564d96224ee9c112b6c3527e94b1b9cb465814af
+//>>>>>>> 564d96224ee9c112b6c3527e94b1b9cb465814af
     initializeWebRTC();
 
     return () => {
