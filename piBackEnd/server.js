@@ -1,9 +1,7 @@
 import express from 'express';
 import mongoose from 'mongoose';
-import cors from 'cors';
-import userRoutes from './routes/userRoutes.js';
-import skillRoutes from './routes/skillRoutes.js';
-
+const cors = require('cors'); // ✅ Import CORS
+const userRoutes = require('./routes/userRoutes'); // Import des routes utilisateurs
 const app = express();
 const PORT = process.env.PORT || 3000;
 

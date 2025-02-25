@@ -22,5 +22,13 @@ router.post('/signup', userController.signupUser);
 
 // Route de connexion
 router.post('/login', userController.loginUser);
+// ✅ Route pour récupérer les recommandations basées sur les compétences
+router.get("/recommend", userController.getRecommendations);
+
+// ✅ New route to update skills (skills offered)
+router.put("/:id/skills", userController.updateSkills);
+
+// ✅ New route to update interests (skills wanted)
+router.put("/:id/interests", userController.updateInterests);
 
 module.exports = router;

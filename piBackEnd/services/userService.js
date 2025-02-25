@@ -55,6 +55,19 @@ const getUserByEmail = async (email) => {
   }
 };
 
+// ✅ Trouver des utilisateurs avec des compétences communes
+const getUsersWithCommonSkills = async (userId, userSkills) => {
+  try {
+    // Recherche des utilisateurs ayant des compétences communes avec l'utilisateur
+    return await User.find({
+      _id: { $ne: userId },  // Exclure l'utilisateur courant
+      skills: { $in: userSkills }  // Trouver des utilisateurs avec au moins une compétence en commun
+    });
+  } catch (error) {
+    throw new Error(`❌ Erreur lors de la recherche des utilisateurs avec des compétences communes: ${error.message}`);
+  }
+};
+
 // Export des fonctions
 module.exports = {
   createUser,
@@ -62,5 +75,6 @@ module.exports = {
   updateUser,
   deleteUser,
   getAllUsers,
-  getUserByEmail
+  getUserByEmail,
+  getUsersWithCommonSkills , // Export de la nouvelle fonction
 };
