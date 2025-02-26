@@ -15,7 +15,7 @@ import {
   Lock,
   Shield,
   AlertTriangle,
-  Download,
+ 
   Trash2
 } from 'lucide-react';
 
@@ -50,7 +50,7 @@ const Profile = () => {
     }
   });
 
-  const userId = "67bb85f5e2c453c29de65714"; 
+  const userId = "67bb8dcb8135deacc39b37c6"; 
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -113,16 +113,17 @@ const Profile = () => {
   const confirmToggleVisibility = async () => {
     try {
       const newVisibility = !isVisible;
-      await axios.patch(`http://localhost:3000/api/users/${userId}/visibility`, {
-        isVisible: newVisibility
-      });
+      //await axios.put(`http://localhost:3000/api/users/${userId}/visibility`, {
+        //isVisible: newVisibility
+      //});
       setIsVisible(newVisibility);
       setShowConfirm(false);
     } catch (error) {
       console.error("Error updating visibility:", error);
     }
   };
-
+  
+  
   const toggleFieldVisibility = async (field: keyof typeof profile.visibilitySettings) => {
     try {
       const newSettings = {
@@ -130,10 +131,10 @@ const Profile = () => {
         [field]: !profile.visibilitySettings[field]
       };
       
-      await axios.patch(`http://localhost:3000/api/users/${userId}/visibility-settings`, {
-        visibilitySettings: newSettings
-      });
-
+     // await axios.put(`http://localhost:3000/api/users/${userId}/visibility-settings`, {
+     // visibilitySettings: newSettings
+     //});
+  
       setProfile(prev => ({
         ...prev,
         visibilitySettings: newSettings
@@ -142,6 +143,7 @@ const Profile = () => {
       console.error("Error updating field visibility:", error);
     }
   };
+  
 
   const handleDeleteProfile = () => {
     setShowDeleteConfirm(true);
@@ -157,33 +159,6 @@ const Profile = () => {
         console.error("Error deleting profile:", error);
       }
     }
-  };
-
-  const downloadPersonalData = () => {
-    const data = {
-      personalInfo: {
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        email: profile.email,
-        age: profile.age,
-        location: `${profile.city}, ${profile.country}`,
-        education: profile.educationLevel
-      },
-      skills: profile.skills,
-      interests: profile.interests,
-      achievements: profile.achievements,
-      matches: matches
-    };
-
-    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = 'my-personal-data.json';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   if (!profile.firstName) {
@@ -736,7 +711,6 @@ const Profile = () => {
                   <ul className="mt-2 text-sm text-gray-600 list-disc list-inside space-y-1">
                     <li>Profile visibility settings</li>
                     <li>Field-level privacy controls</li>
-                    <li>Data download option</li>
                     <li>Account deletion</li>
                   </ul>
                 </div>
