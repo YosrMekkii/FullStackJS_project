@@ -31,4 +31,23 @@ router.put("/:id/skills", userController.updateSkills);
 // ✅ New route to update interests (skills wanted)
 router.put("/:id/interests", userController.updateInterests);
 
+
+router.patch("/:userId/visibility", async (req, res) => {
+    // const { userId } = req.params;
+    // const { isVisible } = req.body;
+
+    // try {
+    //     const user = await User.findByIdAndUpdate(userId, { isVisible }, { new: true });
+
+    //     if (!user) {
+    //         return res.status(404).json({ error: "User not found" });
+    //     }
+
+    //     res.json({ message: "Visibility updated successfully", user });
+    // } catch (error) {
+    //     console.error("Error updating visibility:", error);
+    //     res.status(500).json({ error: "Internal server error" });
+    // }
+});
+
 module.exports = router;

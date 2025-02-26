@@ -112,9 +112,9 @@ const Profile = () => {
   const confirmToggleVisibility = async () => {
     try {
       const newVisibility = !isVisible;
-      await axios.patch(`http://localhost:3000/api/users/${userId}/visibility`, {
+      // await axios.patch(`http://localhost:3000/api/users/${userId}/visibility`, {
         isVisible: newVisibility
-      });
+      // });
       setIsVisible(newVisibility);
       setShowConfirm(false);
     } catch (error) {
@@ -129,9 +129,9 @@ const Profile = () => {
         [field]: !profile.visibilitySettings[field]
       };
       
-      await axios.patch(`http://localhost:3000/api/users/${userId}/visibility-settings`, {
+      // await axios.patch(`http://localhost:3000/api/users/${userId}/visibility-settings`, {
         visibilitySettings: newSettings
-      });
+      // });
 
       setProfile(prev => ({
         ...prev,
