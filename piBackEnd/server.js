@@ -2,6 +2,12 @@ import express from 'express';
 import mongoose from 'mongoose';
 const cors = require('cors'); // ✅ Import CORS
 const userRoutes = require('./routes/userRoutes'); // Import des routes utilisateurs
+import cors from 'cors';
+import userRoutes from './routes/userRoutes.js';
+import skillRoutes from './routes/skillRoutes.js';
+import reportRoutes from "./routes/reportRoutes.js";
+
+
 const app = express();
 const PORT = process.env.PORT || 3000;
 
@@ -28,7 +34,8 @@ app.post("/api/login", async (req, res) => {
 
   // Vérifier le token reCAPTCHA avec Google
   const recaptchaSecret = "6LcGAOAqAAAAAKAW6BF13HT6FCGSM_xJ5ks2Ss0D"; // Remplace par ta clé secrète reCAPTCHA
-  const recaptchaVerifyURL = `https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecret}&response=${recaptchaToken}`;
+  const recaptchaSecret1 = "6LcGAOAqAAAAABnRcsfkKtY9aOaFyCwODtQ2J-UC"; // Remplace par ta clé secrète reCAPTCHA
+  const recaptchaVerifyURL = `https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecret1}&response=${recaptchaToken}`;
 
   try {
     const response = await fetch(recaptchaVerifyURL, { method: "POST" });
@@ -48,6 +55,8 @@ app.post("/api/login", async (req, res) => {
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/skill', skillRoutes);
+app.use("/api", reportRoutes);
+
 
 // Gestion des erreurs 404
 app.use((req, res) => {
@@ -55,6 +64,7 @@ app.use((req, res) => {
 });
 
 // Lancer le serveur
+
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);
 });
