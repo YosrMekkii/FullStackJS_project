@@ -4,8 +4,8 @@ import mongoose from 'mongoose';
 import userRoutes from './routes/userRoutes.js';
 import skillRoutes from './routes/skillRoutes.js';
 import reportRoutes from "./routes/reportRoutes.js";
-const cors = require('cors'); // ✅ Import CORS
-const userRoutes = require('./routes/userRoutes'); // Import des routes utilisateurs
+import cors from 'cors'; // ✅ Import CORS
+//const userRoutes = require('./routes/userRoutes'); // Import des routes utilisateurs
 
 
 const app = express();
