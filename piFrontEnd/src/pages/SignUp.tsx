@@ -9,7 +9,8 @@ const SignUp = () => {
     email: '',
     age: '',
     country: '',
-    education: '',
+    city: '',
+    educationLevel: '',
     password: '',
     confirmPassword: ''
   });
@@ -22,9 +23,33 @@ const SignUp = () => {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     // Handle sign up logic here
+    if (formData.password !== formData.confirmPassword) {
+      alert("Les mots de passe ne correspondent pas !");
+      return;
+    }
+  
+    try {
+      const response = await fetch("http://localhost:3000/api/users/signup", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+  
+      const data = await response.json();
+  
+      if (!response.ok) {
+        throw new Error(data.error || "Une erreur est survenue");
+      }
+  
+      alert("Inscription réussie !");
+    } catch (error: any) {
+      alert(error.message);
+    }
   };
 
   return (
@@ -107,7 +132,7 @@ const SignUp = () => {
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-4">
               <div>
                 <label htmlFor="age" className="block text-sm font-medium text-gray-700">
                   Age
@@ -153,18 +178,40 @@ const SignUp = () => {
             </div>
 
             <div>
-              <label htmlFor="education" className="block text-sm font-medium text-gray-700">
-                Education Level
+  <label htmlFor="city" className="block text-sm font-medium text-gray-700">
+    City
+  </label>
+  <div className="mt-1 relative">
+    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+      <MapPin className="h-5 w-5 text-gray-400" />
+    </div>
+    <input
+      type="text"
+      name="city"
+      id="city"
+      required
+      className="appearance-none block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+      placeholder="City"
+      value={formData.city}
+      onChange={handleChange}
+    />
+  </div>
+</div>
+
+
+            <div>
+              <label htmlFor="educationLevel" className="block text-sm font-medium text-gray-700">
+                educationLevel Level
               </label>
               <select
-                id="education"
-                name="education"
+                id="educationLevel"
+                name="educationLevel"
                 required
                 className="mt-1 block w-full pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 rounded-md"
-                value={formData.education}
+                value={formData.educationLevel}
                 onChange={handleChange}
               >
-                <option value="">Select education level</option>
+                <option value="">Select educationLevel level</option>
                 <option value="high_school">High School</option>
                 <option value="bachelors">Bachelor's Degree</option>
                 <option value="masters">Master's Degree</option>
