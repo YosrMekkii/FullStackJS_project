@@ -11,6 +11,14 @@ import cors from 'cors'; // ✅ Import CORS
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+// ✅ Middleware pour activer CORS AVANT les routes
+app.use(cors({
+  origin: 'http://localhost:5173', // ✅ Autoriser uniquement le frontend
+  methods: 'GET,POST,PATCH,PUT,DELETE',
+  allowedHeaders: 'Content-Type,Authorization',
+}));
+
+// ✅ Middleware pour parser les requêtes JSON
 app.use(express.json());
 app.use(cors());
 
