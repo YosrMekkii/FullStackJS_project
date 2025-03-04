@@ -1,3 +1,4 @@
+
 const express = require("express");
 const router = express.Router();
 const userController = require("../controllers/userController");
@@ -30,6 +31,7 @@ router.put("/:id/skills", userController.updateSkills);
 
 // ✅ New route to update interests (skills wanted)
 router.put("/:id/interests", userController.updateInterests);
+
 
 
 router.patch("/:userId/visibility", async (req, res) => {

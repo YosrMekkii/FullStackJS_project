@@ -66,12 +66,11 @@ app.use('/skill', skillRoutes);
 app.use("/api", reportRoutes);
 
 
-// Gestion des erreurs 404
+
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
-// Lancer le serveur
 
 app.listen(PORT, () => {
   console.log(`🚀 Server is running on http://localhost:${PORT}`);

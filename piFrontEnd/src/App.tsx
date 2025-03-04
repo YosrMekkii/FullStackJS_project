@@ -15,6 +15,9 @@ import SkillDetails from './pages/SkillDetails';
 import ReCAPTCHA from "react-google-recaptcha";
 import AdminDashboard from './pages/AdminDashboard';
 import LearningSession from './pages/LearningSession';
+import SkillMatching from './pages/SkillMatching';
+import Navbar from './components/Navbar';
+
 const user = {
   name: 'John Doe',
   profilePicture: 'https://via.placeholder.com/150', // Use a valid image URL
@@ -30,6 +33,7 @@ const user = {
 function App() {
   return (
     <Router>
+      
       <div className="min-h-screen app-background">
         <nav className="bg-white shadow-md">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -65,12 +69,15 @@ function App() {
           <Route path="/skills/:id" element={<SkillDetails />} />
           <Route path="/admindashboard" element={<AdminDashboard />} />
           <Route path='/learningsession' element={<LearningSession />} />
+          <Route path="/matches" element={<SkillMatching />} />
+
 
 
         </Routes>
-      </div>
+        </div>
     </Router>
   );
+  
 }
 
 export default App;

@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const User = require("../models/user")
 require('dotenv').config();
-
+const Match = require('../models/Match');
 // ✅ Créer un utilisateur
 const createUser = async (req, res) => {
   try {
@@ -152,6 +152,24 @@ const getRecommendations = async (req, res) => {
   } catch (error) {
     console.error("Error finding recommendations:", error);
     res.status(500).json({ error: "Internal Server Error" });
+  }
+};
+
+// ✅ Fetch users with matching skills
+exports.getMatches = async (req, res) => {
+  const userId = req.params.id;  // Extract user ID from the request params
+  try {
+      // Fetch match data using userId
+      const match = await Match.findOne({ userId: userId });
+
+      if (match) {
+          return res.json(match);  // Send the match data if found
+      } else {
+          return res.status(404).json({ error: "Match not found" });  // Handle no match found
+      }
+  } catch (error) {
+      console.error(error);
+      return res.status(500).json({ error: "Server error" });  // Handle any server errors
   }
 };
 
