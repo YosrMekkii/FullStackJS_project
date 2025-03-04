@@ -60,7 +60,7 @@ const getAllUsers = async (req, res) => {
 // ✅ Fonction pour l'inscription d'un utilisateur
 const signupUser = async (req, res) => {
   try {
-    const { firstName, lastName, email, password, age, country, educationLevel } = req.body;
+    const { firstName, lastName, email, password, age, country, city, educationLevel } = req.body;
 
     // Vérification si l'utilisateur existe déjà
     const userExists = await User.findOne({ email });
@@ -79,6 +79,7 @@ const signupUser = async (req, res) => {
       password: hashedPassword,
       age,
       country,
+      city,
       educationLevel,
     });
 
