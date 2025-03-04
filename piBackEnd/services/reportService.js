@@ -40,3 +40,12 @@ export const deleteReport = async (id) => {
     throw new Error("Error deleting report: " + error.message);
   }
 };
+
+export const getTotalReports = async () => {
+  try {
+    const totalReports = await Report.countDocuments();
+    return totalReports;
+  } catch (error) {
+    throw new Error("Erreur lors du comptage des rapports: " + error.message);
+  }
+};

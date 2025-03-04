@@ -63,7 +63,7 @@ app.post("/api/login", async (req, res) => {
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/skill', skillRoutes);
-app.use("/api", reportRoutes);
+app.use("/api/reports", reportRoutes);
 
 
 // Gestion des erreurs 404

@@ -68,8 +68,14 @@ const getUsersWithCommonSkills = async (userId, userSkills) => {
   }
 };
 
+
+const getTotalUsers = async () => {
+  return await User.countDocuments();
+};
+
 // Export des fonctions
 module.exports = {
+  getTotalUsers,
   createUser,
   getUserById,
   updateUser,

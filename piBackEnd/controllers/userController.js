@@ -187,10 +187,21 @@ const updateInterests = async (req, res) => {
 };
 
 
+const getTotalUsers = async (req, res) => {
+  try {
+    const totalUsers = await userService.getTotalUsers();
+    res.status(200).json({ totalUsers });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors du comptage des utilisateurs", error });
+  }
+};
+
+
 
 
 
 module.exports = {
+  getTotalUsers,
   createUser,
   getUserById,
   updateUser,

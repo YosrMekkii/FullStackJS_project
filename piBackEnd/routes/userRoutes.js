@@ -50,4 +50,8 @@ router.patch("/:userId/visibility", async (req, res) => {
     // }
 });
 
+
+// ✅ Obtenir le nombre total d'utilisateurs
+router.get("/total/count", userController.getTotalUsers);
+
 module.exports = router;

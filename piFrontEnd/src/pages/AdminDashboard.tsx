@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState,useEffect } from 'react';
+import axios from 'axios';
 import { 
   Layout, 
   Home, 
@@ -143,49 +144,49 @@ const AdminDashboard = () => {
   const [activeTab, setActiveTab] = useState<'users' | 'experts' | 'reports'>('users');
   const [showActionModal, setShowActionModal] = useState(false);
   const [selectedReport, setSelectedReport] = useState<any>(null);
+  const [totalUsers, setTotalUsers] = useState(0);
+  const [totalReports, setTotalReports] = useState(0);
 
-  const users = [
-    {
-      id: 1,
-      name: "Sarah Miller",
-      email: "sarah.miller@example.com",
-      location: "Paris, France",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
-      status: "active",
-      joinDate: "2024-02-15",
-      expertApplication: {
-        status: "pending",
-        skills: ["JavaScript", "React", "Node.js"],
-        experience: "5 years of development experience",
-        submitted: "2024-03-01"
+  useEffect(() => {
+    const fetchTotalReports = async () => {
+      try {
+        const response = await axios.get("http://localhost:3000/api/reports/total/count");
+        setTotalReports(response.data.totalReports);
+      } catch (error) {
+        console.error("Error fetching total reports:", error);
       }
-    },
-    {
-      id: 2,
-      name: "John Cooper",
-      email: "john.cooper@example.com",
-      location: "London, UK",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop",
-      status: "active",
-      joinDate: "2024-01-20",
-      expertApplication: null
-    },
-    {
-      id: 3,
-      name: "Maria Garcia",
-      email: "maria.garcia@example.com",
-      location: "Barcelona, Spain",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop",
-      status: "suspended",
-      joinDate: "2024-02-01",
-      expertApplication: {
-        status: "approved",
-        skills: ["Spanish", "Teaching", "Translation"],
-        experience: "10 years of language teaching",
-        submitted: "2024-02-15"
+    };
+    fetchTotalReports();
+  }, []);
+
+  const [users, setUsers] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await axios.get("http://localhost:3000/api/users");
+        console.log("All Users Data:", response.data); // Vérifie les données reçues
+        setUsers(response.data); // Stocke la liste des utilisateurs
+      } catch (error) {
+        console.error("Error fetching users:", error);
       }
-    }
-  ];
+    };
+    
+    fetchUsers();
+  }, []);
+
+
+  useEffect(() => {
+    const fetchTotalUsers = async () => {
+      try {
+        const response = await axios.get("http://localhost:3000/api/users/total/count");
+        setTotalUsers(response.data.totalUsers);
+      } catch (error) {
+        console.error("Error fetching total users:", error);
+      }
+    };
+    fetchTotalUsers();
+  }, []);
 
   const reports = [
     {
@@ -221,10 +222,10 @@ const AdminDashboard = () => {
   ];
 
   const stats = {
-    totalUsers: 1250,
+    totalUsers: totalUsers,
     activeExperts: 45,
     pendingApplications: 12,
-    activeReports: 8
+    activeReports: totalReports
   };
 
   const handleExpertApproval = (userId: number, approved: boolean) => {
@@ -359,17 +360,17 @@ const AdminDashboard = () => {
                         className="h-10 w-10 rounded-full"
                       />
                       <div>
-                        <h3 className="text-sm font-medium text-gray-900">{user.name}</h3>
+                        <h3 className="text-sm font-medium text-gray-900">{user.firstName}</h3>
                         <p className="text-sm text-gray-500">{user.email}</p>
                       </div>
                     </div>
                     <div className="flex items-center space-x-4">
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        user.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                        user.status === true ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}>
                         {user.status}
                       </span>
-                      <p className="text-sm text-gray-500">Joined: {user.joinDate}</p>
+                      <p className="text-sm text-gray-500">Joined: {user.dateInscription}</p>
                       <button className="text-indigo-600 hover:text-indigo-900">
                         <Eye className="h-5 w-5" />
                       </button>
@@ -387,13 +388,13 @@ const AdminDashboard = () => {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center space-x-4">
                         <img
-                          src={user.avatar}
-                          alt={user.name}
+                          src={user.photoProfil}
+                          alt={user.firstName}
                           className="h-10 w-10 rounded-full"
                         />
                         <div>
-                          <h3 className="text-sm font-medium text-gray-900">{user.name}</h3>
-                          <p className="text-sm text-gray-500">{user.location}</p>
+                          <h3 className="text-sm font-medium text-gray-900">{user.firstName}</h3>
+                          <p className="text-sm text-gray-500">{user.country}</p>
                         </div>
                       </div>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
