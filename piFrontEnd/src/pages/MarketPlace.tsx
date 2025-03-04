@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { Link } from "react-router-dom";
-import { UserPlus, PlusCircle } from "lucide-react";
+import { UserPlus, PlusCircle, Flag } from "lucide-react";
 import WebDev from "../assets/webdev.jpeg";
 import GraphicDesign from "../assets/6718fbb85d1152665bfafec4_Untitled design (14).jpg";
 import DigitalMarketing from "../assets/Capa-do-Blog-Marketing-Digital.png";
@@ -9,12 +9,102 @@ import French from "../assets/image.png";
 import Marketing from "../assets/What-is-marketing.webp";
 
 const allSkills = [
-  { id: 1, name: "Web Development", provider: "Alice Johnson", category: "Tech", description: "Learn how to build full-stack web applications.", image: WebDev },
-  { id: 2, name: "Graphic Design", provider: "Michael Smith", category: "Design", description: "Master Photoshop, Illustrator, and Figma.", image: GraphicDesign },
-  { id: 3, name: "Digital Marketing", provider: "Sophia Lee", category: "Marketing", description: "Learn SEO, social media marketing, and advertising.", image: DigitalMarketing },
-  { id: 4, name: "AI & Machine Learning", provider: "Daniel Brown", category: "Tech", description: "Dive into neural networks, Python, and AI applications.", image: AI },
-  { id: 5, name: "Marketing", provider: "Ding Lee", category: "Marketing", description: "Marketing, social media marketing, and advertising.", image: Marketing },
-  { id: 6, name: "French", provider: "François Lacigalle", category: "Language", description: "Learn how to speak French fluently.", image: French }
+  { 
+    id: 1, 
+    name: "Web Development", 
+    provider: "Alice Johnson", 
+    category: "Tech", 
+    description: "Learn how to build full-stack web applications.",
+    image: WebDev,
+    rating: 4.8,
+    reviews: 124,
+    students: 1250,
+    expertise: "Expert",
+    languages: ["English", "Spanish"],
+    topics: ["HTML/CSS", "JavaScript", "React", "Node.js", "Database Design"],
+    schedule: "Flexible",
+    price: "50/hour"
+  },
+  { 
+    id: 2, 
+    name: "Graphic Design", 
+    provider: "Michael Smith", 
+    category: "Design", 
+    description: "Master Photoshop, Illustrator, and Figma.",
+    image: GraphicDesign,
+    rating: 4.9,
+    reviews: 89,
+    students: 850,
+    expertise: "Professional",
+    languages: ["English"],
+    topics: ["UI Design", "Brand Identity", "Typography", "Color Theory"],
+    schedule: "Weekends",
+    price: "45/hour"
+  },
+  { 
+    id: 3, 
+    name: "Digital Marketing", 
+    provider: "Sophia Lee", 
+    category: "Marketing", 
+    description: "Learn SEO, social media marketing, and advertising.",
+    image: DigitalMarketing,
+    rating: 4.7,
+    reviews: 156,
+    students: 2100,
+    expertise: "Expert",
+    languages: ["English", "Mandarin"],
+    topics: ["SEO", "Social Media", "Content Marketing", "Analytics"],
+    schedule: "Flexible",
+    price: "55/hour"
+  },
+  { 
+    id: 4, 
+    name: "AI & Machine Learning", 
+    provider: "Daniel Brown", 
+    category: "Tech", 
+    description: "Dive into neural networks, Python, and AI applications.",
+    image: AI,
+    rating: 4.9,
+    reviews: 78,
+    students: 620,
+    expertise: "Expert",
+    languages: ["English"],
+    topics: ["Python", "TensorFlow", "Neural Networks", "Computer Vision"],
+    schedule: "Weekdays",
+    price: "65/hour"
+  },
+  { 
+    id: 5, 
+    name: "Marketing", 
+    provider: "Ding Lee", 
+    category: "Marketing", 
+    description: "Marketing, social media marketing, and advertising.",
+    image: Marketing,
+    rating: 4.6,
+    reviews: 92,
+    students: 940,
+    expertise: "Professional",
+    languages: ["English", "Chinese"],
+    topics: ["Brand Strategy", "Market Research", "Campaign Planning"],
+    schedule: "Flexible",
+    price: "48/hour"
+  },
+  { 
+    id: 6, 
+    name: "French", 
+    provider: "François Lacigalle", 
+    category: "Language", 
+    description: "Learn how to speak French fluently.",
+    image: French,
+    rating: 4.9,
+    reviews: 203,
+    students: 1580,
+    expertise: "Native Speaker",
+    languages: ["French", "English"],
+    topics: ["Grammar", "Conversation", "Business French", "Culture"],
+    schedule: "Flexible",
+    price: "40/hour"
+  }
 ];
 
 const categories = ["All", "Tech", "Design", "Marketing", "Language"];
@@ -59,10 +149,32 @@ const SkillMarketplace = () => {
             <div key={skill.id} className="bg-white text-gray-900 rounded-3xl shadow-lg overflow-hidden transform transition duration-300 hover:scale-105">
               <img src={skill.image} alt={skill.name} className="w-full h-48 object-cover" />
               <div className="p-6">
-                <h2 className="text-2xl font-semibold mb-2">{skill.name}</h2>
+                <div className="flex justify-between items-start">
+                  <h2 className="text-2xl font-semibold mb-2">{skill.name}</h2>
+                  <button 
+                    className="text-gray-400 hover:text-red-500 transition-colors"
+                    title="Report this skill"
+                  >
+                    <Flag className="h-5 w-5" />
+                  </button>
+                </div>
                 <p className="text-gray-700 mb-4">{skill.description}</p>
-                <p className="mt-2 font-medium text-indigo-600">By {skill.provider}</p>
-                <div className="mt-4 flex justify-center">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center">
+                    <span className="text-yellow-400">★</span>
+                    <span className="ml-1 font-medium">{skill.rating}</span>
+                    <span className="text-gray-500 ml-1">({skill.reviews} reviews)</span>
+                  </div>
+                  <span className="text-indigo-600 font-medium">${skill.price}</span>
+                </div>
+                <p className="font-medium text-indigo-600">By {skill.provider}</p>
+                <div className="mt-4 flex justify-between items-center">
+                  <Link
+                    to={`/skills/${skill.id}`}
+                    className="text-indigo-600 hover:text-indigo-800 font-medium"
+                  >
+                    View Details
+                  </Link>
                   <Link
                     to={`/connect/${skill.id}`}
                     className="bg-indigo-600 text-white px-5 py-3 rounded-xl hover:bg-indigo-700 flex items-center space-x-2 shadow-md"

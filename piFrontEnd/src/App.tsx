@@ -11,6 +11,7 @@ import SkillMarketplace from './pages/MarketPlace';
 import PostSkill from './pages/PostSkill';
 import '../src/css/App.css'
 import Interests from './pages/interests';
+import SkillDetails from './pages/SkillDetails';
 import ReCAPTCHA from "react-google-recaptcha";
 import AdminDashboard from './pages/AdminDashboard';
 import LearningSession from './pages/LearningSession';
@@ -61,6 +62,7 @@ function App() {
           <Route path="/marketplace" element={<SkillMarketplace />} />
           <Route path="/postskill" element={<PostSkill />} />
           <Route path="/interests" element={<Interests />} />
+          <Route path="/skills/:id" element={<SkillDetails />} />
           <Route path="/admindashboard" element={<AdminDashboard />} />
           <Route path='/learningsession' element={<LearningSession />} />
 
