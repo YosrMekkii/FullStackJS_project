@@ -47,3 +47,13 @@ export const deleteReport = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+
+export const getTotalReports = async (req, res) => {
+  try {
+    const totalReports = await reportService.getTotalReports();
+    res.status(200).json({ totalReports });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
