@@ -4,8 +4,6 @@ import { v4 as uuidv4 } from 'uuid';
 import Editor from "@monaco-editor/react";
 import Peer from 'peerjs';
 import { io } from 'socket.io-client';
-import { Stage, Container, Graphics } from '@pixi/react';
-import * as PIXI from 'pixi.js';
 import { 
   Video,
   VideoOff,
@@ -20,7 +18,9 @@ import {
   X,
   Maximize2,
   Minimize2,
-  Eraser
+  Eraser,
+  Play,  // Added for the run button
+  Save // Added for saving code
 } from 'lucide-react';
 
 interface Message {
@@ -40,10 +40,16 @@ interface FileShare {
 }
 
 interface DrawingLine {
-  points: number[];
+  points: { x: number, y: number }[];
   color: string;
   width: number;
   tool: 'pen' | 'eraser';
+}
+
+interface CompileResult {
+  output: string;
+  error: string;
+  executionTime: number;
 }
 
 function App() {
@@ -61,14 +67,21 @@ function App() {
   const [tool, setTool] = useState<'pen' | 'eraser'>('pen');
   const [lines, setLines] = useState<DrawingLine[]>([]);
   const [currentLine, setCurrentLine] = useState<DrawingLine | null>(null);
+  const [isDrawing, setIsDrawing] = useState(false);
+  // Added for code compilation
+  const [compileResult, setCompileResult] = useState<CompileResult | null>(null);
+  const [isCompiling, setIsCompiling] = useState(false);
+  const [showOutput, setShowOutput] = useState(false);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const peerRef = useRef<Peer>();
   const streamRef = useRef<MediaStream>();
-  const graphicsRef = useRef<PIXI.Graphics>();
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const outputRef = useRef<HTMLDivElement>(null);
 
+  // Initialize WebRTC and other effects
   useEffect(() => {
     const initializeWebRTC = async () => {
       try {
@@ -95,18 +108,6 @@ function App() {
       }
     };
 
-//<<<<<<< HEAD
-//=======
-    /* Initialize Fabric.js canvas
-    if (canvasRef.current) {
-      fabricCanvasRef.current = new fabric.Canvas(canvasRef.current, {
-        isDrawingMode: true,
-        width: 800,
-        height: 600,
-      });
-    }*/
-
-//>>>>>>> 564d96224ee9c112b6c3527e94b1b9cb465814af
     initializeWebRTC();
 
     return () => {
@@ -118,6 +119,63 @@ function App() {
       }
     };
   }, []);
+
+  // Scroll to bottom of output when compile result changes
+  useEffect(() => {
+    if (outputRef.current && compileResult) {
+      outputRef.current.scrollTop = outputRef.current.scrollHeight;
+    }
+  }, [compileResult]);
+
+  // Redraw canvas when lines change
+  useEffect(() => {
+    if (!canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+    
+    // Clear canvas
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = '#FFFFFF';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    
+    // Redraw all lines
+    lines.forEach(drawLine);
+    
+    function drawLine(line: DrawingLine) {
+      if (!ctx) return;
+      
+      ctx.beginPath();
+      ctx.lineWidth = line.tool === 'eraser' ? 20 : line.width;
+      
+      if (line.tool === 'eraser') {
+        ctx.strokeStyle = '#FFFFFF';
+        ctx.globalCompositeOperation = 'destination-out';
+      } else {
+        ctx.strokeStyle = line.color;
+        ctx.globalCompositeOperation = 'source-over';
+      }
+      
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      for (let i = 0; i < line.points.length - 1; i++) {
+        ctx.moveTo(line.points[i].x, line.points[i].y);
+        ctx.lineTo(line.points[i + 1].x, line.points[i + 1].y);
+      }
+      
+      ctx.stroke();
+    }
+    
+    // Draw current line if it exists
+    if (currentLine) {
+      drawLine(currentLine);
+    }
+    
+    // Reset composite operation
+    ctx.globalCompositeOperation = 'source-over';
+  }, [lines, currentLine]);
 
   const toggleVideo = () => {
     if (streamRef.current) {
@@ -179,70 +237,187 @@ function App() {
 
   const clearWhiteboard = () => {
     setLines([]);
-    if (graphicsRef.current) {
-      graphicsRef.current.clear();
-    }
-  };
-
-  const draw = (g: PIXI.Graphics) => {
-    graphicsRef.current = g;
-    g.clear();
-
-    lines.forEach(line => {
-      g.lineStyle({
-        width: line.tool === 'eraser' ? 20 : 2,
-        color: line.tool === 'eraser' ? 0xFFFFFF : parseInt(line.color.replace('#', '0x')),
-        alpha: line.tool === 'eraser' ? 0 : 1,
-        cap: PIXI.LINE_CAP.ROUND,
-        join: PIXI.LINE_JOIN.ROUND,
-      });
-
-      for (let i = 0; i < line.points.length - 2; i += 2) {
-        g.moveTo(line.points[i], line.points[i + 1]);
-        g.lineTo(line.points[i + 2], line.points[i + 3]);
-      }
-    });
-
-    if (currentLine) {
-      g.lineStyle({
-        width: currentLine.tool === 'eraser' ? 20 : 2,
-        color: currentLine.tool === 'eraser' ? 0xFFFFFF : parseInt(currentLine.color.replace('#', '0x')),
-        alpha: currentLine.tool === 'eraser' ? 0 : 1,
-        cap: PIXI.LINE_CAP.ROUND,
-        join: PIXI.LINE_JOIN.ROUND,
-      });
-
-      for (let i = 0; i < currentLine.points.length - 2; i += 2) {
-        g.moveTo(currentLine.points[i], currentLine.points[i + 1]);
-        g.lineTo(currentLine.points[i + 2], currentLine.points[i + 3]);
+    
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
       }
     }
   };
 
-  const handlePointerDown = (event: PIXI.FederatedPointerEvent) => {
+  // Code compilation function
+  const compileCode = async () => {
+    setIsCompiling(true);
+    setShowOutput(true);
+    
+    try {
+      // In a real application, you would send the code to a backend service
+      // Here we're demonstrating a mock implementation
+      
+      const startTime = performance.now();
+      
+      // Mock API call to a code execution service
+      // Replace with actual API call in production
+      const response = await mockCompileRequest(code, language);
+      
+      const endTime = performance.now();
+      const executionTime = endTime - startTime;
+      
+      setCompileResult({
+        output: response.output,
+        error: response.error,
+        executionTime: executionTime
+      });
+    } catch (error) {
+      setCompileResult({
+        output: '',
+        error: 'Error connecting to compilation service',
+        executionTime: 0
+      });
+    } finally {
+      setIsCompiling(false);
+    }
+  };
+  
+  // This is a mock function that simulates sending code to a backend
+  // In a real application, replace this with an actual API call
+  const mockCompileRequest = async (code: string, language: string) => {
+    // Simulate network delay
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    
+    // For demonstration purposes only
+    // Simple evaluation for JavaScript code (NEVER use eval in production)
+    if (language === 'javascript') {
+      try {
+        // This is just for demo purposes, NEVER use in production
+        // Ideally, code would be executed in a sandboxed environment on the backend
+        let output = '';
+        const consoleLog = console.log;
+        // Override console.log to capture output
+        console.log = (...args) => {
+          output += args.join(' ') + '\n';
+        };
+        
+        // WARNING: This is extremely unsafe and only for demo purposes
+        // eslint-disable-next-line no-eval
+        eval(code);
+        
+        // Restore console.log
+        console.log = consoleLog;
+        
+        return { output, error: '' };
+      } catch (err) {
+        return { output: '', error: (err as Error).message };
+      }
+    }
+    
+    // For other languages, return a placeholder message
+    return {
+      output: `[Mock output] Running ${language} code...\nHello, world!`,
+      error: ''
+    };
+  };
+
+  const handleSaveCode = () => {
+    // Create a blob and download the code file
+    const blob = new Blob([code], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `code.${getFileExtension(language)}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+  
+  const getFileExtension = (lang: string) => {
+    switch (lang) {
+      case 'javascript': return 'js';
+      case 'typescript': return 'ts';
+      case 'python': return 'py';
+      case 'java': return 'java';
+      case 'cpp': return 'cpp';
+      default: return 'txt';
+    }
+  };
+
+  // Canvas drawing handlers
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
     const newLine: DrawingLine = {
-      points: [event.global.x, event.global.y],
+      points: [{ x, y }],
       color: currentColor,
       width: tool === 'eraser' ? 20 : 2,
       tool
     };
+    
     setCurrentLine(newLine);
+    setIsDrawing(true);
   };
 
-  const handlePointerMove = (event: PIXI.FederatedPointerEvent) => {
-    if (currentLine) {
-      const updatedLine = {
-        ...currentLine,
-        points: [...currentLine.points, event.global.x, event.global.y]
+  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing || !currentLine || !canvasRef.current) return;
+    
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    
+    const newPoint = { x, y };
+    
+    setCurrentLine(prevLine => {
+      if (!prevLine) return null;
+      
+      const updatedLine = { 
+        ...prevLine,
+        points: [...prevLine.points, newPoint]
       };
-      setCurrentLine(updatedLine);
-    }
+      
+      // Draw the latest segment immediately for smooth drawing
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        const lastPoint = prevLine.points[prevLine.points.length - 1];
+        
+        ctx.beginPath();
+        ctx.lineWidth = prevLine.tool === 'eraser' ? 20 : prevLine.width;
+        
+        if (prevLine.tool === 'eraser') {
+          ctx.strokeStyle = '#FFFFFF';
+          ctx.globalCompositeOperation = 'destination-out';
+        } else {
+          ctx.strokeStyle = prevLine.color;
+          ctx.globalCompositeOperation = 'source-over';
+        }
+        
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.moveTo(lastPoint.x, lastPoint.y);
+        ctx.lineTo(newPoint.x, newPoint.y);
+        ctx.stroke();
+        
+        // Reset composite operation
+        ctx.globalCompositeOperation = 'source-over';
+      }
+      
+      return updatedLine;
+    });
   };
 
-  const handlePointerUp = () => {
-    if (currentLine) {
-      setLines([...lines, currentLine]);
+  const endDrawing = () => {
+    if (isDrawing && currentLine) {
+      setLines(prevLines => [...prevLines, currentLine]);
       setCurrentLine(null);
+      setIsDrawing(false);
     }
   };
 
@@ -427,33 +602,101 @@ function App() {
 
                 {activeTab === 'code' && (
                   <div className="h-[600px] flex flex-col">
+                    {/* Code Editor Controls */}
                     <div className="flex justify-between items-center mb-4">
-                      <select
-                        value={language}
-                        onChange={(e) => setLanguage(e.target.value)}
-                        className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+                      <div className="flex items-center space-x-2">
+                        <select
+                          value={language}
+                          onChange={(e) => setLanguage(e.target.value)}
+                          className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+                        >
+                          <option value="javascript">JavaScript</option>
+                          <option value="typescript">TypeScript</option>
+                          <option value="python">Python</option>
+                          <option value="java">Java</option>
+                          <option value="cpp">C++</option>
+                        </select>
+                        <button
+                          onClick={compileCode}
+                          disabled={isCompiling}
+                          className={`flex items-center px-3 py-1 rounded ${
+                            isCompiling
+                              ? 'bg-gray-300 text-gray-500'
+                              : 'bg-green-600 text-white hover:bg-green-700'
+                          }`}
+                        >
+                          <Play className="h-4 w-4 mr-1" />
+                          {isCompiling ? 'Running...' : 'Run Code'}
+                        </button>
+                        <button
+                          onClick={handleSaveCode}
+                          className="flex items-center px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                        >
+                          <Save className="h-4 w-4 mr-1" />
+                          Save
+                        </button>
+                      </div>
+                      <button
+                        onClick={() => setShowOutput(!showOutput)}
+                        className="text-sm text-gray-500 hover:text-gray-700"
                       >
-                        <option value="javascript">JavaScript</option>
-                        <option value="typescript">TypeScript</option>
-                        <option value="python">Python</option>
-                        <option value="java">Java</option>
-                        <option value="cpp">C++</option>
-                      </select>
+                        {showOutput ? 'Hide Output' : 'Show Output'}
+                      </button>
                     </div>
-                    <div className="flex-1 border border-gray-200 rounded-lg overflow-hidden">
-                      <Editor
-                        height="100%"
-                        language={language}
-                        value={code}
-                        onChange={handleCodeChange}
-                        theme="vs-dark"
-                        options={{
-                          minimap: { enabled: false },
-                          fontSize: 14,
-                          lineNumbers: "on",
-                          automaticLayout: true,
-                        }}
-                      />
+
+                    {/* Split View: Editor and Output */}
+                    <div className={`flex flex-col flex-1 ${showOutput ? 'h-full' : ''}`}>
+                      {/* Editor */}
+                      <div className={`border border-gray-200 rounded-lg overflow-hidden ${
+                        showOutput ? 'h-1/2' : 'h-full'
+                      }`}>
+                        <Editor
+                          height="100%"
+                          language={language}
+                          value={code}
+                          onChange={handleCodeChange}
+                          theme="vs-dark"
+                          options={{
+                            minimap: { enabled: false },
+                            fontSize: 14,
+                            lineNumbers: "on",
+                            automaticLayout: true,
+                          }}
+                        />
+                      </div>
+
+                      {/* Output Panel */}
+                      {showOutput && (
+                        <div className="mt-4 h-1/2 flex flex-col">
+                          <div className="flex items-center justify-between">
+                            <h3 className="text-sm font-medium text-gray-700">Output</h3>
+                            {compileResult && (
+                              <span className="text-xs text-gray-500">
+                                {`Execution time: ${compileResult.executionTime.toFixed(2)}ms`}
+                              </span>
+                            )}
+                          </div>
+                          <div 
+                            ref={outputRef}
+                            className="flex-1 mt-2 p-3 bg-gray-900 text-gray-100 font-mono text-sm rounded overflow-y-auto"
+                          >
+                            {isCompiling ? (
+                              <div className="text-yellow-300">Compiling and running code...</div>
+                            ) : compileResult ? (
+                              <>
+                                {compileResult.output && (
+                                  <pre className="whitespace-pre-wrap text-green-300">{compileResult.output}</pre>
+                                )}
+                                {compileResult.error && (
+                                  <pre className="whitespace-pre-wrap text-red-400">{compileResult.error}</pre>
+                                )}
+                              </>
+                            ) : (
+                              <div className="text-gray-400">Run your code to see output here</div>
+                            )}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
@@ -491,19 +734,16 @@ function App() {
                       </button>
                     </div>
                     <div className="border border-gray-200 rounded-lg overflow-hidden">
-                      <Stage
+                      <canvas 
+                        ref={canvasRef}
                         width={800}
                         height={520}
-                        options={{ backgroundColor: 0xFFFFFF }}
-                        onPointerDown={handlePointerDown}
-                        onPointerMove={handlePointerMove}
-                        onPointerUp={handlePointerUp}
-                        onPointerUpOutside={handlePointerUp}
-                      >
-                        <Container>
-                          <Graphics draw={draw} />
-                        </Container>
-                      </Stage>
+                        className="bg-white"
+                        onMouseDown={startDrawing}
+                        onMouseMove={draw}
+                        onMouseUp={endDrawing}
+                        onMouseLeave={endDrawing}
+                      />
                     </div>
                   </div>
                 )}

@@ -300,6 +300,7 @@ const Profile = () => {
                       </div>
                     )}
                   </div>
+                  
                   <div className="mt-4 space-y-2">
                     <div className="flex items-center justify-between text-gray-600 group">
                       <div className="flex items-center">
