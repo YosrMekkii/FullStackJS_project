@@ -17,6 +17,7 @@ import AdminDashboard from './pages/AdminDashboard';
 import LearningSession from './pages/LearningSession';
 import SkillMatching from './pages/SkillMatching';
 import Navbar from './components/Navbar';
+import StudentInterface from './pages/studentLearningInterface';
 
 const user = {
   name: 'John Doe',
@@ -70,6 +71,7 @@ function App() {
           <Route path="/admindashboard" element={<AdminDashboard />} />
           <Route path='/learningsession' element={<LearningSession />} />
           <Route path="/matches" element={<SkillMatching />} />
+          <Route path="/studentInterface" element={<StudentInterface />} />
 
 
 

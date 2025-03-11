@@ -17,7 +17,8 @@ app.use(cors({
   methods: 'GET,POST,PATCH,PUT,DELETE',
   allowedHeaders: 'Content-Type,Authorization',
 }));
-
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }))
 // ✅ Middleware pour parser les requêtes JSON
 app.use(express.json());
 app.use(cors());
