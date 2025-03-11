@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import AIChat from './components/AIChat';
 import { 
   Mail, 
   MapPin, 
@@ -15,8 +16,9 @@ import {
   Lock,
   Shield,
   AlertTriangle,
- 
-  Trash2
+  Trash2,
+  Camera,
+  Upload
 } from 'lucide-react';
 
 const Profile = () => {
@@ -26,6 +28,8 @@ const Profile = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [showGDPRInfo, setShowGDPRInfo] = useState(false);
+  const [profilePicture, setProfilePicture] = useState('');
+  const fileInputRef = useRef(null);
   const [profile, setProfile] = useState({
     firstName: "",
     lastName: "",
@@ -35,6 +39,7 @@ const Profile = () => {
     city: "",
     educationLevel: "",
     bio: "",
+    profilePicture: "", // Added for storing base64 image
     skills: [],
     interests: [],
     achievements: [],
@@ -65,6 +70,10 @@ const Profile = () => {
             ...(response.data.visibilitySettings || {})
           }
         }));
+        
+        if (response.data.profilePicture) {
+          setProfilePicture(response.data.profilePicture);
+        }
       } catch (error) {
         console.error("Error fetching user data:", error);
       }
@@ -99,11 +108,51 @@ const Profile = () => {
 
   const handleSave = async () => {
     try {
-      await axios.put(`http://localhost:3000/api/users/${userId}`, profile);
+      const dataToSave = {
+        ...profile,
+        profilePicture: profilePicture
+      };
+      
+      await axios.put(`http://localhost:3000/api/users/${userId}`, dataToSave);
       setIsEditing(false);
     } catch (error) {
       console.error("Error saving profile:", error);
     }
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please select an image file (JPEG, PNG, GIF)');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      alert('File size must be less than 2MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      setProfilePicture(base64String);
+      // Also update in the profile state
+      setProfile(prev => ({
+        ...prev,
+        profilePicture: base64String
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current.click();
   };
 
   const toggleVisibility = () => {
@@ -123,8 +172,7 @@ const Profile = () => {
     }
   };
   
-  
-  const toggleFieldVisibility = async (field: keyof typeof profile.visibilitySettings) => {
+  const toggleFieldVisibility = async (field) => {
     try {
       const newSettings = {
         ...profile.visibilitySettings,
@@ -144,7 +192,6 @@ const Profile = () => {
     }
   };
   
-
   const handleDeleteProfile = () => {
     setShowDeleteConfirm(true);
   };
@@ -245,11 +292,35 @@ const Profile = () => {
           <div className="p-8">
             <div className="flex justify-between items-start">
               <div className="flex space-x-6">
-                <img
-                  src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop"
-                  alt="Profile"
-                  className="h-32 w-32 rounded-full border-4 border-white shadow-lg"
-                />
+                {/* Profile Picture with Upload UI */}
+                <div className="relative group">
+                  <input 
+                    type="file" 
+                    ref={fileInputRef}
+                    onChange={handleFileChange}
+                    accept="image/jpeg, image/png, image/gif"
+                    className="hidden"
+                  />
+                  {profilePicture ? (
+                    <img
+                      src={profilePicture}
+                      alt="Profile"
+                      className="h-32 w-32 rounded-full border-4 border-white shadow-lg object-cover"
+                    />
+                  ) : (
+                    <div className="h-32 w-32 rounded-full border-4 border-white shadow-lg bg-gray-200 flex items-center justify-center">
+                      <Camera className="h-10 w-10 text-gray-400" />
+                    </div>
+                  )}
+                  {isEditing && (
+                    <div 
+                      onClick={triggerFileInput}
+                      className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <Upload className="h-8 w-8 text-white" />
+                    </div>
+                  )}
+                </div>
                 <div>
                   <div className="flex items-center space-x-4">
                     <h1 className="text-2xl font-bold text-gray-900">
