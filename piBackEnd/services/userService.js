@@ -68,6 +68,25 @@ const getUsersWithCommonSkills = async (userId, userSkills) => {
   }
 };
 
+const authenticateToken = (req, res, next) => {
+  const token = req.header("Authorization")?.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ error: "Accès refusé, aucun token fourni" });
+  }
+
+  if (blacklist.has(token)) {
+    return res.status(403).json({ error: "Token invalide, veuillez vous reconnecter" });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: "Token invalide" });
+    req.user = user;
+    next();
+  });
+};
+
+
 // Export des fonctions
 module.exports = {
   createUser,
@@ -77,4 +96,5 @@ module.exports = {
   getAllUsers,
   getUserByEmail,
   getUsersWithCommonSkills , // Export de la nouvelle fonction
+  authenticateToken,
 };

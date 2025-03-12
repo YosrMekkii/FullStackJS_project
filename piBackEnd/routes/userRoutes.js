@@ -31,6 +31,9 @@ router.put("/:id/skills", userController.updateSkills);
 // ✅ New route to update interests (skills wanted)
 router.put("/:id/interests", userController.updateInterests);
 
+// ✅ Route pour la déconnexion
+router.post("/logout", userController.logoutUser);
+
 
 router.patch("/:userId/visibility", async (req, res) => {
     // const { userId } = req.params;

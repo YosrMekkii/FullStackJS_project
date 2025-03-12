@@ -125,11 +125,12 @@ const loginUser = async (req, res) => {
     res.status(200).json({
       message: 'Connexion réussie',
       token,
-      user: { id: user._id, email: user.email }
+      user: { id: user._id,firstName: user.firstName,lastName: user.lastName, email: user.email }
     });
   } catch (error) {
     console.error('Erreur lors de la connexion:', error);
     res.status(500).json({ error: 'Erreur serveur' });}}
+
 // ✅ Recommander des utilisateurs avec des compétences communes
 const getRecommendations = async (req, res) => {
   const userId = req.query.userId;
@@ -187,6 +188,22 @@ const updateInterests = async (req, res) => {
 };
 
 
+const blacklist = new Set(); // Liste noire pour stocker les tokens invalidés
+
+const logoutUser = async (req, res) => {
+  try {
+    const token = req.header("Authorization")?.split(" ")[1]; // Récupérer le token depuis le header
+
+    if (!token) {
+      return res.status(400).json({ error: "Aucun token fourni" });
+    }
+
+    blacklist.add(token); // Ajouter le token à la liste noire
+    res.status(200).json({ message: "Déconnexion réussie" });
+  } catch (error) {
+    res.status(500).json({ error: "Erreur lors de la déconnexion" });
+  }
+};
 
 
 
@@ -201,4 +218,5 @@ module.exports = {
   getRecommendations,// Export the recommendation function
   updateSkills,
   updateInterests,
+  logoutUser,
 };
