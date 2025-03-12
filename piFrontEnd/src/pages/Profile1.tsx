@@ -55,8 +55,21 @@ const Profile = () => {
     },
     profileImagePath: '',
   });
-
-  const userId = "67d0c1f2afe3e10790d65690"; 
+  const [user, setUser] = useState<any | null>(null);
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error("Erreur lors du parsing des données utilisateur :", error);
+        localStorage.removeItem("user"); // Supprime les données corrompues
+      }
+    }
+  }, []);
+  const userId = user ? user.id : null;
+ 
 
   useEffect(() => {
     const fetchUserData = async () => {
