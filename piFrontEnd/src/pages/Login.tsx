@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock } from 'lucide-react';
 import ReCAPTCHA from "react-google-recaptcha";
 
@@ -7,6 +7,9 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+  const navigate = useNavigate();
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -16,13 +19,9 @@ const Login = () => {
       return;
     }
 
-    // Envoyer les données de connexion avec le token reCAPTCHA
-    console.log("Email:", email);
-    console.log("Password:", password);
-    console.log("reCAPTCHA Token:", recaptchaToken);
+    setLoading(true);
 
-    // Envoyer les données au backend
-    fetch("http://localhost:3000/api/login", {
+    fetch("http://localhost:3000/api/users/login", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -31,14 +30,25 @@ const Login = () => {
     })
       .then((res) => res.json())
       .then((data) => {
-        console.log("Réponse du serveur:", data);
-        if (data.success) {
-          alert("Connexion réussie !");
+        setLoading(false);
+
+        if (data.message === "Connexion réussie") {
+          // Stocker l'utilisateur dans le localStorage
+          localStorage.setItem('user', JSON.stringify(data.user));
+          // Rediriger vers la page d'accueil et mettre à jour l'état utilisateur dans le parent
+          navigate('/', { replace: true });
+                  // Forcer un rafraîchissement immédiat de l'état
+        window.location.reload(); // Rafraîchit la page de manière automatique
+          
         } else {
-          alert("Échec de la connexion : " + data.message);
+          setErrorMessage(data.message || "Échec de la connexion");
         }
       })
-      .catch((err) => console.error("Erreur:", err));
+      .catch((err) => {
+        setLoading(false);
+        console.error("Erreur:", err);
+        setErrorMessage("Une erreur est survenue. Veuillez réessayer.");
+      });
   };
 
   const onChange = (token: string | null) => {
@@ -103,6 +113,10 @@ const Login = () => {
             </div>
           </div>
 
+          {errorMessage && (
+            <div className="text-red-500 text-sm mt-2">{errorMessage}</div>
+          )}
+
           <div className="flex items-center justify-between">
             <div className="flex items-center">
               <input
@@ -124,16 +138,17 @@ const Login = () => {
           </div>
 
           <ReCAPTCHA
-        sitekey="6LcGAOAqAAAAAKAW6BF13HT6FCGSM_xJ5ks2Ss0D"
-        onChange={onChange}
-      />
+            sitekey="6LcGAOAqAAAAAKAW6BF13HT6FCGSM_xJ5ks2Ss0D"
+            onChange={onChange}
+          />
 
           <div>
             <button
               type="submit"
               className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={loading}
             >
-              Sign in
+              {loading ? "Loading..." : "Sign in"}
             </button>
           </div>
         </form>

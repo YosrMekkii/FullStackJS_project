@@ -13,7 +13,57 @@ const storage = multer.diskStorage({
   filename: function (req, file, cb) {
     cb(null, Date.now() + path.extname(file.originalname)); // 🔥 Nom unique
   },
-});
+  });
+/*// ✅ Route pour créer un utilisateur
+router.post("/", userController.createUser);
+
+// ✅ Route pour récupérer tous les utilisateurs
+router.get("/", userController.getAllUsers);
+
+// ✅ Route pour récupérer un utilisateur par ID
+router.get("/:id", userController.getUserById);
+
+// ✅ Route pour mettre à jour un utilisateur
+router.put("/:id", userController.updateUser);
+
+// ✅ Route pour supprimer un utilisateur
+router.delete("/:id", userController.deleteUser);
+
+// Route d'inscription
+router.post('/signup', userController.signupUser);
+
+// Route de connexion
+router.post('/login', userController.loginUser);
+// ✅ Route pour récupérer les recommandations basées sur les compétences
+router.get("/recommend", userController.getRecommendations);
+
+// ✅ New route to update skills (skills offered)
+router.put("/:id/skills", userController.updateSkills);
+
+// ✅ New route to update interests (skills wanted)
+router.put("/:id/interests", userController.updateInterests);
+
+// ✅ Route pour la déconnexion
+router.post("/logout", userController.logoutUser);
+
+
+router.patch("/:userId/visibility", async (req, res) => {
+    // const { userId } = req.params;
+    // const { isVisible } = req.body;
+
+    // try {
+    //     const user = await User.findByIdAndUpdate(userId, { isVisible }, { new: true });
+
+    //     if (!user) {
+    //         return res.status(404).json({ error: "User not found" });
+    //     }
+
+    //     res.json({ message: "Visibility updated successfully", user });
+    // } catch (error) {
+    //     console.error("Error updating visibility:", error);
+    //     res.status(500).json({ error: "Internal server error" });
+    // }
+*/
 
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith("image/")) {
@@ -38,6 +88,7 @@ router.put("/:id/skills", userController.updateSkills);
 router.put("/:id/interests", userController.updateInterests);
 router.get("/total/count", userController.getTotalUsers);
 router.post("/upload/:userId", upload.single("profileImage"), userController.uploadProfileImage);
+router.post("/logout", userController.logoutUser);
 
 
 export default router; // ✅ Export par défaut
