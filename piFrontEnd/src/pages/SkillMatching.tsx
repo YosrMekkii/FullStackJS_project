@@ -24,6 +24,7 @@ interface SkillUser {
   rating: number;
   experience: string;
   achievements: string[];
+  profileImagePath: '',
 }
 
 const SkillMatching = () => {
@@ -326,7 +327,7 @@ const SkillMatching = () => {
               {/* User Image */}
               <div 
                 className="relative h-[60%] bg-cover bg-center"
-                style={{ backgroundImage: `url(${currentUser.avatar})` }}
+                style={{ backgroundImage: `url(${`http://localhost:3000/${currentUser.profileImagePath}`})` }}
               >
                 {/* Swipe Indicators */}
                 {offsetX > 50 && (

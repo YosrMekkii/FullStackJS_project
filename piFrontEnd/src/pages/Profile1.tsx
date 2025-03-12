@@ -1,5 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
+import AIChat from './components/AIChat';
 import { 
   Mail, 
   MapPin, 
@@ -15,8 +16,9 @@ import {
   Lock,
   Shield,
   AlertTriangle,
- 
-  Trash2
+  Trash2,
+  Camera,
+  Upload
 } from 'lucide-react';
 
 const Profile = () => {
@@ -26,6 +28,8 @@ const Profile = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [showGDPRInfo, setShowGDPRInfo] = useState(false);
+  const [profilePicture, setProfilePicture] = useState('');
+  const fileInputRef = useRef(null);
   const [profile, setProfile] = useState({
     firstName: "",
     lastName: "",
@@ -35,6 +39,7 @@ const Profile = () => {
     city: "",
     educationLevel: "",
     bio: "",
+    profilePicture: "", // Added for storing base64 image
     skills: [],
     interests: [],
     achievements: [],
@@ -66,6 +71,10 @@ const Profile = () => {
             ...(response.data.visibilitySettings || {})
           }
         }));
+        
+        if (response.data.profilePicture) {
+          setProfilePicture(response.data.profilePicture);
+        }
       } catch (error) {
         console.error("Error fetching user data:", error);
       }
@@ -100,11 +109,51 @@ const Profile = () => {
 
   const handleSave = async () => {
     try {
-      await axios.put(`http://localhost:3000/api/users/${userId}`, profile);
+      const dataToSave = {
+        ...profile,
+        profilePicture: profilePicture
+      };
+      
+      await axios.put(`http://localhost:3000/api/users/${userId}`, dataToSave);
       setIsEditing(false);
     } catch (error) {
       console.error("Error saving profile:", error);
     }
+  };
+
+  const handleFileChange = (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
+    if (!validTypes.includes(file.type)) {
+      alert('Please select an image file (JPEG, PNG, GIF)');
+      return;
+    }
+
+    // Validate file size (max 2MB)
+    const maxSize = 2 * 1024 * 1024; // 2MB
+    if (file.size > maxSize) {
+      alert('File size must be less than 2MB');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const base64String = reader.result;
+      setProfilePicture(base64String);
+      // Also update in the profile state
+      setProfile(prev => ({
+        ...prev,
+        profilePicture: base64String
+      }));
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current.click();
   };
 
   const toggleVisibility = () => {
@@ -124,8 +173,7 @@ const Profile = () => {
     }
   };
   
-  
-  const toggleFieldVisibility = async (field: keyof typeof profile.visibilitySettings) => {
+  const toggleFieldVisibility = async (field) => {
     try {
       const newSettings = {
         ...profile.visibilitySettings,
@@ -145,7 +193,6 @@ const Profile = () => {
     }
   };
   
-
   const handleDeleteProfile = () => {
     setShowDeleteConfirm(true);
   };
@@ -301,6 +348,7 @@ const Profile = () => {
                       </div>
                     )}
                   </div>
+                  
                   <div className="mt-4 space-y-2">
                     <div className="flex items-center justify-between text-gray-600 group">
                       <div className="flex items-center">
