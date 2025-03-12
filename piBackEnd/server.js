@@ -27,7 +27,7 @@ app.use(cors({
 }));
 
 // Connexion à MongoDB
-mongoose.connect('mongodb+srv://ghoumadhia01:skillexchange123@cluster0.d5mue.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0')
+mongoose.connect('mongodb://127.0.0.1:27017/skillexchangedb')
   .then(() => console.log("✅ Connected to MongoDB!"))
   .catch(error => console.error("❌ Database connection error:", error));
 
