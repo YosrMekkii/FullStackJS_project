@@ -481,7 +481,7 @@ const AdminDashboard = () => {
                           />
                           <div>
                             <p className="text-xs text-gray-500">Reporter</p>
-                            <p className="text-sm font-medium text-gray-900">{report.reporter.name}</p>
+                            <p className="text-sm font-medium text-gray-900">{report.reporter.firstName}</p>
                           </div>
                         </div>
                         <AlertTriangle className="h-5 w-5 text-red-500" />
