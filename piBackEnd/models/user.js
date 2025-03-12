@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const path = require("path");
 
 const userSchema = new mongoose.Schema({
   // 🔹 Identifiant unique
@@ -25,7 +26,10 @@ const userSchema = new mongoose.Schema({
   skills: { type: [String], default: [] },
   achievements: { type: [String], default: [] },
   bio: { type: String, default: "" },
-  photoProfil: { type: String, default: "" },
+   // 📷 Image de profil
+   profileImagePath: { type: String, default: "" },  // Chemin d'accès du fichier
+   profileImageFilename: { type: String, default: "" }, // Nom du fichier
+  // 🔹 Statistiques 
   dateInscription: { type: Date, default: Date.now },
   // 🔹 Interaction Data
   interactions: [{ type: mongoose.Schema.Types.ObjectId, ref: "user" }],  // ✅ Users they engaged with

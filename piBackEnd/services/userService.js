@@ -73,8 +73,25 @@ const getTotalUsers = async () => {
   return await User.countDocuments();
 };
 
+
+const uploadProfileImageService = async (userId, filePath) => {
+  try {
+    const user = await User.findById(userId);
+    if (!user) throw new Error("Utilisateur non trouvé");
+
+    user.profileImagePath = filePath; // Assigne le chemin du fichier
+    await user.save();
+
+    return user;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+
 // Export des fonctions
 module.exports = {
+  uploadProfileImageService,
   getTotalUsers,
   createUser,
   getUserById,

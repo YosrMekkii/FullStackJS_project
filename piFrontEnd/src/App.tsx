@@ -34,6 +34,7 @@ const user = {
 function App() {
   return (
     <Router>
+      {/* <Navbar /> */}
       
       <div className="min-h-screen app-background">
         <nav className="bg-white shadow-md">
