@@ -47,10 +47,11 @@ const Profile = () => {
       skills: true,
       interests: true,
       matches: true
-    }
+    },
+    profileImagePath: '',
   });
 
-  const userId = "67b9091ad4e96e044c86c941"; 
+  const userId = "67d0c1f2afe3e10790d65690"; 
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -246,8 +247,8 @@ const Profile = () => {
             <div className="flex justify-between items-start">
               <div className="flex space-x-6">
                 <img
-                  src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=200&h=200&fit=crop"
-                  alt="Profile"
+                src={`http://localhost:3000/${profile.profileImagePath}`}
+                alt="Profile"
                   className="h-32 w-32 rounded-full border-4 border-white shadow-lg"
                 />
                 <div>

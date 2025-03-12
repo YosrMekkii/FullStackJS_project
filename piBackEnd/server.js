@@ -119,6 +119,7 @@ app.use('/api/users', userRoutes);
 app.use('/skill', skillRoutes);
 app.use("/api/reports", reportRoutes);
 
+app.use('/uploads', express.static('uploads'));
 
 
 app.use((req, res) => {
