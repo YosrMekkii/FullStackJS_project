@@ -291,6 +291,10 @@ const SkillMatching = () => {
   }
 
   const currentUser = users[currentIndex];
+  console.log("Image Path:", currentUser.profileImagePath);
+console.log("Full URL:", `http://localhost:3000/${currentUser.profileImagePath}`);
+
+const imagePath = currentUser.profileImagePath.replace(/\\/g, "/");
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white py-8 px-4">
@@ -326,9 +330,9 @@ const SkillMatching = () => {
             <div className="h-full flex flex-col">
               {/* User Image */}
               <div 
-                className="relative h-[60%] bg-cover bg-center"
-                style={{ backgroundImage: `url(${`http://localhost:3000/${currentUser.profileImagePath}`})` }}
-              >
+  className="relative h-[60%] bg-cover bg-center"
+  style={{ backgroundImage: `url(http://localhost:3000/${imagePath})` }}
+>
                 {/* Swipe Indicators */}
                 {offsetX > 50 && (
                   <div className="absolute top-4 left-4 bg-green-500 text-white px-4 py-2 rounded-full font-bold transform -rotate-12 border-2 border-white">
