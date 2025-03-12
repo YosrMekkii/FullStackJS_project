@@ -110,6 +110,8 @@ const allSkills = [
 const categories = ["All", "Tech", "Design", "Marketing", "Language"];
 
 const SkillMarketplace = () => {
+  const isAuthenticated = !!localStorage.getItem("user"); // Vérifie si un utilisateur est connecté
+
   const [selectedCategory, setSelectedCategory] = useState("All");
   const filteredSkills = selectedCategory === "All" ? allSkills : allSkills.filter(skill => skill.category === selectedCategory);
 
@@ -176,12 +178,12 @@ const SkillMarketplace = () => {
                     View Details
                   </Link>
                   <Link
-                    to={`/connect/${skill.id}`}
-                    className="bg-indigo-600 text-white px-5 py-3 rounded-xl hover:bg-indigo-700 flex items-center space-x-2 shadow-md"
-                  >
-                    <UserPlus className="h-6 w-6" />
-                    <span>Connect</span>
-                  </Link>
+  to={isAuthenticated ? `/connect/${skill.id}` : "/login"}
+  className="bg-indigo-600 text-white px-5 py-3 rounded-xl hover:bg-indigo-700 flex items-center space-x-2 shadow-md"
+>
+  <UserPlus className="h-6 w-6" />
+  <span>Connect</span>
+</Link>
                 </div>
               </div>
             </div>
