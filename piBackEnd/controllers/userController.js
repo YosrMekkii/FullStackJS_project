@@ -4,6 +4,8 @@ const jwt = require("jsonwebtoken");
 const User = require("../models/user")
 require('dotenv').config();
 const Match = require('../models/Match');
+
+
 // ✅ Créer un utilisateur
 const createUser = async (req, res) => {
   try {
@@ -60,8 +62,12 @@ const getAllUsers = async (req, res) => {
 // ✅ Fonction pour l'inscription d'un utilisateur
 const signupUser = async (req, res) => {
   try {
+    console.log("Données reçues :", req.body); 
     const { firstName, lastName, email, password, age, country, city, educationLevel } = req.body;
 
+    if (!password) {
+      return res.status(400).json({ error: "Le mot de passe est requis." });
+    }
     // Vérification si l'utilisateur existe déjà
     const userExists = await User.findOne({ email });
     if (userExists) {
@@ -125,11 +131,12 @@ const loginUser = async (req, res) => {
     res.status(200).json({
       message: 'Connexion réussie',
       token,
-      user: { id: user._id, email: user.email }
+      user: { id: user._id,firstName: user.firstName,lastName: user.lastName, email: user.email }
     });
   } catch (error) {
     console.error('Erreur lors de la connexion:', error);
     res.status(500).json({ error: 'Erreur serveur' });}}
+
 // ✅ Recommander des utilisateurs avec des compétences communes
 const getRecommendations = async (req, res) => {
   const userId = req.query.userId;
@@ -216,9 +223,54 @@ const getTotalUsers = async (req, res) => {
 
 
 
+// Fonction pour gérer l'upload de l'image de profil
+const uploadProfileImage = async (req, res) => {
+  const { userId } = req.params;
+  const { file } = req; // Assurez-vous que le fichier est bien récupéré
+  
+  console.log("userId reçu :", userId);
+  console.log("Fichier reçu :", file); // Debug pour vérifier le fichier reçu
+
+  try {
+    const user = await User.findById(userId);
+    if (!user) {
+      throw new Error("Utilisateur non trouvé");
+    }
+
+    // Logique de mise à jour de l'image
+    user.profileImagePath = file.path; // Ou le champ où tu veux stocker l'image
+    await user.save();
+    
+    res.status(200).json({ message: "Image de profil téléchargée avec succès", user });
+  } catch (error) {
+    console.error("Erreur dans le contrôleur :", error);
+    res.status(500).json({ error: error.message });
+  }
+};
+
+
+
+const blacklist = new Set(); // Liste noire pour stocker les tokens invalidés
+
+const logoutUser = async (req, res) => {
+  try {
+    const token = req.header("Authorization")?.split(" ")[1]; // Récupérer le token depuis le header
+
+    if (!token) {
+      return res.status(400).json({ error: "Aucun token fourni" });
+    }
+
+    blacklist.add(token); // Ajouter le token à la liste noire
+    res.status(200).json({ message: "Déconnexion réussie" });
+  } catch (error) {
+    res.status(500).json({ error: "Erreur lors de la déconnexion" });
+  }
+};
+
 
 
 module.exports = {
+  uploadProfileImage,
   getTotalUsers,
   createUser,
   getUserById,
@@ -230,4 +282,5 @@ module.exports = {
   getRecommendations,// Export the recommendation function
   updateSkills,
   updateInterests,
+  logoutUser,
 };

@@ -73,8 +73,43 @@ const getTotalUsers = async () => {
   return await User.countDocuments();
 };
 
+
+const uploadProfileImageService = async (userId, filePath) => {
+  try {
+    const user = await User.findById(userId);
+    if (!user) throw new Error("Utilisateur non trouvé");
+
+    user.profileImagePath = filePath; // Assigne le chemin du fichier
+    await user.save();
+
+    return user;
+  } catch (error) {
+    throw new Error(error.message);
+  }
+};
+
+const authenticateToken = (req, res, next) => {
+  const token = req.header("Authorization")?.split(" ")[1];
+
+  if (!token) {
+    return res.status(401).json({ error: "Accès refusé, aucun token fourni" });
+  }
+
+  if (blacklist.has(token)) {
+    return res.status(403).json({ error: "Token invalide, veuillez vous reconnecter" });
+  }
+
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
+    if (err) return res.status(403).json({ error: "Token invalide" });
+    req.user = user;
+    next();
+  });
+};
+
+
 // Export des fonctions
 module.exports = {
+  uploadProfileImageService,
   getTotalUsers,
   createUser,
   getUserById,
@@ -83,4 +118,6 @@ module.exports = {
   getAllUsers,
   getUserByEmail,
   getUsersWithCommonSkills , // Export de la nouvelle fonction
+  authenticateToken,
 };
+

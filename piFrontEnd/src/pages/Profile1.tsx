@@ -52,10 +52,24 @@ const Profile = () => {
       skills: true,
       interests: true,
       matches: true
-    }
+    },
+    profileImagePath: '',
   });
-
-  const userId = "67d14174903ade9d03988f5d"; 
+  const [user, setUser] = useState<any | null>(null);
+  useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+      } catch (error) {
+        console.error("Erreur lors du parsing des données utilisateur :", error);
+        localStorage.removeItem("user"); // Supprime les données corrompues
+      }
+    }
+  }, []);
+  const userId = user ? user.id : null;
+ 
 
   useEffect(() => {
     const fetchUserData = async () => {
@@ -292,35 +306,11 @@ const Profile = () => {
           <div className="p-8">
             <div className="flex justify-between items-start">
               <div className="flex space-x-6">
-                {/* Profile Picture with Upload UI */}
-                <div className="relative group">
-                  <input 
-                    type="file" 
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    accept="image/jpeg, image/png, image/gif"
-                    className="hidden"
-                  />
-                  {profilePicture ? (
-                    <img
-                      src={profilePicture}
-                      alt="Profile"
-                      className="h-32 w-32 rounded-full border-4 border-white shadow-lg object-cover"
-                    />
-                  ) : (
-                    <div className="h-32 w-32 rounded-full border-4 border-white shadow-lg bg-gray-200 flex items-center justify-center">
-                      <Camera className="h-10 w-10 text-gray-400" />
-                    </div>
-                  )}
-                  {isEditing && (
-                    <div 
-                      onClick={triggerFileInput}
-                      className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full cursor-pointer opacity-0 group-hover:opacity-100 transition-opacity"
-                    >
-                      <Upload className="h-8 w-8 text-white" />
-                    </div>
-                  )}
-                </div>
+                <img
+                src={`http://localhost:3000/${profile.profileImagePath}`}
+                alt="Profile"
+                  className="h-32 w-32 rounded-full border-4 border-white shadow-lg"
+                />
                 <div>
                   <div className="flex items-center space-x-4">
                     <h1 className="text-2xl font-bold text-gray-900">

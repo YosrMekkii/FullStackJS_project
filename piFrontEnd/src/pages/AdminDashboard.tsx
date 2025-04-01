@@ -187,39 +187,56 @@ const AdminDashboard = () => {
     };
     fetchTotalUsers();
   }, []);
+  const [reports, setReports] = useState<any[]>([]);
 
-  const reports = [
-    {
-      id: 1,
-      reporter: {
-        name: "John Cooper",
-        avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop"
-      },
-      reported: {
-        name: "Alex Thompson",
-        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop"
-      },
-      reason: "Inappropriate behavior during session",
-      details: "User was consistently late and unprofessional",
-      date: "2024-03-01",
-      status: "pending"
-    },
-    {
-      id: 2,
-      reporter: {
-        name: "Maria Garcia",
-        avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop"
-      },
-      reported: {
-        name: "Sarah Miller",
-        avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop"
-      },
-      reason: "Misrepresented skill level",
-      details: "Claimed to be expert but showed beginner level knowledge",
-      date: "2024-02-28",
-      status: "resolved"
-    }
-  ];
+  useEffect(() => {
+    const fetchUsers = async () => {
+      try {
+        const response = await axios.get("http://localhost:3000/api/reports");
+        console.log("All Reports Data:", response.data); // Vérifie les données reçues
+        setReports(response.data); // Stocke la liste des utilisateurs
+      } catch (error) {
+        console.error("Error fetching reports:", error);
+      }
+    };
+    
+    fetchUsers();
+    console.log(reports);
+  }, []);
+
+
+  // const reports = [
+  //   {
+  //     id: 1,
+  //     reporter: {
+  //       name: "John Cooper",
+  //       avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop"
+  //     },
+  //     reported: {
+  //       name: "Alex Thompson",
+  //       avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop"
+  //     },
+  //     reason: "Inappropriate behavior during session",
+  //     details: "User was consistently late and unprofessional",
+  //     date: "2024-03-01",
+  //     status: "pending"
+  //   },
+  //   {
+  //     id: 2,
+  //     reporter: {
+  //       name: "Maria Garcia",
+  //       avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop"
+  //     },
+  //     reported: {
+  //       name: "Sarah Miller",
+  //       avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop"
+  //     },
+  //     reason: "Misrepresented skill level",
+  //     details: "Claimed to be expert but showed beginner level knowledge",
+  //     date: "2024-02-28",
+  //     status: "resolved"
+  //   }
+  // ];
 
   const stats = {
     totalUsers: totalUsers,
@@ -354,11 +371,11 @@ const AdminDashboard = () => {
                 {users.map((user) => (
                   <div key={user.id} className="p-6 flex items-center justify-between hover:bg-gray-50">
                     <div className="flex items-center space-x-4">
-                      <img
-                        src={user.avatar}
-                        alt={user.name}
-                        className="h-10 w-10 rounded-full"
-                      />
+                    <img
+            src={`http://localhost:3000/${user.profileImagePath}`}  // Chemin de l'image de l'utilisateur
+            alt={user.firstName}  // Utilisation du prénom de l'utilisateur pour le texte alternatif
+            className="h-10 w-10 rounded-full"
+          />
                       <div>
                         <h3 className="text-sm font-medium text-gray-900">{user.firstName}</h3>
                         <p className="text-sm text-gray-500">{user.email}</p>
@@ -457,26 +474,26 @@ const AdminDashboard = () => {
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center space-x-8">
                         <div className="flex items-center space-x-2">
-                          <img
-                            src={report.reporter.avatar}
-                            alt={report.reporter.name}
+                        <img
+                            src={`http://localhost:3000/${report.reporter.profileImagePath}`}  // Chemin de l'image de l'utilisateur
+                            alt={report.reporter.firstName}
                             className="h-8 w-8 rounded-full"
                           />
                           <div>
                             <p className="text-xs text-gray-500">Reporter</p>
-                            <p className="text-sm font-medium text-gray-900">{report.reporter.name}</p>
+                            <p className="text-sm font-medium text-gray-900">{report.reporter.firstName}</p>
                           </div>
                         </div>
                         <AlertTriangle className="h-5 w-5 text-red-500" />
                         <div className="flex items-center space-x-2">
                           <img
-                            src={report.reported.avatar}
-                            alt={report.reported.name}
+                            src={`http://localhost:3000/${report.reportedUser.profileImagePath}`}  // Chemin de l'image de l'utilisateur
+                            alt={report.reportedUser.firstName}
                             className="h-8 w-8 rounded-full"
                           />
                           <div>
                             <p className="text-xs text-gray-500">Reported User</p>
-                            <p className="text-sm font-medium text-gray-900">{report.reported.name}</p>
+                            <p className="text-sm font-medium text-gray-900">{report.reportedUser.firstName}</p>
                           </div>
                         </div>
                       </div>

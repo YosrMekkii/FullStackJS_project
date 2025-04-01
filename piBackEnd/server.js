@@ -1,27 +1,30 @@
 import express from 'express';
 import mongoose from 'mongoose';
+import multer from 'multer';
+import path from 'path';
+import url from 'url'; 
+import fs from 'fs';
+
 
 import userRoutes from './routes/userRoutes.js';
 import skillRoutes from './routes/skillRoutes.js';
 import reportRoutes from "./routes/reportRoutes.js";
+
 import cors from 'cors'; // ✅ Import CORS
+import imageModel from './models/image.model.js';
 //const userRoutes = require('./routes/userRoutes'); // Import des routes utilisateurs
 
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
-// ✅ Middleware pour activer CORS AVANT les routes
+// ✅ Middleware pour parser les requêtes JSON
+app.use(express.json());
+app.use(cors());
 app.use(cors({
   origin: 'http://localhost:5173', // ✅ Autoriser uniquement le frontend
   methods: 'GET,POST,PATCH,PUT,DELETE',
   allowedHeaders: 'Content-Type,Authorization',
 }));
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }))
-// ✅ Middleware pour parser les requêtes JSON
-app.use(express.json());
-app.use(cors());
 
 // Connexion à MongoDB
 mongoose.connect('mongodb+srv://ayari2014khalil:skillexchangedb@skillexchangedb.jyc2i.mongodb.net/')  .then(() => console.log("✅ Connected to MongoDB!"))
@@ -60,11 +63,62 @@ app.post("/api/login", async (req, res) => {
   }
 });
 
+
+
+// ✅ Middleware pour activer CORS AVANT les routes
+
+
+const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
+
+// Define the upload folder path correctly
+const storage = multer.diskStorage({
+  destination: function (req, file, cb) {
+    cb(null, 'uploads/'); // Dossier où stocker les images
+  },
+  filename: function (req, file, cb) {
+    cb(null, Date.now() + path.extname(file.originalname)); // Nom unique
+  }
+});
+
+// Vérifier l'extension du fichier
+const fileFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image/')) {
+    cb(null, true);
+  } else {
+    cb(new Error('Seuls les fichiers images sont acceptés !'), false);
+  }
+};
+
+// Initialiser multer
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+});
+
+// Route pour uploader une image
+app.post('/upload', upload.single('profileImage'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Aucun fichier téléchargé' });
+    }
+    
+    res.json({ message: 'Image téléchargée avec succès', filename: req.file.filename });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+
+
+
+
+
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/skill', skillRoutes);
 app.use("/api/reports", reportRoutes);
 
+app.use('/uploads', express.static('uploads'));
 
 
 app.use((req, res) => {

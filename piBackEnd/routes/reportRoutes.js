@@ -3,8 +3,8 @@ import * as reportController from "../controllers/reportController.js";
 
 const router = express.Router();
 
-router.post("/reports", reportController.createReport);
-router.get("/reports", reportController.getAllReports);
+router.post("/", reportController.createReport);
+router.get("/", reportController.getAllReports);
 
 router.get("/reports/:id", reportController.getReportById);
 router.put("/reports/:id/status", reportController.updateReportStatus);
