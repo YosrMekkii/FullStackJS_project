@@ -5,7 +5,6 @@ import Home from './pages/Home';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';
 import Dashboard from './pages/Dashboard';
-// import ProfilePage from './pages/Profile';
 import Profile from './pages/Profile1';
 import SkillMarketplace from './pages/MarketPlace';
 import PostSkill from './pages/PostSkill';
@@ -16,20 +15,8 @@ import ReCAPTCHA from "react-google-recaptcha";
 import AdminDashboard from './pages/AdminDashboard';
 import LearningSession from './pages/LearningSession';
 import SkillMatching from './pages/SkillMatching';
-import Navbar from './components/Navbar';
 import StudentInterface from './pages/studentLearningInterface';
 
-const user = {
-  name: 'John Doe',
-  profilePicture: 'https://via.placeholder.com/150', // Use a valid image URL
-  bio: 'A passionate learner and developer.',
-  achievements: [
-    'Completed 100+ projects',
-    'Mentored 20+ students',
-    'Won a hackathon'
-  ],
-  skills: ['JavaScript', 'React', 'Node.js', 'AI']
-};
 
 function App() {
   return (
@@ -62,7 +49,6 @@ function App() {
           <Route path="/" element={<Home />} />
           <Route path="/login" element={<Login />} />
           <Route path="/signup" element={<SignUp />} />
-          {/* <Route path="/profile" element={<ProfilePage user={user} />} /> Pass the user object as a prop */}
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/marketplace" element={<SkillMarketplace />} />
           <Route path="/postskill" element={<PostSkill />} />

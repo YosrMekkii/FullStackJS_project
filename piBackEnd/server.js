@@ -24,8 +24,7 @@ app.use(express.json());
 app.use(cors());
 
 // Connexion à MongoDB
-mongoose.connect('mongodb://127.0.0.1:27017/skillexchangedb')
-  .then(() => console.log("✅ Connected to MongoDB!"))
+mongoose.connect('mongodb+srv://ayari2014khalil:skillexchangedb@skillexchangedb.jyc2i.mongodb.net/')  .then(() => console.log("✅ Connected to MongoDB!"))
   .catch(error => console.error("❌ Database connection error:", error));
 
 // Route principale (test)
