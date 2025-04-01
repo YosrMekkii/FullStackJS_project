@@ -17,6 +17,8 @@ import About from './pages/About';
 import SkillMatching from './pages/SkillMatching';
 import StudentInterface from './pages/studentLearningInterface';
 import { Navigate } from "react-router-dom";
+import Community from './pages/community';
+import QA from './pages/questionsanswers';
 
 
 function App() {
@@ -135,6 +137,9 @@ const ProtectedRoute = ({ user, children }: { user: any; children: JSX.Element }
           <Route path='/learningsession' element={<LearningSession />} />
           <Route path="/matches" element={<SkillMatching />} />
           <Route path="/studentInterface" element={<StudentInterface />} />
+          <Route path="/community" element={<Community />} />
+          <Route path="/qa" element={<QA />} /> 
+
             {/* Route protégée pour Challenges */}
   <Route path="/challenges" element={<ProtectedRoute user={user}><Challenges /></ProtectedRoute>} />
           <Route path="/about" element={<About />} />
