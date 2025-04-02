@@ -19,6 +19,8 @@ import StudentInterface from './pages/studentLearningInterface';
 import { Navigate } from "react-router-dom";
 import Community from './pages/community';
 import QA from './pages/questionsanswers';
+import QuestionDetail from './pages/Questiondetail';
+import AskQuestion from './pages/askquestion';
 
 
 function App() {
@@ -139,6 +141,8 @@ const ProtectedRoute = ({ user, children }: { user: any; children: JSX.Element }
           <Route path="/studentInterface" element={<StudentInterface />} />
           <Route path="/community" element={<Community />} />
           <Route path="/qa" element={<QA />} /> 
+          <Route path="/qa/:id" element={<QuestionDetail />} />
+          <Route path="/ask-question" element={<AskQuestion />} />
 
             {/* Route protégée pour Challenges */}
   <Route path="/challenges" element={<ProtectedRoute user={user}><Challenges /></ProtectedRoute>} />

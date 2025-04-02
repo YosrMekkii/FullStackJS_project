@@ -1,189 +1,114 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
-  MessageSquare,
-  Users,
+  Code,
   Search,
   ThumbsUp,
-  Star,
-  Clock,
-  Tag,
+  MessageSquare,
+  Eye,
+  CheckCircle2,
   Filter,
   TrendingUp,
-  CheckCircle2,
-  Bell,
+  Clock,
+  Tag,
   Plus,
-  ChevronRight,
-  MessagesSquare,
-  Award,
-  Eye,
-  Code,
-  Palette,
-  Briefcase,
-  Globe,
-  User,
-  HelpCircle,
-  AlertCircle,
-  Lightbulb
+  ChevronDown,
+  Languages
 } from 'lucide-react';
 
 interface Question {
   id: string;
   title: string;
+  content: string;
+  tags: string[];
   author: {
     name: string;
     avatar: string;
     reputation: number;
-    isMentor?: boolean;
   };
-  category: string;
-  tags: string[];
-  upvotes: number;
+  votes: number;
   answers: number;
   views: number;
-  timestamp: Date;
   solved: boolean;
-  preview: string;
-  bounty?: number;
+  timestamp: Date;
+  category: 'Programming' | 'Languages';
 }
 
-interface Category {
-  id: string;
-  name: string;
-  description: string;
-  questionsCount: number;
-  icon: React.ReactNode;
-}
+const SAMPLE_QUESTIONS: Question[] = [
+  {
+    id: '1',
+    title: 'How to implement async/await with TypeScript generics?',
+    content: 'I\'m trying to create a generic function that handles API responses with TypeScript...',
+    tags: ['typescript', 'async', 'generics', 'javascript'],
+    author: {
+      name: 'Sarah Chen',
+      avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop',
+      reputation: 1250
+    },
+    votes: 15,
+    answers: 3,
+    views: 142,
+    solved: true,
+    timestamp: new Date('2024-03-10T15:30:00'),
+    category: 'Programming'
+  },
+  {
+    id: '2',
+    title: 'Best practices for React custom hooks with TypeScript',
+    content: 'What are the current best practices for creating custom hooks in React when using TypeScript...',
+    tags: ['react', 'typescript', 'hooks', 'javascript'],
+    author: {
+      name: 'Mike Wilson',
+      avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop',
+      reputation: 3420
+    },
+    votes: 28,
+    answers: 5,
+    views: 312,
+    solved: false,
+    timestamp: new Date('2024-03-11T09:15:00'),
+    category: 'Programming'
+  },
+  {
+    id: '3',
+    title: 'Understanding Python decorators and their use cases',
+    content: 'I\'m trying to understand when and how to use decorators effectively in Python...',
+    tags: ['python', 'decorators', 'advanced'],
+    author: {
+      name: 'Alex Thompson',
+      avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop',
+      reputation: 892
+    },
+    votes: 42,
+    answers: 7,
+    views: 567,
+    solved: true,
+    timestamp: new Date('2024-03-11T11:20:00'),
+    category: 'Programming'
+  }
+];
+
+const PROGRAMMING_CATEGORIES = [
+  'All',
+  'JavaScript',
+  'TypeScript',
+  'Python',
+  'Java',
+  'C++',
+  'Go',
+  'Rust',
+  'SQL'
+];
 
 const QA = () => {
-  const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'unanswered' | 'bounty'>('recent');
+  const [selectedCategory, setSelectedCategory] = useState('All');
+  const [sortBy, setSortBy] = useState<'recent' | 'votes' | 'unanswered'>('recent');
   const [searchQuery, setSearchQuery] = useState('');
-  const [showNewQuestionModal, setShowNewQuestionModal] = useState(false);
-  const [filterSolved, setFilterSolved] = useState<boolean | null>(null);
+  const [showFilters, setShowFilters] = useState(false);
 
-  const categories: Category[] = [
-    {
-      id: 'tech',
-      name: 'Technology',
-      description: 'Programming, web development, and tech discussions',
-      questionsCount: 1234,
-      icon: <Code className="h-6 w-6" />
-    },
-    {
-      id: 'design',
-      name: 'Design',
-      description: 'UI/UX, graphic design, and creative arts',
-      questionsCount: 856,
-      icon: <Palette className="h-6 w-6" />
-    },
-    {
-      id: 'business',
-      name: 'Business',
-      description: 'Marketing, entrepreneurship, and management',
-      questionsCount: 967,
-      icon: <Briefcase className="h-6 w-6" />
-    },
-    {
-      id: 'languages',
-      name: 'Languages',
-      description: 'Language learning and cultural exchange',
-      questionsCount: 543,
-      icon: <Globe className="h-6 w-6" />
-    }
-  ];
-
-  const questions: Question[] = [
-    {
-      id: '1',
-      title: 'How to properly implement useEffect cleanup in React?',
-      author: {
-        name: 'Sarah Chen',
-        avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop',
-        reputation: 1250,
-        isMentor: true
-      },
-      category: 'tech',
-      tags: ['react', 'hooks', 'javascript'],
-      upvotes: 42,
-      answers: 5,
-      views: 1205,
-      timestamp: new Date('2024-03-15T15:30:00'),
-      solved: true,
-      preview: 'I\'m having trouble understanding how to properly implement cleanup functions in useEffect hooks. My component seems to have memory leaks...'
-    },
-    {
-      id: '2',
-      title: 'What\'s the best approach for user research with limited resources?',
-      author: {
-        name: 'Mike Wilson',
-        avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop',
-        reputation: 780
-      },
-      category: 'design',
-      tags: ['ux-research', 'design-thinking', 'startup'],
-      upvotes: 38,
-      answers: 4,
-      views: 942,
-      timestamp: new Date('2024-03-14T09:15:00'),
-      solved: false,
-      preview: 'I\'m working at a small startup and need to conduct user research with very limited time and budget. What approaches would you recommend...',
-      bounty: 50
-    },
-    {
-      id: '3',
-      title: 'How to roll your Rs in Spanish pronunciation?',
-      author: {
-        name: 'Elena Rodriguez',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop',
-        reputation: 1560,
-        isMentor: true
-      },
-      category: 'languages',
-      tags: ['spanish', 'pronunciation', 'learning'],
-      upvotes: 124,
-      answers: 8,
-      views: 2876,
-      timestamp: new Date('2024-03-13T12:45:00'),
-      solved: true,
-      preview: 'I\'ve been studying Spanish for almost a year now, but I still can\'t properly roll my Rs. I\'ve tried various techniques but nothing seems to work...'
-    },
-    {
-      id: '4',
-      title: 'TypeScript generics with React components - best practices?',
-      author: {
-        name: 'David Kim',
-        avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop',
-        reputation: 2100
-      },
-      category: 'tech',
-      tags: ['typescript', 'react', 'generics'],
-      upvotes: 87,
-      answers: 3,
-      views: 1560,
-      timestamp: new Date('2024-03-12T16:20:00'),
-      solved: false,
-      preview: 'I\'m trying to create reusable components with TypeScript generics. I want to understand the best practices for properly typing props...',
-      bounty: 100
-    }
-  ];
-
-  const formatTimestamp = (date: Date) => {
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(minutes / 60);
-    const days = Math.floor(hours / 24);
-
-    if (days > 0) return `${days}d ago`;
-    if (hours > 0) return `${hours}h ago`;
-    return `${minutes}m ago`;
-  };
-
-  const filteredQuestions = questions
+  const filteredQuestions = SAMPLE_QUESTIONS
     .filter(question => 
-      (selectedCategory === 'all' || question.category === selectedCategory) &&
-      (filterSolved === null || question.solved === filterSolved) &&
+      (selectedCategory === 'All' || question.tags.includes(selectedCategory.toLowerCase())) &&
       (searchQuery === '' || 
         question.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         question.tags.some(tag => tag.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -191,12 +116,10 @@ const QA = () => {
     )
     .sort((a, b) => {
       switch (sortBy) {
-        case 'popular':
-          return b.upvotes - a.upvotes;
+        case 'votes':
+          return b.votes - a.votes;
         case 'unanswered':
-          return (a.answers === 0 ? 0 : 1) - (b.answers === 0 ? 0 : 1) || b.timestamp.getTime() - a.timestamp.getTime();
-        case 'bounty':
-          return (b.bounty || 0) - (a.bounty || 0);
+          return (a.answers === 0 ? -1 : 1) - (b.answers === 0 ? -1 : 1);
         default:
           return b.timestamp.getTime() - a.timestamp.getTime();
       }
@@ -209,21 +132,21 @@ const QA = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-3xl font-bold text-gray-900">Questions & Answers</h1>
-              <p className="mt-2 text-gray-600">Get help from the community or share your knowledge</p>
+              <h1 className="text-3xl font-bold text-gray-900">Programming Q&A</h1>
+              <p className="mt-2 text-gray-600">Get help with programming languages and technical challenges</p>
             </div>
-            <button
-              onClick={() => setShowNewQuestionModal(true)}
+            <Link
+              to="/ask-question"
               className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700"
             >
               <Plus className="h-5 w-5 mr-2" />
               Ask Question
-            </button>
+            </Link>
           </div>
 
           {/* Search and Filters */}
-          <div className="mt-6 flex items-center space-x-4">
-            <div className="flex-1 relative">
+          <div className="mt-6 flex flex-col sm:flex-row items-center space-y-4 sm:space-y-0 sm:space-x-4">
+            <div className="w-full sm:w-96 relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <Search className="h-5 w-5 text-gray-400" />
               </div>
@@ -235,243 +158,132 @@ const QA = () => {
                 className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
               />
             </div>
-            <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-4">
               <select
                 value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'recent' | 'popular' | 'unanswered' | 'bounty')}
+                onChange={(e) => setSortBy(e.target.value as 'recent' | 'votes' | 'unanswered')}
                 className="block pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
               >
                 <option value="recent">Most Recent</option>
-                <option value="popular">Most Upvoted</option>
+                <option value="votes">Most Votes</option>
                 <option value="unanswered">Unanswered</option>
-                <option value="bounty">Highest Bounty</option>
               </select>
-            </div>
-            <div className="flex items-center space-x-2">
-              <select
-                value={filterSolved === null ? 'all' : filterSolved ? 'solved' : 'unsolved'}
-                onChange={(e) => {
-                  const value = e.target.value;
-                  if (value === 'all') setFilterSolved(null);
-                  else if (value === 'solved') setFilterSolved(true);
-                  else setFilterSolved(false);
-                }}
-                className="block pl-3 pr-10 py-2 text-base border border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50"
               >
-                <option value="all">All Questions</option>
-                <option value="solved">Solved Only</option>
-                <option value="unsolved">Unsolved Only</option>
-              </select>
+                <Filter className="h-5 w-5 mr-2" />
+                Filters
+              </button>
             </div>
+          </div>
+
+          {/* Category Pills */}
+          <div className="mt-6 flex flex-wrap gap-2">
+            {PROGRAMMING_CATEGORIES.map((category) => (
+              <button
+                key={category}
+                onClick={() => setSelectedCategory(category)}
+                className={`px-4 py-2 rounded-full text-sm font-medium ${
+                  selectedCategory === category
+                    ? 'bg-indigo-100 text-indigo-800'
+                    : 'bg-gray-100 text-gray-800 hover:bg-gray-200'
+                }`}
+              >
+                {category}
+              </button>
+            ))}
           </div>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="grid grid-cols-4 gap-8">
-          {/* Sidebar */}
-          <div className="col-span-1 space-y-8">
-            {/* Categories */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <div className="p-4 border-b border-gray-200">
-                <h2 className="text-lg font-medium text-gray-900">Categories</h2>
-              </div>
-              <div className="divide-y divide-gray-200">
-                <button
-                  onClick={() => setSelectedCategory('all')}
-                  className={`w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 ${
-                    selectedCategory === 'all' ? 'bg-indigo-50' : ''
-                  }`}
-                >
-                  <div className="flex items-center">
-                    <HelpCircle className="h-5 w-5 text-gray-400" />
-                    <span className="ml-3 text-sm font-medium text-gray-900">All Categories</span>
-                  </div>
-                  <span className="text-sm text-gray-500">
-                    {questions.length}
-                  </span>
-                </button>
-                {categories.map((category) => (
-                  <button
-                    key={category.id}
-                    onClick={() => setSelectedCategory(category.id)}
-                    className={`w-full px-4 py-3 flex items-center justify-between hover:bg-gray-50 ${
-                      selectedCategory === category.id ? 'bg-indigo-50' : ''
-                    }`}
-                  >
-                    <div className="flex items-center">
-                      {category.icon}
-                      <span className="ml-3 text-sm font-medium text-gray-900">{category.name}</span>
-                    </div>
-                    <span className="text-sm text-gray-500">
-                      {category.questionsCount}
-                    </span>
+        <div className="space-y-6">
+          {filteredQuestions.map((question) => (
+            <div
+              key={question.id}
+              className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:border-indigo-200 transition-colors"
+            >
+              <div className="flex items-start space-x-4">
+                {/* Vote Counter */}
+                <div className="flex flex-col items-center space-y-2">
+                  <button className="p-2 hover:bg-gray-100 rounded">
+                    <ThumbsUp className="h-5 w-5 text-gray-400" />
                   </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Popular Tags */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <div className="p-4 border-b border-gray-200">
-                <h2 className="text-lg font-medium text-gray-900">Popular Tags</h2>
-              </div>
-              <div className="p-4">
-                <div className="flex flex-wrap gap-2">
-                  {Array.from(new Set(questions.flatMap(q => q.tags))).map((tag) => (
-                    <button
-                      key={tag}
-                      className="px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 hover:bg-gray-200"
-                    >
-                      #{tag}
-                    </button>
-                  ))}
+                  <span className="text-lg font-semibold text-gray-900">{question.votes}</span>
                 </div>
-              </div>
-            </div>
 
-            {/* Top Experts */}
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              <div className="p-4 border-b border-gray-200">
-                <h2 className="text-lg font-medium text-gray-900">Top Experts</h2>
-              </div>
-              <div className="divide-y divide-gray-200">
-                {questions
-                  .map(q => q.author)
-                  .filter((author, index, self) => 
-                    index === self.findIndex(a => a.name === author.name)
-                  )
-                  .sort((a, b) => b.reputation - a.reputation)
-                  .slice(0, 5)
-                  .map((author) => (
-                    <div key={author.name} className="p-4 flex items-center justify-between">
-                      <div className="flex items-center">
-                        <img
-                          src={author.avatar}
-                          alt={author.name}
-                          className="h-8 w-8 rounded-full"
-                        />
-                        <div className="ml-3">
-                          <p className="text-sm font-medium text-gray-900">{author.name}</p>
-                          <p className="text-xs text-gray-500">{author.reputation.toLocaleString()} reputation</p>
+                {/* Question Content */}
+                <div className="flex-1">
+                  <div className="flex items-start justify-between">
+                    <div>
+                      <Link
+                        to={`/qa/${question.id}`}
+                        className="text-xl font-semibold text-gray-900 hover:text-indigo-600"
+                      >
+                        {question.title}
+                      </Link>
+                      <div className="mt-2 flex items-center space-x-4 text-sm text-gray-500">
+                        <div className="flex items-center">
+                          <MessageSquare className="h-4 w-4 mr-1" />
+                          {question.answers} answers
                         </div>
-                      </div>
-                      {author.isMentor && (
-                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-indigo-100 text-indigo-800">
-                          Expert
-                        </span>
-                      )}
-                    </div>
-                  ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Question List */}
-          <div className="col-span-3 space-y-4">
-            {filteredQuestions.map((question) => (
-              <div
-                key={question.id}
-                className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 hover:border-indigo-200 transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-4">
-                      <img
-                        src={question.author.avatar}
-                        alt={question.author.name}
-                        className="h-10 w-10 rounded-full"
-                      />
-                      <div>
-                        <h3 className="text-lg font-medium text-gray-900">
-                          <Link to={`/qa/question/${question.id}`} className="hover:text-indigo-600">
-                            {question.title}
-                          </Link>
-                          {question.bounty && (
-                            <span className="ml-3 inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                              +{question.bounty} bounty
-                            </span>
-                          )}
-                        </h3>
-                        <div className="mt-1 flex items-center space-x-4 text-sm text-gray-500">
-                          <span className="flex items-center">
-                            <User className="h-4 w-4 mr-1" />
-                            {question.author.name}
-                          </span>
-                          <span className="flex items-center">
-                            <Star className="h-4 w-4 mr-1" />
-                            {question.author.reputation.toLocaleString()}
-                          </span>
-                          <span className="flex items-center">
-                            <Clock className="h-4 w-4 mr-1" />
-                            {formatTimestamp(question.timestamp)}
-                          </span>
+                        <div className="flex items-center">
+                          <Eye className="h-4 w-4 mr-1" />
+                          {question.views} views
+                        </div>
+                        <div className="flex items-center">
+                          <Clock className="h-4 w-4 mr-1" />
+                          {new Date(question.timestamp).toLocaleDateString()}
                         </div>
                       </div>
                     </div>
-                    <p className="mt-3 text-gray-600 line-clamp-2">{question.preview}</p>
-                    <div className="mt-4 flex items-center space-x-4">
-                      <div className="flex items-center space-x-2">
-                        {question.tags.map((tag) => (
-                          <span
-                            key={tag}
-                            className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800"
-                          >
-                            #{tag}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="ml-6 flex flex-col items-end space-y-2">
-                    <div className="flex items-center space-x-4 text-sm text-gray-500">
-                      <span className="flex items-center">
-                        <ThumbsUp className="h-4 w-4 mr-1" />
-                        {question.upvotes}
-                      </span>
-                      <span className={`flex items-center ${question.answers === 0 ? 'text-orange-500 font-medium' : ''}`}>
-                        <MessageSquare className="h-4 w-4 mr-1" />
-                        {question.answers}
-                      </span>
-                      <span className="flex items-center">
-                        <Eye className="h-4 w-4 mr-1" />
-                        {question.views}
-                      </span>
-                    </div>
-                    {question.solved ? (
+                    {question.solved && (
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
                         <CheckCircle2 className="h-4 w-4 mr-1" />
                         Solved
                       </span>
-                    ) : (
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
-                        <AlertCircle className="h-4 w-4 mr-1" />
-                        Unsolved
-                      </span>
                     )}
+                  </div>
+
+                  <p className="mt-2 text-gray-600 line-clamp-2">{question.content}</p>
+
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="flex flex-wrap gap-2">
+                      {question.tags.map((tag) => (
+                        <span
+                          key={tag}
+                          className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
+                        >
+                          {tag}
+                        </span>
+                      ))}
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <img
+                        src={question.author.avatar}
+                        alt={question.author.name}
+                        className="h-6 w-6 rounded-full"
+                      />
+                      <span className="text-sm text-gray-600">{question.author.name}</span>
+                      <span className="text-xs text-gray-500">{question.author.reputation} rep</span>
+                    </div>
                   </div>
                 </div>
               </div>
-            ))}
+            </div>
+          ))}
 
-            {filteredQuestions.length === 0 && (
-              <div className="text-center py-12">
-                <HelpCircle className="mx-auto h-12 w-12 text-gray-400" />
-                <h3 className="mt-2 text-sm font-medium text-gray-900">No questions found</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Try adjusting your search or filters to find what you're looking for.
-                </p>
-                <button
-                  onClick={() => setShowNewQuestionModal(true)}
-                  className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md text-sm font-medium text-indigo-600 bg-indigo-50 hover:bg-indigo-100"
-                >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Ask a new question
-                </button>
-              </div>
-            )}
-          </div>
+          {filteredQuestions.length === 0 && (
+            <div className="text-center py-12">
+              <Code className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No questions found</h3>
+              <p className="mt-1 text-sm text-gray-500">
+                Try adjusting your search or filters to find what you're looking for.
+              </p>
+            </div>
+          )}
         </div>
       </div>
     </div>
