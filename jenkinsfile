@@ -1,44 +1,40 @@
-pipeline{
-  agent any
+pipeline {
+    agent any
 
-  stage('Install dependencies') {
-      steps{
-        
-        script {
-         sh('npm install')
+    stages {
+        stage('Install dependencies') {
+            steps {
+                script {
+                    sh 'npm install'
+                }
+            }
         }
-      }
-    }
 
-stage('Unit Test') {
-      steps{
-        
-        script {
-         sh('npm test')
+        stage('Unit Test') {
+            steps {
+                script {
+                    sh 'npm test'
+                }
+            }
         }
-      }
-    }
 
-
-stage('Build application') {
-      steps{
-        
-        script {
-         sh('npm run build-dev')
+        stage('Build application') {
+            steps {
+                script {
+                    sh 'npm run build-dev'
+                }
+            }
         }
-      }
-    }
 
         stage('SonarQube Analysis') {
-      steps{
-      script {  
+            steps {
+                script {
                     def scannerHome = tool 'scanner'
                     withSonarQubeEnv {
-                    sh "${scannerHome}/bin/sonar-scanner"
-                        }
-                } 
-              }  
+                        sh "${scannerHome}/bin/sonar-scanner"
+                    }
+                }
             }
-
-  } 
-
+        }
+    }
+}
