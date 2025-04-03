@@ -35,7 +35,7 @@ const AskQuestion = () => {
     setIsSubmitting(true);
 
     try {
-      const response = await axios.post("http://localhost:5000/questions", {
+      const response = await axios.post("http://localhost:3000/questions", {
         title,
         content,
         tags: selectedTags,

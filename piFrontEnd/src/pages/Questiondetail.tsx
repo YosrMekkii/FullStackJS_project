@@ -30,7 +30,7 @@ const QuestionDetail = () => {
   useEffect(() => {
     if (id) {
       setLoading(true);
-      axios.get(`http://localhost:5000/questions/${id}`)
+      axios.get(`http://localhost:3000/questions/${id}`)
         .then((response) => {
           setQuestion(response.data);
           // In a real app, you would fetch comments separately or they would be included
@@ -51,7 +51,7 @@ const QuestionDetail = () => {
   const handleDelete = async () => {
     try {
       setIsDeleting(true);
-      await axios.delete(`http://localhost:5000/questions/${id}`);
+      await axios.delete(`http://localhost:3000/questions/${id}`);
       navigate("/qa");
     } catch (error) {
       console.error("Error deleting question:", error);
@@ -62,7 +62,7 @@ const QuestionDetail = () => {
 
   const handleEdit = async () => {
     try {
-      const response = await axios.put(`http://localhost:5000/questions/${id}`, {
+      const response = await axios.put(`http://localhost:3000/questions/${id}`, {
         ...question,
         content: editedContent,
       });
