@@ -9,6 +9,7 @@ import fs from 'fs';
 import userRoutes from './routes/userRoutes.js';
 import skillRoutes from './routes/skillRoutes.js';
 import reportRoutes from "./routes/reportRoutes.js";
+import questionRoutes from "./routes/questionRoutes.js";
 
 import cors from 'cors'; // ✅ Import CORS
 import imageModel from './models/image.model.js';
@@ -27,8 +28,7 @@ app.use(cors({
 }));
 
 // Connexion à MongoDB
-mongoose.connect('mongodb+srv://ayari2014khalil:skillexchangedb@skillexchangedb.jyc2i.mongodb.net/')
-  .then(() => console.log("✅ Connected to MongoDB!"))
+mongoose.connect('mongodb+srv://ayari2014khalil:skillexchangedb@skillexchangedb.jyc2i.mongodb.net/')  .then(() => console.log("✅ Connected to MongoDB!"))
   .catch(error => console.error("❌ Database connection error:", error));
 
 // Route principale (test)
@@ -118,6 +118,7 @@ app.post('/upload', upload.single('profileImage'), async (req, res) => {
 app.use('/api/users', userRoutes);
 app.use('/skill', skillRoutes);
 app.use("/api/reports", reportRoutes);
+app.use("/questions", questionRoutes);
 
 app.use('/uploads', express.static('uploads'));
 
