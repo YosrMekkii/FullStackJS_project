@@ -372,7 +372,7 @@ const AdminDashboard = () => {
                   <div key={user.id} className="p-6 flex items-center justify-between hover:bg-gray-50">
                     <div className="flex items-center space-x-4">
                     <img
-            src={`http://localhost:3000/${user.profileImagePath}`}  // Chemin de l'image de l'utilisateur
+            src={`http://localhost:3000${user.profileImagePath}`}  // Chemin de l'image de l'utilisateur
             alt={user.firstName}  // Utilisation du prénom de l'utilisateur pour le texte alternatif
             className="h-10 w-10 rounded-full"
           />
