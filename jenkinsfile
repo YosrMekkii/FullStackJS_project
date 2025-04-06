@@ -4,7 +4,7 @@ pipeline {
     stages {
         stage('Install dependencies') {
             steps {
-                script {
+                dir('backend') {
                     sh 'npm install'
                 }
             }
@@ -12,7 +12,7 @@ pipeline {
 
         stage('Unit Test') {
             steps {
-                script {
+                dir('backend') {
                     sh 'npm test'
                 }
             }
@@ -20,7 +20,7 @@ pipeline {
 
         stage('Build application') {
             steps {
-                script {
+                dir('backend') {
                     sh 'npm run build-dev'
                 }
             }
@@ -28,10 +28,12 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                script {
-                    def scannerHome = tool 'scanner'
-                    withSonarQubeEnv {
-                        sh "${scannerHome}/bin/sonar-scanner"
+                dir('backend') {
+                    script {
+                        def scannerHome = tool 'scanner'
+                        withSonarQubeEnv {
+                            sh "${scannerHome}/bin/sonar-scanner"
+                        }
                     }
                 }
             }
