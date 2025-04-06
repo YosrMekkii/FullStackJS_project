@@ -68,7 +68,7 @@ const getAllUsers = async (req, res) => {
 
 // ✅ Fonction pour l'inscription d'un utilisateur
 const signupUser = async (req, res) => {
-  const { file } = req; // Fichier téléchargé
+  const { file } = req; // Fichier téléchargé via multer
   const { firstName, lastName, email, password, age, country, city, educationLevel } = req.body;
 
   try {
@@ -102,9 +102,15 @@ const signupUser = async (req, res) => {
     await newUser.save();
 
     // Si un fichier d'image est fourni, on l'upload
+    if (file) {
+      const profileImagePath = `/uploads/${file.filename}`;
 
+      // Mise à jour de l'utilisateur avec le chemin de l'image de profil
+      newUser.profileImagePath = profileImagePath;
+      await newUser.save();
+    }
 
-    // Envoyer un email de vérification
+    // Envoi de l'email de vérification
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
@@ -125,16 +131,6 @@ const signupUser = async (req, res) => {
     });
 
     res.status(201).json({ message: "Un e-mail de vérification a été envoyé." });
-
-    if (file) {
-      // Suppose que le fichier est stocké dans un dossier 'uploads'
-      const profileImagePath = `/uploads/${file.filename}`;
-
-      // Mise à jour de l'utilisateur avec le chemin de l'image de profil
-      newUser.profileImagePath = profileImagePath;
-      await newUser.save();
-    }
-
   } catch (error) {
     console.error("Erreur lors de l'inscription de l'utilisateur :", error);
     if (!res.headersSent) {
@@ -353,10 +349,87 @@ const getUserByEmail = async (req, res) => {
   }
 };
 
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(404).json({ error: "Utilisateur non trouvé" });
+
+    // Génère un token sécurisé
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetTokenExpire = Date.now() + 3600000; // 1 heure
+
+    // Sauvegarde dans le user
+    user.resetPasswordToken = resetToken;
+    user.resetPasswordExpires = resetTokenExpire;
+    await user.save();
+
+    const resetLink = `http://localhost:5173/reset-password/${resetToken}`;
+
+    // Envoi de l'e-mail
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "ghoumadhia01@gmail.com", 
+        pass: "taxq sccq foja pfau", 
+      },
+    });
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: user.email,
+      subject: "Réinitialisation de votre mot de passe",
+      html: `<p>Bonjour ${user.firstName},</p>
+            <p>Vous avez demandé une réinitialisation de votre mot de passe. Cliquez sur le lien ci-dessous pour le faire :</p>
+            <a href="${resetLink}">Réinitialiser mon mot de passe</a><br/>
+            <p>Ce lien expirera dans 1 heure.</p>`,
+    });
+
+    res.status(200).json({ message: "Email de réinitialisation envoyé avec succès." });
+  } catch (error) {
+    console.error("Erreur dans forgotPassword:", error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
 
 
+const resetPassword = async (req, res) => {
+  const { token } = req.params;
+  const { newPassword } = req.body;
+
+  console.log("Token reçu :", token);
+  console.log("Token reçu :", newPassword);
+
+
+  try {
+    const user = await User.findOne({
+      resetPasswordToken: token,
+      resetPasswordExpires: { $gt: Date.now() },
+    });
+
+    if (!user) {
+      return res.status(400).json({ error: "Token invalide ou expiré" });
+    }
+
+    // Hash du nouveau mot de passe
+    const hashedPassword = await bcrypt.hash(newPassword, 10);
+    user.password = hashedPassword;
+    user.resetPasswordToken = undefined;
+    user.resetPasswordExpires = undefined;
+
+    await user.save();
+
+    res.status(200).json({ message: "Mot de passe réinitialisé avec succès." });
+  } catch (error) {
+    console.error("Erreur dans resetPassword:", error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
 
 export {
+  forgotPassword,
+  resetPassword,
   getUserByEmail,
   verifyEmail,
   uploadProfileImage,

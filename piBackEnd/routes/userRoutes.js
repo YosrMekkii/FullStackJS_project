@@ -93,6 +93,8 @@ router.post("/logout", userController.logoutUser);
 router.get("/api/auth/verify/:token", userController.verifyEmail);
 router.get("/auth/verify/:token", userController.verifyEmail); // ✅
 router.get('/email/:email', userController.getUserByEmail); // Appel de la fonction dans le controller
+router.post('/forgot-password', userController.forgotPassword);
+router.post('/reset-password/:token', userController.resetPassword);
 
 
 //router.post("/test-email", userController.sendTestEmail);

@@ -17,6 +17,8 @@ import About from './pages/About';
 import SkillMatching from './pages/SkillMatching';
 import StudentInterface from './pages/studentLearningInterface';
 import { Navigate } from "react-router-dom";
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 
 
 function App() {
@@ -138,6 +140,8 @@ const ProtectedRoute = ({ user, children }: { user: any; children: JSX.Element }
             {/* Route protégée pour Challenges */}
   <Route path="/challenges" element={<ProtectedRoute user={user}><Challenges /></ProtectedRoute>} />
           <Route path="/about" element={<About />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
 
 
 
