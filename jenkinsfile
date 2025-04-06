@@ -4,30 +4,48 @@ pipeline {
     stages {
         stage('Install frontend dependencies') {
             steps {
-                dir('piBackEnd') {
+                dir('piFrontEnd') {
+                    sh 'npm install'
+                }
+            }
+        }
+
+        stage('Install backend dependencies') {
+            steps {
+                dir('piBackenEnd') {
                     sh 'npm install'
                 }
             }
         }
 
         stage('Unit Test') {
-    steps {
-        dir('piBackEnd') {
-            script {
-                try {
-                    sh 'npm test'
-                } catch (err) {
-                    echo "Tests skipped (no tests defined yet)"
+            steps {
+                parallel (
+                    frontend: {
+                        dir('piFrontEnd') {
+                            sh 'npm test'
+                        }
+                    },
+                    backend: {
+                        dir('piBackenEnd') {
+                            sh 'npm test'
+                        }
+                    }
+                )
+            }
+        }
+
+        stage('Build frontend') {
+            steps {
+                dir('piFrontEnd') {
+                    sh 'npm run build-dev'
                 }
             }
         }
-    }
-}
-
 
         stage('Build backend') {
             steps {
-                dir('piBackEnd') {
+                dir('piBackenEnd') {
                     sh 'npm run build-dev'
                 }
             }
@@ -35,12 +53,10 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                dir('piBackEnd') {
-                    script {
-                        def scannerHome = tool 'scanner'
-                        withSonarQubeEnv {
-                            sh "${scannerHome}/bin/sonar-scanner"
-                        }
+                dir('piFrontEnd') {
+                    def scannerHome = tool 'scanner'
+                    withSonarQubeEnv {
+                        sh "${scannerHome}/bin/sonar-scanner"
                     }
                 }
             }
