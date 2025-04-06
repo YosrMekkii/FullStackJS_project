@@ -4,8 +4,7 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"No tests specified, skipping.\"",
-    "start": "node server.js",
-    "build": "build"
+    "start": "node server.js"
   },
   "keywords": [],
   "author": "",

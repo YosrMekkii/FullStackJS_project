@@ -35,24 +35,7 @@ pipeline {
             }
         }
 
-        stage('Build frontend') {
-            steps {
-                dir('piFrontEnd') {
-                    sh 'npm run build'
-                }
-            }
-        }
-
-        stage('Build backend') {
-            steps {
-                dir('piBackEnd') {
-                    // If needed, use the correct build command for backend
-                    sh 'npm run build'  // Example if backend has a build script
-                    // or if you only want to start the backend:
-                    // sh 'npm run start'
-                }
-            }
-        }
+        // No 'Build' stage for the backend since it's a Node.js project
 
         stage('SonarQube Analysis (Frontend)') {
             steps {
