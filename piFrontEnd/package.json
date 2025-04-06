@@ -4,11 +4,8 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "lint": "eslint .",
-    "preview": "vite preview"
-  },
+  "test": "echo \"No frontend tests configured yet\""
+},
   "dependencies": {
     "@headlessui/react": "^2.2.0",
     "@monaco-editor/react": "^4.7.0",
