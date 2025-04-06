@@ -11,7 +11,7 @@ import skillRoutes from './routes/skillRoutes.js';
 import reportRoutes from "./routes/reportRoutes.js";
 
 import cors from 'cors'; // ✅ Import CORS
-import imageModel from './models/image.model.js';
+//import imageModel from './models/image.model.js';
 //const userRoutes = require('./routes/userRoutes'); // Import des routes utilisateurs
 
 

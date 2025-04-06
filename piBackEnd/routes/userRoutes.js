@@ -81,7 +81,8 @@ router.get("/", userController.getAllUsers);
 router.get("/:id", userController.getUserById);
 router.put("/:id", userController.updateUser);
 router.delete("/:id", userController.deleteUser);
-router.post("/signup", userController.signupUser);
+//router.post("/signup", userController.signupUser);
+router.post('/signup', upload.single('profileImage'), userController.signupUser);
 router.post("/login", userController.loginUser);
 router.get("/recommend", userController.getRecommendations);
 router.put("/:id/skills", userController.updateSkills);
@@ -89,6 +90,14 @@ router.put("/:id/interests", userController.updateInterests);
 router.get("/total/count", userController.getTotalUsers);
 router.post("/upload/:userId", upload.single("profileImage"), userController.uploadProfileImage);
 router.post("/logout", userController.logoutUser);
+router.get("/api/auth/verify/:token", userController.verifyEmail);
+router.get("/auth/verify/:token", userController.verifyEmail); // ✅
+router.get('/email/:email', userController.getUserByEmail); // Appel de la fonction dans le controller
+
+
+//router.post("/test-email", userController.sendTestEmail);
+
+
 
 
 export default router; // ✅ Export par défaut

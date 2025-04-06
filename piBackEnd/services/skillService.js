@@ -1,4 +1,4 @@
-const Skill = require('../models/skill')
+import Skill from '../models/skill.js'
 
 const createSkill = async (skillData) => {
     return await Skill.create(skillData);
@@ -20,7 +20,7 @@ const deleteSkill = async (id) => {
     return await Skill.findByIdAndDelete(id);
 };
 
-module.exports = {
+export default {
     createSkill,
     getAllSkills,
     getSkillById,

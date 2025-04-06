@@ -1,5 +1,5 @@
 // models/Match.js
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
 // Define the schema for the Match model
 const matchSchema = new mongoose.Schema(
@@ -28,4 +28,6 @@ const matchSchema = new mongoose.Schema(
 const Match = mongoose.model('Match', matchSchema);
 
 // Export the model to be used in the routes
-module.exports = Match;
+//module.exports = Match;
+
+export default Match;

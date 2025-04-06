@@ -59,6 +59,7 @@ const reader = new FileReader();
     e.preventDefault();
     console.log("Données envoyées :", formData);
   
+    // Vérification des mots de passe
     if (formData.password !== formData.confirmPassword) {
       alert("Les mots de passe ne correspondent pas !");
       return;
@@ -66,74 +67,83 @@ const reader = new FileReader();
   
     try {
       const submitData = new FormData();
-  
-      // Ajouter l'image de profil dans FormData
+      submitData.append('firstName', formData.firstName);
+      submitData.append('lastName', formData.lastName);
+      submitData.append('email', formData.email);
+      submitData.append('password', formData.password);
+      submitData.append('age', formData.age);
+      submitData.append('country', formData.country);
+      submitData.append('city', formData.city);
+      submitData.append('educationLevel', formData.educationLevel);
+      
       if (profileImage) {
-        submitData.append("profileImage", profileImage);
+        submitData.append('profileImage', profileImage); // Ajouter l'image si elle existe
       }
   
-      // Ajouter les autres données sous forme de JSON
-      const formDataJson = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        password: formData.password,
-        age: formData.age,
-        country: formData.country,
-        city: formData.city,
-        educationLevel: formData.educationLevel,
-      };
-  
-      // Créer l'utilisateur sans l'image
+      // Création de l'utilisateur sans l'image
       const response = await fetch("http://localhost:3000/api/users/signup", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formDataJson),
+        body: submitData,  // FormData contient aussi bien les champs de formulaire que l'image
       });
   
       const result = await response.json();
-      console.log("Réponse d'inscription :", result);  // Ajout d'un log pour inspecter la réponse
+      console.log("Réponse d'inscription :", result);
   
       if (!response.ok) throw new Error(result.error || "Erreur lors de l'inscription");
-  
-      // Vérifie que la réponse contient bien un utilisateur avec un ID
-      const userId = result.user?.id; // Utilisation du _id si présent
-      if (!userId) throw new Error("ID utilisateur manquant dans la réponse");
-  
-      console.log("ID de l'utilisateur créé :", userId);
-  
-      // Si une image est présente, on l'envoie après la création de l'utilisateur
-      if (profileImage) {
-        const imageUploadResponse = await fetch(`http://localhost:3000/api/users/upload/${userId}`, {
-          method: "POST",
-          body: submitData,
-        });
-  
-        const imageData = await imageUploadResponse.json();
-        if (!imageUploadResponse.ok) throw new Error(imageData.error || "Erreur lors de l'upload de l'image");
-  
-        // Ajouter l'URL de l'image au profil de l'utilisateur
-        const profileImageUrl = imageData.filename;
-        const updateUserResponse = await fetch(`http://localhost:3000/api/users/${userId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ profileImagePath: profileImageUrl }),
-        });
-  
-        const updateResult = await updateUserResponse.json();
-        if (!updateUserResponse.ok) throw new Error(updateResult.error || "Erreur lors de la mise à jour de l'image de profil");
-  
-        console.log("Image de profil ajoutée avec succès :", updateResult);
-      }
   
     } catch (error) {
       console.error("Erreur lors de l'inscription ou du téléchargement de l'image :", error);
     }
   };
+  
+  //     const result = await response.json();
+  //     console.log("Réponse d'inscription :", result);
+  
+  //     if (!response.ok) throw new Error(result.error || "Erreur lors de l'inscription");
+  
+  //     // Récupérer l'utilisateur créé en utilisant l'email
+  //     const userEmail = formData.email; // Email de l'utilisateur créé
+  //     const userResponse = await fetch(`http://localhost:3000/api/users/${userEmail}`);
+  
+  //     if (!userResponse.ok) throw new Error("Impossible de récupérer l'utilisateur créé");
+  
+  //     const user = await userResponse.json();
+  //     console.log("Utilisateur récupéré :", user);  // Log de l'utilisateur récupéré
+  
+  //     // Si une image est présente, la télécharger
+  //     if (profileImage) {
+  //       const submitImageData = new FormData();
+  //       submitImageData.append("profileImage", profileImage);
+  
+  //       // Envoi de l'image de profil
+  //       const imageUploadResponse = await fetch(`http://localhost:3000/api/users/upload/${user._id}`, {
+  //         method: "POST",
+  //         body: submitImageData,
+  //       });
+  
+  //       const imageData = await imageUploadResponse.json();
+  //       if (!imageUploadResponse.ok) throw new Error(imageData.error || "Erreur lors de l'upload de l'image");
+  
+  //       const profileImageUrl = imageData.filename;
+  
+  //       // Mettre à jour l'utilisateur avec l'URL de l'image
+  //       const updateUserResponse = await fetch(`http://localhost:3000/api/users/${user._id}`, {
+  //         method: "PUT",
+  //         headers: {
+  //           "Content-Type": "application/json",
+  //         },
+  //         body: JSON.stringify({ profileImagePath: profileImageUrl }),
+  //       });
+  
+  //       const updateResult = await updateUserResponse.json();
+  //       if (!updateUserResponse.ok) throw new Error(updateResult.error || "Erreur lors de la mise à jour de l'image de profil");
+  
+  //       console.log("Image de profil ajoutée avec succès :", updateResult);
+  //     }
+  //   } catch (error) {
+  //     console.error("Erreur lors de l'inscription ou du téléchargement de l'image :", error);
+  //   }
+  // };
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">

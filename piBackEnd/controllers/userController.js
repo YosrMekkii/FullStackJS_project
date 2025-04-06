@@ -1,9 +1,16 @@
-const userService = require("../services/userService");
-const bcrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
-const User = require("../models/user")
-require('dotenv').config();
-const Match = require('../models/Match');
+import * as userService from "../services/userService.js";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
+import User from"../models/user.js";
+import crypto from "crypto";
+import nodemailer from "nodemailer";
+
+
+
+import dotenv from 'dotenv';
+dotenv.config();
+import Match from '../models/match.js';
+
 
 
 // ✅ Créer un utilisateur
@@ -61,23 +68,23 @@ const getAllUsers = async (req, res) => {
 
 // ✅ Fonction pour l'inscription d'un utilisateur
 const signupUser = async (req, res) => {
-  try {
-    console.log("Données reçues :", req.body); 
-    const { firstName, lastName, email, password, age, country, city, educationLevel } = req.body;
+  const { file } = req; // Fichier téléchargé
+  const { firstName, lastName, email, password, age, country, city, educationLevel } = req.body;
 
+  try {
     if (!password) {
       return res.status(400).json({ error: "Le mot de passe est requis." });
     }
-    // Vérification si l'utilisateur existe déjà
+
     const userExists = await User.findOne({ email });
     if (userExists) {
       return res.status(400).json({ error: "L'email est déjà utilisé" });
     }
 
-    // Hachage du mot de passe avant de le sauvegarder
     const hashedPassword = await bcrypt.hash(password, 10);
+    const verificationToken = crypto.randomBytes(32).toString("hex");
 
-    // Création du nouvel utilisateur
+    // Création de l'utilisateur sans le profilImagePath au début
     const newUser = new User({
       firstName,
       lastName,
@@ -87,23 +94,52 @@ const signupUser = async (req, res) => {
       country,
       city,
       educationLevel,
+      isVerified: false,
+      verificationToken,
     });
 
-    // Sauvegarde de l'utilisateur dans la base de données
+    // Sauvegarder l'utilisateur sans l'URL de l'image de profil
     await newUser.save();
 
-    // Génération d'un token JWT pour l'utilisateur
-    const token = jwt.sign({ userId: newUser._id }, process.env.JWT_SECRET, { expiresIn: '1h' });
+    // Si un fichier d'image est fourni, on l'upload
 
-    // Réponse avec le token
-    res.status(201).json({
-      message: 'Utilisateur créé avec succès',
-      token,
-      user: { id: newUser._id, email: newUser.email }
+
+    // Envoyer un email de vérification
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: "ghoumadhia01@gmail.com", 
+        pass: "taxq sccq foja pfau", 
+      },
     });
+
+    const verificationLink = `http://localhost:3000/api/users/auth/verify/${verificationToken}`;
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "Vérification de votre compte",
+      html: `<p>Bonjour ${firstName},</p>
+             <p>Merci de vous être inscrit. Cliquez sur le lien ci-dessous pour vérifier votre compte :</p>
+             <a href="${verificationLink}">Vérifier mon compte</a>`,
+    });
+
+    res.status(201).json({ message: "Un e-mail de vérification a été envoyé." });
+
+    if (file) {
+      // Suppose que le fichier est stocké dans un dossier 'uploads'
+      const profileImagePath = `/uploads/${file.filename}`;
+
+      // Mise à jour de l'utilisateur avec le chemin de l'image de profil
+      newUser.profileImagePath = profileImagePath;
+      await newUser.save();
+    }
+
   } catch (error) {
-    console.error('Erreur lors de l\'inscription:', error);
-    res.status(500).json({ error: 'Erreur serveur' });
+    console.error("Erreur lors de l'inscription de l'utilisateur :", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || "Une erreur est survenue lors de l'inscription." });
+    }
   }
 };
 
@@ -117,6 +153,13 @@ const loginUser = async (req, res) => {
     if (!user) {
       return res.status(404).json({ error: "Utilisateur non trouvé" });
     }
+
+    // Vérification si le compte est vérifié
+    if (!user.isVerified) {
+      return res.status(400).json({ error: "Votre compte n'est pas vérifié. Veuillez vérifier votre email." });
+    }    
+
+    
 
     // Vérification du mot de passe
     const validPassword = await bcrypt.compare(password, user.password);
@@ -164,7 +207,7 @@ const getRecommendations = async (req, res) => {
 };
 
 // ✅ Fetch users with matching skills
-exports.getMatches = async (req, res) => {
+export const getMatches = async (req, res) => {
   const userId = req.params.id;  // Extract user ID from the request params
   try {
       // Fetch match data using userId
@@ -268,8 +311,54 @@ const logoutUser = async (req, res) => {
 };
 
 
+const verifyEmail = async (req, res) => {
+  const { token } = req.params;
 
-module.exports = {
+  try {
+    const user = await User.findOne({ verificationToken: token });
+
+    if (!user) {
+      return res.status(400).json({ error: "Token de vérification invalide ou expiré." });
+    }
+
+    user.isVerified = true;
+    user.verificationToken = undefined; // On supprime le token
+    await user.save();
+
+    res.status(200).json({ message: "Votre email a été vérifié avec succès !" });
+  } catch (error) {
+    console.error("Erreur lors de la vérification de l'email :", error);
+    res.status(500).json({ error: "Erreur serveur" });
+  }
+};
+
+
+
+const getUserByEmail = async (req, res) => {
+  try {
+    const email = req.params.email; // Récupère l'email depuis les paramètres de l'URL
+
+    // Recherche de l'utilisateur par email (s'assurer qu'on cherche dans le champ 'email' et non '_id')
+    const user = await User.findOne({ email });
+
+    if (!user) {
+      return res.status(404).json({ error: "Utilisateur non trouvé" });
+    }
+
+    // Retourner les informations de l'utilisateur si trouvé
+    return res.status(200).json(user);
+  } catch (error) {
+    console.error("❌ Erreur lors de la récupération de l'utilisateur:", error);
+    return res.status(500).json({ error: "Erreur lors de la récupération de l'utilisateur" });
+  }
+};
+
+
+
+
+export {
+  getUserByEmail,
+  verifyEmail,
   uploadProfileImage,
   getTotalUsers,
   createUser,
