@@ -35,9 +35,6 @@ pipeline {
             }
         }
 
-        // No 'Build' stage for the backend since it's a Node.js project
-
-     stages {
         stage('SonarQube Analysis (Frontend)') {
             steps {
                 script {
@@ -59,6 +56,5 @@ pipeline {
                 }
             }
         }
-
     }
 }
