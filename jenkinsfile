@@ -2,9 +2,17 @@ pipeline {
     agent any
 
     stages {
-        stage('Install dependencies') {
+        stage('Install frontend dependencies') {
             steps {
-                script {
+                dir('piFrontEnd') {
+                    sh 'npm install'
+                }
+            }
+        }
+
+        stage('Install backend dependencies') {
+            steps {
+                dir('piBackenEnd') {
                     sh 'npm install'
                 }
             }
@@ -12,15 +20,32 @@ pipeline {
 
         stage('Unit Test') {
             steps {
-                script {
-                    sh 'npm test'
+                parallel (
+                    frontend: {
+                        dir('piFrontEnd') {
+                            sh 'npm test'
+                        }
+                    },
+                    backend: {
+                        dir('piBackenEnd') {
+                            sh 'npm test'
+                        }
+                    }
+                )
+            }
+        }
+
+        stage('Build frontend') {
+            steps {
+                dir('piFrontEnd') {
+                    sh 'npm run build-dev'
                 }
             }
         }
 
-        stage('Build application') {
+        stage('Build backend') {
             steps {
-                script {
+                dir('piBackenEnd') {
                     sh 'npm run build-dev'
                 }
             }
@@ -28,7 +53,7 @@ pipeline {
 
         stage('SonarQube Analysis') {
             steps {
-                script {
+                dir('piFrontEnd') {
                     def scannerHome = tool 'scanner'
                     withSonarQubeEnv {
                         sh "${scannerHome}/bin/sonar-scanner"
