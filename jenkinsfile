@@ -37,30 +37,31 @@ pipeline {
 
         // No 'Build' stage for the backend since it's a Node.js project
 
-        stage('SonarQube Analysis (Frontend)') {
-            steps {
-                dir('piFrontEnd') {
-                    script {
-                        def scannerHome = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                        withSonarQubeEnv('SonarQube') {
-                            sh "${scannerHome}/bin/sonar-scanner"
-                        }
-                    }
+    stage('SonarQube Analysis (Frontend)') {
+    steps {
+        dir('piFrontEnd') {
+            script {
+                def scannerHome = tool name: 'scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                withSonarQubeEnv('SonarQube') {
+                    sh "${scannerHome}/bin/sonar-scanner"
                 }
             }
         }
+    }
+}
 
-        stage('SonarQube Analysis (Backend)') {
-            steps {
-                dir('piBackEnd') {
-                    script {
-                        def scannerHome = tool name: 'SonarScanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
-                        withSonarQubeEnv('SonarQube') {
-                            sh "${scannerHome}/bin/sonar-scanner"
-                        }
-                    }
+stage('SonarQube Analysis (Backend)') {
+    steps {
+        dir('piBackEnd') {
+            script {
+                def scannerHome = tool name: 'scanner', type: 'hudson.plugins.sonar.SonarRunnerInstallation'
+                withSonarQubeEnv('SonarQube') {
+                    sh "${scannerHome}/bin/sonar-scanner"
                 }
             }
         }
+    }
+}
+
     }
 }
