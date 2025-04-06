@@ -38,7 +38,7 @@ pipeline {
         stage('Build frontend') {
             steps {
                 dir('piFrontEnd') {
-                    sh 'npm run build-dev'
+                    sh 'npm run build'
                 }
             }
         }
@@ -46,7 +46,7 @@ pipeline {
         stage('Build backend') {
             steps {
                 dir('piBackEnd') {
-                    sh 'npm run build-dev'
+                    sh 'npm run build'
                 }
             }
         }
