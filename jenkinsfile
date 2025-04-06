@@ -46,7 +46,10 @@ pipeline {
         stage('Build backend') {
             steps {
                 dir('piBackEnd') {
-                    sh 'npm run build'
+                    // If needed, use the correct build command for backend
+                    sh 'npm run build'  // Example if backend has a build script
+                    // or if you only want to start the backend:
+                    // sh 'npm run start'
                 }
             }
         }
