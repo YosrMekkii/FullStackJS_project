@@ -35,26 +35,31 @@ pipeline {
             }
         }
 
-        stage('SonarQube Analysis (Frontend)') {
-            steps {
-                script {
-                    def scannerHome = tool 'scanner'
-                    withSonarQubeEnv('SonarQube') {  // Remplacez 'SonarQube' par le nom de votre installation SonarQube
-                        sh "${scannerHome}/bin/sonar-scanner"
-                    }
+ stage('SonarQube Analysis (Frontend)') {
+    steps {
+        dir('piFrontEnd') {
+            script {
+                def scannerHome = tool 'scanner'
+                withSonarQubeEnv('SonarQube') {  // Remplacez 'SonarQube' par le nom de votre installation SonarQube
+                    sh "${scannerHome}/bin/sonar-scanner"
                 }
             }
         }
+    }
+}
 
-        stage('SonarQube Analysis (Backend)') {
-            steps {
-                script {
-                    def scannerHome = tool 'scanner'
-                    withSonarQubeEnv('SonarQube') {  // Remplacez 'SonarQube' par le nom de votre installation SonarQube
-                        sh "${scannerHome}/bin/sonar-scanner"
-                    }
+stage('SonarQube Analysis (Backend)') {
+    steps {
+        dir('piBackEnd') {
+            script {
+                def scannerHome = tool 'scanner'
+                withSonarQubeEnv('SonarQube') {  // Remplacez 'SonarQube' par le nom de votre installation SonarQube
+                    sh "${scannerHome}/bin/sonar-scanner"
                 }
             }
         }
+    }
+}
+
     }
 }
