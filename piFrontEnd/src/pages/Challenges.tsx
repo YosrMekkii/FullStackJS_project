@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import Sidebar from '../components/sidebar';
 import {
   Trophy,
   Star,
@@ -13,7 +14,8 @@ import {
   Flame,
   Crown,
   Medal,
-  TrendingUp
+  TrendingUp,
+  
 } from 'lucide-react';
 import ActiveChallenge from '../components/ActiveChallenge';
 
@@ -247,6 +249,7 @@ const UserProfile: React.FC<Props> = (props) => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
+      <Sidebar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header with User Progress */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">

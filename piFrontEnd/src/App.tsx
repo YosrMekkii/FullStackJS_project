@@ -21,7 +21,7 @@ import Community from './pages/community';
 import QA from './pages/questionsanswers';
 import QuestionDetail from './pages/Questiondetail';
 import AskQuestion from './pages/askquestion';
-
+import MatchesPage from './pages/MatchesPage';
 
 function App() {
   const [user, setUser] = useState<any | null>(null);
@@ -65,7 +65,7 @@ const ProtectedRoute = ({ user, children }: { user: any; children: JSX.Element }
         </Link>
       </div>
 
-      {/* Liens stylisés */}
+      {/* Liens stylisés
       <div className="flex items-center space-x-6">
         <Link
           to="/marketplace"
@@ -87,7 +87,7 @@ const ProtectedRoute = ({ user, children }: { user: any; children: JSX.Element }
         >
           À propos
         </Link>
-      </div>
+      </div> */}
 
       {/* Section Connexion / Profil */}
       <div className="flex items-center space-x-4">
@@ -143,10 +143,9 @@ const ProtectedRoute = ({ user, children }: { user: any; children: JSX.Element }
           <Route path="/qa" element={<QA />} /> 
           <Route path="/qa/:id" element={<QuestionDetail />} />
           <Route path="/ask-question" element={<AskQuestion />} />
-
-            {/* Route protégée pour Challenges */}
-  <Route path="/challenges" element={<ProtectedRoute user={user}><Challenges /></ProtectedRoute>} />
+          <Route path="/challenges" element={<Challenges/>} ></Route>
           <Route path="/about" element={<About />} />
+          <Route path="/matchesPage" element={<MatchesPage />} />
 
 
 

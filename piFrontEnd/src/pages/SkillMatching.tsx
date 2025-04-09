@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { 
   X, 
   Check, 
@@ -12,6 +12,7 @@ import {
   Loader2
 } from 'lucide-react';
 import axios from 'axios';
+import Sidebar from '../components/sidebar';
 
 interface SkillUser {
   id: string;
@@ -24,7 +25,18 @@ interface SkillUser {
   rating: number;
   experience: string;
   achievements: string[];
-  profileImagePath: '',
+  profileImagePath: string;
+}
+
+interface Match {
+  userId: string;
+  matchedUserId: string;
+  createdAt: string;
+}
+
+interface User {
+  id: string;
+  // other user properties
 }
 
 const SkillMatching = () => {
@@ -37,18 +49,47 @@ const SkillMatching = () => {
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [offsetX, setOffsetX] = useState(0);
+  const [matches, setMatches] = useState<Match[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const cardRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
+  // Get user from localStorage
   useEffect(() => {
+    const storedUser = localStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setUser(parsedUser);
+        console.log("Logged in user:", parsedUser);
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+      }
+    }
+  }, []);
+
+  // Fetch users once we have the current user
+  useEffect(() => {
+    if (!user || !user.id) return;
+    
     const fetchUsers = async () => {
       try {
         setLoading(true);
-        setError(null);
-  
-        const response = await axios.get("http://localhost:3000/api/users"); 
-        console.log("Fetched Users:", response.data);
-  
-        setUsers(response.data); 
+        const response = await axios.get("http://localhost:3000/api/users");
+        
+        // Log all users to see what we're working with
+        console.log("All users:", response.data);
+        console.log("Current user ID:", user.id);
+        
+        // Filter out the current user by ID
+        const filteredUsers = response.data.filter((u: SkillUser) => u.id !== user.id);
+        console.log("Filtered users:", filteredUsers);
+        
+        setUsers(filteredUsers);
+        
+        // Get existing matches
+        const existingMatches = JSON.parse(localStorage.getItem('skillMatches') || '[]');
+        setMatches(existingMatches);
       } catch (error) {
         console.error("Error fetching users:", error);
         setError("Failed to load potential matches");
@@ -56,35 +97,44 @@ const SkillMatching = () => {
         setLoading(false);
       }
     };
-  
+    
     fetchUsers();
-  }, []);
+  }, [user]);
   
+  const saveMatch = async (matchedUserId: string) => {
+    if (!user || !user.id) return null;
+    
+    try {
+      const matchData = {
+        userId: user.id,
+        matchedUserId,
+        createdAt: new Date().toISOString()
+      };
+      
+      console.log("Match saved:", matchData);
+      
+      // Add to local matches state
+      setMatches(prev => [...prev, matchData]);
+      
+      // Save to localStorage for persistence
+      const existingMatches = JSON.parse(localStorage.getItem('skillMatches') || '[]');
+      localStorage.setItem('skillMatches', JSON.stringify([...existingMatches, matchData]));
+      
+      return { ...matchData, isMutual: Math.random() > 0.7 };
+    } catch (error) {
+      console.error("Error saving match:", error);
+      return null;
+    }
+  };
 
   const handleSwipeLeft = async () => {
     if (currentIndex >= users.length) return;
     
     setSwipeDirection('left');
     
-    // In a real app, you would record this swipe in the database
     try {
-      // Record the swipe in your database
-      // const response = await fetch('/api/swipes', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({
-      //     userId: 'current-user-id',
-      //     swipedUserId: users[currentIndex].id,
-      //     direction: 'left',
-      //   }),
-      // });
-      
-      // For demo purposes, just log it
       console.log(`Swiped left on ${users[currentIndex].firstName}`);
       
-      // Move to next user after animation completes
       setTimeout(() => {
         setCurrentIndex(prev => prev + 1);
         setSwipeDirection(null);
@@ -100,34 +150,20 @@ const SkillMatching = () => {
     
     setSwipeDirection('right');
     
-    // In a real app, you would record this swipe and check for a match
     try {
-      // Record the swipe in your database
-      // const response = await fetch('/api/swipes', {
-      //   method: 'POST',
-      //   headers: {
-      //     'Content-Type': 'application/json',
-      //   },
-      //   body: JSON.stringify({
-      //     userId: 'current-user-id',
-      //     swipedUserId: users[currentIndex].id,
-      //     direction: 'right',
-      //   }),
-      // });
-      // const data = await response.json();
+      const matchedUser = users[currentIndex];
+      console.log(`Swiped right on ${matchedUser.firstName}`);
       
-      // For demo purposes, just log it
-      console.log(`Swiped right on ${users[currentIndex].firstName}`);
+      // Save match to database
+      const savedMatch = await saveMatch(matchedUser.id);
       
-      // Check if it's a match (in a real app, this would be a database query)
-      const isMatch = Math.random() > 0.5; // 50% chance of match for demo
+      // Check if it's a mutual match
+      const isMatch = savedMatch?.isMutual || false; 
       
       if (isMatch) {
-        // Show match notification
-        alert(`It's a match! You matched with ${users[currentIndex].firstName}`);
+        alert(`It's a match! You matched with ${matchedUser.firstName}`);
       }
       
-      // Move to next user after animation completes
       setTimeout(() => {
         setCurrentIndex(prev => prev + 1);
         setSwipeDirection(null);
@@ -138,7 +174,12 @@ const SkillMatching = () => {
     }
   };
 
-  // Touch/mouse event handlers for drag functionality
+  // Handle navigation to matches page with direct window.location
+  const goToMatchesPage = () => {
+    window.location.href = '/matches';
+  };
+
+  // Touch/mouse event handlers
   const handleStart = (clientX: number) => {
     setIsDragging(true);
     setStartX(clientX);
@@ -150,19 +191,15 @@ const SkillMatching = () => {
     const newOffsetX = clientX - startX;
     setOffsetX(newOffsetX);
     
-    // Change opacity based on swipe direction
     if (cardRef.current) {
-      const rotationAngle = newOffsetX * 0.1; // Adjust rotation speed
+      const rotationAngle = newOffsetX * 0.1;
       cardRef.current.style.transform = `translateX(${newOffsetX}px) rotate(${rotationAngle}deg)`;
       
       if (newOffsetX > 0) {
-        // Swiping right - show green overlay
         cardRef.current.style.boxShadow = `inset 0 0 0 2px #10b981, 0 10px 15px -3px rgba(0, 0, 0, 0.1)`;
       } else if (newOffsetX < 0) {
-        // Swiping left - show red overlay
         cardRef.current.style.boxShadow = `inset 0 0 0 2px #ef4444, 0 10px 15px -3px rgba(0, 0, 0, 0.1)`;
       } else {
-        // Reset
         cardRef.current.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1)';
       }
     }
@@ -173,28 +210,24 @@ const SkillMatching = () => {
     
     setIsDragging(false);
     
-    // Reset card style
     if (cardRef.current) {
       cardRef.current.style.transition = 'transform 0.3s ease, box-shadow 0.3s ease';
       cardRef.current.style.boxShadow = '0 10px 15px -3px rgba(0, 0, 0, 0.1)';
     }
     
-    // Determine if swipe was significant enough
-    const threshold = 100; // Minimum distance to trigger swipe
+    const threshold = 100;
     
     if (offsetX > threshold) {
       handleSwipeRight();
     } else if (offsetX < -threshold) {
       handleSwipeLeft();
     } else {
-      // Reset position if swipe wasn't significant
       setOffsetX(0);
       if (cardRef.current) {
         cardRef.current.style.transform = 'translateX(0) rotate(0deg)';
       }
     }
     
-    // Reset transition after animation completes
     setTimeout(() => {
       if (cardRef.current) {
         cardRef.current.style.transition = '';
@@ -230,7 +263,7 @@ const SkillMatching = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-indigo-100 to-blue-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-indigo-600 mx-auto" />
           <p className="mt-4 text-xl text-gray-600">Finding potential matches...</p>
@@ -241,7 +274,7 @@ const SkillMatching = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-indigo-100 to-blue-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-6 bg-white rounded-xl shadow-md">
           <div className="text-red-500 mb-4">
             <X className="h-12 w-12 mx-auto" />
@@ -262,7 +295,7 @@ const SkillMatching = () => {
   // No more users to show
   if (currentIndex >= users.length) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-indigo-100 to-blue-50 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-8 bg-white rounded-xl shadow-md">
           <div className="text-indigo-500 mb-4">
             <Award className="h-16 w-16 mx-auto" />
@@ -278,6 +311,12 @@ const SkillMatching = () => {
             >
               Browse Skill Marketplace
             </Link>
+            <a 
+              href="/matches" 
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-center"
+            >
+              View My Matches ({matches.length})
+            </a>
             <button 
               onClick={() => window.location.reload()}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
@@ -293,7 +332,8 @@ const SkillMatching = () => {
   const currentUser = users[currentIndex];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-indigo-50 to-white py-8 px-4">
+    <div className="min-h-screen bg-gradient-to-b from-indigo-100 to-blue-50 py-8 px-4">
+      <Sidebar />
       <div className="max-w-md mx-auto">
         <div className="mb-6 text-center">
           <h1 className="text-3xl font-bold text-gray-900">Skill Matching</h1>
@@ -308,10 +348,10 @@ const SkillMatching = () => {
             className={`absolute inset-0 bg-white rounded-2xl shadow-lg overflow-hidden transition-transform duration-300 ${
               swipeDirection === 'left' ? 'translate-x-[-150%] rotate-[-30deg]' : 
               swipeDirection === 'right' ? 'translate-x-[150%] rotate-[30deg]' : 
-              `translate-x-[${offsetX}px]`
+              ''
             }`}
             style={{ 
-              transform: isDragging ? `translateX(${offsetX}px)` : undefined,
+              transform: isDragging ? `translateX(${offsetX}px) rotate(${offsetX * 0.1}deg)` : undefined,
               transition: isDragging ? 'none' : 'transform 0.3s ease, box-shadow 0.3s ease'
             }}
             onMouseDown={handleMouseDown}
@@ -459,13 +499,13 @@ const SkillMatching = () => {
             <span>Marketplace</span>
           </Link>
           
-          <Link
-            to="/matches"
+          <a
+            href="/matchespage"
             className="flex items-center text-indigo-600 hover:text-indigo-800"
           >
-            <span>My Matches</span>
+            <span>My Matches ({matches.length})</span>
             <ChevronRight className="h-5 w-5 ml-1" />
-          </Link>
+          </a>
         </div>
       </div>
     </div>

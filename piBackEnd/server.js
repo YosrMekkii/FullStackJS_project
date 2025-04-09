@@ -10,6 +10,7 @@ import userRoutes from './routes/userRoutes.js';
 import skillRoutes from './routes/skillRoutes.js';
 import reportRoutes from "./routes/reportRoutes.js";
 import questionRoutes from "./routes/questionRoutes.js";
+import matchRoutes from "./routes/matchRoutes.js";
 
 import cors from 'cors'; // ✅ Import CORS
 import imageModel from './models/image.model.js';
@@ -119,7 +120,7 @@ app.use('/api/users', userRoutes);
 app.use('/skill', skillRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/questions", questionRoutes);
-
+app.use("/api/matches", matchRoutes);
 app.use('/uploads', express.static('uploads'));
 
 

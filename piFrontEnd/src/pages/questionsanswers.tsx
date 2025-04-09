@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useParams, useNavigate } from 'react-router-dom';
+import Sidebar from '../components/sidebar';
 import {
   Code,
   Search,
@@ -286,6 +287,8 @@ const QA = () => {
     // Show question detail view
     return (
       <div className="min-h-screen bg-gray-50">
+              <Sidebar />
+
         {/* Header with Back Button */}
         <div className="bg-white border-b border-gray-200">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
@@ -476,6 +479,7 @@ const QA = () => {
   // Question List View
   return (
     <div className="min-h-screen bg-gray-50">
+      <Sidebar />
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">

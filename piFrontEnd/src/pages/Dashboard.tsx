@@ -1,16 +1,28 @@
-import React from 'react';
-import { 
-  Layout, 
-  Home, 
-  BookOpen, 
-  Users, 
-  MessageSquare, 
-  Settings,
-  Search,
-  Bell
-} from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import Sidebar from '../components/sidebar'; // Import the Sidebar component
 
 const Dashboard = () => {
+  const [sidebarState, setSidebarState] = useState(false);
+  const [mainContentMargin, setMainContentMargin] = useState('ml-64');
+
+  // Listen for sidebar state changes through a custom event
+  useEffect(() => {
+    const handleSidebarChange = (event) => {
+      setSidebarState(event.detail.isCollapsed);
+    };
+
+    window.addEventListener('sidebarStateChange', handleSidebarChange);
+    
+    return () => {
+      window.removeEventListener('sidebarStateChange', handleSidebarChange);
+    };
+  }, []);
+
+  // Update main content margin when sidebar state changes
+  useEffect(() => {
+    setMainContentMargin(sidebarState ? 'ml-16' : 'ml-64');
+  }, [sidebarState]);
+
   const skillExchanges = [
     {
       id: 1,
@@ -43,128 +55,69 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Top Navigation */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <span className="text-xl font-semibold text-indigo-600">Dashboard</span>
-            </div>
-            <div className="flex items-center space-x-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search..."
-                  className="w-64 pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                />
-                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-              </div>
-              <button className="relative p-2 text-gray-400 hover:text-indigo-500">
-                <Bell className="h-6 w-6" />
-                <span className="absolute top-1 right-1 h-2 w-2 bg-red-500 rounded-full"></span>
-              </button>
-              <img
-                src="https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=32&h=32&fit=crop"
-                alt="Profile"
-                className="h-8 w-8 rounded-full cursor-pointer"
-              />
-            </div>
+      {/* Include the Sidebar component */}
+      <Sidebar />
+
+      {/* Main Content - with dynamic margin based on sidebar state */}
+      <div className={`${mainContentMargin} p-8 transition-all duration-300 ease-in-out`}>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <h3 className="text-gray-500 text-sm font-medium">Active Exchanges</h3>
+            <p className="text-2xl font-semibold text-gray-900 mt-2">24</p>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <h3 className="text-gray-500 text-sm font-medium">Pending Requests</h3>
+            <p className="text-2xl font-semibold text-gray-900 mt-2">12</p>
+          </div>
+          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <h3 className="text-gray-500 text-sm font-medium">Skills Shared</h3>
+            <p className="text-2xl font-semibold text-gray-900 mt-2">8</p>
           </div>
         </div>
-      </nav>
 
-      <div className="flex">
-        {/* Sidebar */}
-        <div className="w-64 min-h-[calc(100vh-4rem)] bg-white border-r border-gray-200">
-          <nav className="mt-8 space-y-1 px-4">
-            <a href="#" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
-              <Home className="h-5 w-5 mr-3" />
-              Overview
-            </a>
-            <a href="#" className="flex items-center px-4 py-2 bg-indigo-50 text-indigo-600 rounded-lg">
-              <Layout className="h-5 w-5 mr-3" />
-              Dashboard
-            </a>
-            <a href="#" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
-              <BookOpen className="h-5 w-5 mr-3" />
-              My Skills
-            </a>
-            <a href="#" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
-              <Users className="h-5 w-5 mr-3" />
-              Connections
-            </a>
-            <a href="#" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
-              <MessageSquare className="h-5 w-5 mr-3" />
-              Messages
-            </a>
-            <a href="#" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
-              <Settings className="h-5 w-5 mr-3" />
-              Settings
-            </a>
-          </nav>
-        </div>
-
-        {/* Main Content */}
-        <div className="flex-1 p-8">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-              <h3 className="text-gray-500 text-sm font-medium">Active Exchanges</h3>
-              <p className="text-2xl font-semibold text-gray-900 mt-2">24</p>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-              <h3 className="text-gray-500 text-sm font-medium">Pending Requests</h3>
-              <p className="text-2xl font-semibold text-gray-900 mt-2">12</p>
-            </div>
-            <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-              <h3 className="text-gray-500 text-sm font-medium">Skills Shared</h3>
-              <p className="text-2xl font-semibold text-gray-900 mt-2">8</p>
-            </div>
+        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+          <div className="p-6 border-b border-gray-200">
+            <h2 className="text-lg font-semibold text-gray-900">Recent Skill Exchange Proposals</h2>
           </div>
-
-          <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-            <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Recent Skill Exchange Proposals</h2>
-            </div>
-            <div className="divide-y divide-gray-200">
-              {skillExchanges.map((exchange) => (
-                <div key={exchange.id} className="p-6 flex items-center justify-between hover:bg-gray-50">
-                  <div className="flex items-center space-x-4">
-                    <img
-                      src={exchange.avatar}
-                      alt={exchange.user}
-                      className="h-10 w-10 rounded-full"
-                    />
-                    <div>
-                      <h3 className="text-sm font-medium text-gray-900">{exchange.user}</h3>
-                      <p className="text-sm text-gray-500">{exchange.location}</p>
-                    </div>
-                  </div>
-                  <div className="flex-1 px-8">
-                    <div className="flex items-center justify-center space-x-4">
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-gray-900">Offering</p>
-                        <p className="text-sm text-gray-500">{exchange.offering}</p>
-                      </div>
-                      <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
-                      </svg>
-                      <div className="text-center">
-                        <p className="text-sm font-medium text-gray-900">Looking for</p>
-                        <p className="text-sm text-gray-500">{exchange.looking}</p>
-                      </div>
-                    </div>
-                  </div>
+          <div className="divide-y divide-gray-200">
+            {skillExchanges.map((exchange) => (
+              <div key={exchange.id} className="p-6 flex items-center justify-between hover:bg-gray-50">
+                <div className="flex items-center space-x-4">
+                  <img
+                    src={exchange.avatar}
+                    alt={exchange.user}
+                    className="h-10 w-10 rounded-full"
+                  />
                   <div>
-                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                      {exchange.level}
-                    </span>
+                    <h3 className="text-sm font-medium text-gray-900">{exchange.user}</h3>
+                    <p className="text-sm text-gray-500">{exchange.location}</p>
                   </div>
-                  <button className="ml-8 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
-                    Connect
-                  </button>
                 </div>
-              ))}
-            </div>
+                <div className="flex-1 px-8">
+                  <div className="flex items-center justify-center space-x-4">
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-gray-900">Offering</p>
+                      <p className="text-sm text-gray-500">{exchange.offering}</p>
+                    </div>
+                    <svg className="h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4" />
+                    </svg>
+                    <div className="text-center">
+                      <p className="text-sm font-medium text-gray-900">Looking for</p>
+                      <p className="text-sm text-gray-500">{exchange.looking}</p>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                    {exchange.level}
+                  </span>
+                </div>
+                <button className="ml-8 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
+                  Connect
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       </div>

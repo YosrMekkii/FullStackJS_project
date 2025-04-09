@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Editor from "@monaco-editor/react";
 import Peer from 'peerjs';
 import { io } from 'socket.io-client';
+import Sidebar from '../components/sidebar'; // Import the Sidebar component
 import { 
   Video,
   VideoOff,
@@ -423,6 +424,8 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gray-50">
+            <Sidebar />
+
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <div className="grid grid-cols-3 gap-6">
           {/* Video Call Section */}

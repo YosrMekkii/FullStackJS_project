@@ -1,21 +1,16 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useNavigate } from 'react-router-dom';
-
+import Sidebar from '../components/sidebar';
 import {
   MessageSquare,
   Users,
   Search,
   ThumbsUp,
-  Star,
+
   Clock,
-  Tag,
-  Filter,
-  TrendingUp,
   CheckCircle2,
-  Bell,
   Plus,
-  ChevronRight,
   MessagesSquare,
   Award,
   Eye,
@@ -183,6 +178,8 @@ const Community = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+            <Sidebar />
+
       {/* Header */}
       <div className="bg-white border-b border-gray-200">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
