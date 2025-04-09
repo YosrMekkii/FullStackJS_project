@@ -310,7 +310,7 @@ const Profile = () => {
             <div className="flex justify-between items-start">
               <div className="flex space-x-6">
                 <img
-                src={`http://localhost:3000/${profile.profileImagePath}`}
+                src={`http://localhost:3000${profile.profileImagePath}`}
                 alt="Profile"
                   className="h-32 w-32 rounded-full border-4 border-white shadow-lg"
                 />

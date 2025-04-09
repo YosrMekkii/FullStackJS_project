@@ -1,15 +1,24 @@
 import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { User, Mail, MapPin, Calendar, Upload } from 'lucide-react';
+import { User, Mail, MapPin, Calendar, Upload, CheckCircle, XCircle, Loader2 } from 'lucide-react';
 
 const SignUp = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [profileImage, setProfileImage] = useState<File | null>(null);
+  // Ajout des états pour gérer la notification
+  const [notification, setNotification] = useState<{
+    show: boolean;
+    type: 'success' | 'error';
+    message: string;
+  }>({
+    show: false,
+    type: 'success',
+    message: '',
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [formData, setFormData] = useState({
-
-    
     firstName: '',
     lastName: '',
     email: '',
@@ -31,14 +40,9 @@ const SignUp = () => {
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    console.log(e.target.files);
     if (file) {
       setProfileImage(file);
-
-
-     
-      // Create preview URL
-const reader = new FileReader();
+      const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
       };
@@ -50,93 +54,116 @@ const reader = new FileReader();
     fileInputRef.current?.click();
   };
 
-  
+  // Fonction pour afficher la notification
+  const showNotification = (type: 'success' | 'error', message: string) => {
+    setNotification({
+      show: true,
+      type,
+      message,
+    });
 
+    // Masquer la notification après 5 secondes
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }));
+    }, 5000);
+  };
 
-
-  // Gestion de l'inscription et envoi des données
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log("Données envoyées :", formData);
-  
+
     if (formData.password !== formData.confirmPassword) {
-      alert("Les mots de passe ne correspondent pas !");
+      showNotification('error', 'Les mots de passe ne correspondent pas !');
       return;
     }
-  
+
+    setIsSubmitting(true);
+
     try {
       const submitData = new FormData();
-  
-      // Ajouter l'image de profil dans FormData
+      submitData.append('firstName', formData.firstName);
+      submitData.append('lastName', formData.lastName);
+      submitData.append('email', formData.email);
+      submitData.append('password', formData.password);
+      submitData.append('age', formData.age);
+      submitData.append('country', formData.country);
+      submitData.append('city', formData.city);
+      submitData.append('educationLevel', formData.educationLevel);
+      
       if (profileImage) {
-        submitData.append("profileImage", profileImage);
+        submitData.append('profileImage', profileImage);
       }
-  
-      // Ajouter les autres données sous forme de JSON
-      const formDataJson = {
-        firstName: formData.firstName,
-        lastName: formData.lastName,
-        email: formData.email,
-        password: formData.password,
-        age: formData.age,
-        country: formData.country,
-        city: formData.city,
-        educationLevel: formData.educationLevel,
-      };
-  
-      // Créer l'utilisateur sans l'image
+
       const response = await fetch("http://localhost:3000/api/users/signup", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formDataJson),
+        body: submitData,
       });
-  
+
       const result = await response.json();
-      console.log("Réponse d'inscription :", result);  // Ajout d'un log pour inspecter la réponse
-  
-      if (!response.ok) throw new Error(result.error || "Erreur lors de l'inscription");
-  
-      // Vérifie que la réponse contient bien un utilisateur avec un ID
-      const userId = result.user?.id; // Utilisation du _id si présent
-      if (!userId) throw new Error("ID utilisateur manquant dans la réponse");
-  
-      console.log("ID de l'utilisateur créé :", userId);
-  
-      // Si une image est présente, on l'envoie après la création de l'utilisateur
-      if (profileImage) {
-        const imageUploadResponse = await fetch(`http://localhost:3000/api/users/upload/${userId}`, {
-          method: "POST",
-          body: submitData,
-        });
-  
-        const imageData = await imageUploadResponse.json();
-        if (!imageUploadResponse.ok) throw new Error(imageData.error || "Erreur lors de l'upload de l'image");
-  
-        // Ajouter l'URL de l'image au profil de l'utilisateur
-        const profileImageUrl = imageData.filename;
-        const updateUserResponse = await fetch(`http://localhost:3000/api/users/${userId}`, {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ profileImagePath: profileImageUrl }),
-        });
-  
-        const updateResult = await updateUserResponse.json();
-        if (!updateUserResponse.ok) throw new Error(updateResult.error || "Erreur lors de la mise à jour de l'image de profil");
-  
-        console.log("Image de profil ajoutée avec succès :", updateResult);
+
+      if (!response.ok) {
+        throw new Error(result.error || "Erreur lors de l'inscription");
       }
-  
+
+      showNotification(
+        'success',
+        'Inscription réussie ! Un email de vérification a été envoyé à votre adresse email.'
+      );
+
+      // Réinitialiser le formulaire après 2 secondes
+      setTimeout(() => {
+        setFormData({
+          firstName: '',
+          lastName: '',
+          email: '',
+          age: '',
+          country: '',
+          city: '',
+          educationLevel: '',
+          password: '',
+          confirmPassword: '',
+        });
+        setImagePreview(null);
+        setProfileImage(null);
+      }, 2000);
+
     } catch (error) {
-      console.error("Erreur lors de l'inscription ou du téléchargement de l'image :", error);
+      showNotification('error', 'Une erreur est survenue lors de l\'inscription.');
+      console.error("Erreur lors de l'inscription :", error);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   return (
     <div className="min-h-[calc(100vh-4rem)] flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      {/* Notification Toast */}
+      <div
+        className={`fixed top-4 right-4 max-w-md transform transition-transform duration-300 ease-in-out ${
+          notification.show ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
+        <div
+          className={`rounded-lg shadow-lg p-4 flex items-center space-x-3 ${
+            notification.type === 'success'
+              ? 'bg-green-50 border border-green-200'
+              : 'bg-red-50 border border-red-200'
+          }`}
+        >
+          {notification.type === 'success' ? (
+            <CheckCircle className="h-6 w-6 text-green-500" />
+          ) : (
+            <XCircle className="h-6 w-6 text-red-500" />
+          )}
+          <p
+            className={`text-sm font-medium ${
+              notification.type === 'success' ? 'text-green-800' : 'text-red-800'
+            }`}
+          >
+            {notification.message}
+          </p>
+        </div>
+      </div>
+
       <div className="max-w-md w-full space-y-8 bg-white p-8 rounded-xl shadow-md">
         <div>
           <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
@@ -376,9 +403,17 @@ const reader = new FileReader();
           <div>
             <button
               type="submit"
-              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={isSubmitting}
+              className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-70 disabled:cursor-not-allowed"
             >
-              Create Account
+              {isSubmitting ? (
+                <div className="flex items-center">
+                  <Loader2 className="animate-spin h-5 w-5 mr-2" />
+                  Creating account...
+                </div>
+              ) : (
+                'Create Account'
+              )}
             </button>
           </div>
         </form>

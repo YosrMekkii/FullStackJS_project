@@ -13,7 +13,7 @@ import questionRoutes from "./routes/questionRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
 
 import cors from 'cors'; // ✅ Import CORS
-import imageModel from './models/image.model.js';
+//import imageModel from './models/image.model.js';
 //const userRoutes = require('./routes/userRoutes'); // Import des routes utilisateurs
 
 

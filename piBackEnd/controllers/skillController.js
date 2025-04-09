@@ -1,4 +1,4 @@
-const skillService = require('../services/skillService');
+import skillService from '../services/skillService.js';
 
 const createSkill = async (req, res) => {
     try {
@@ -48,7 +48,7 @@ const deleteSkill = async (req, res) => {
     }
 };
 
-module.exports = {
+export default {
     createSkill,
     getAllSkills,
     getSkillById,

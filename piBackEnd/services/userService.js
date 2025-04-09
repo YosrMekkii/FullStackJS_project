@@ -1,4 +1,4 @@
-const User = require("../models/user"); 
+import User from "../models/user.js";
 
 // ✅ Créer un utilisateur
 const createUser = async (userData) => {
@@ -108,7 +108,7 @@ const authenticateToken = (req, res, next) => {
 
 
 // Export des fonctions
-module.exports = {
+export  {
   uploadProfileImageService,
   getTotalUsers,
   createUser,

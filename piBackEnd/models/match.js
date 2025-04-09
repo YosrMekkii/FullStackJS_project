@@ -1,4 +1,5 @@
-const mongoose = require('mongoose');
+// models/Match.js
+import mongoose from 'mongoose';
 
 const matchSchema = new mongoose.Schema({
   userId: {
@@ -29,4 +30,7 @@ matchSchema.index({ userId: 1, matchedUserId: 1 }, { unique: true });
 
 const Match = mongoose.model('Match', matchSchema);
 
-module.exports = Match;
+// Export the model to be used in the routes
+//module.exports = Match;
+
+export default Match;

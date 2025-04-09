@@ -22,6 +22,9 @@ import QA from './pages/questionsanswers';
 import QuestionDetail from './pages/Questiondetail';
 import AskQuestion from './pages/askquestion';
 import MatchesPage from './pages/MatchesPage';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
+
 
 function App() {
   const [user, setUser] = useState<any | null>(null);
@@ -146,6 +149,8 @@ const ProtectedRoute = ({ user, children }: { user: any; children: JSX.Element }
           <Route path="/challenges" element={<Challenges/>} ></Route>
           <Route path="/about" element={<About />} />
           <Route path="/matchesPage" element={<MatchesPage />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password/:token" element={<ResetPassword />} />
 
 
 

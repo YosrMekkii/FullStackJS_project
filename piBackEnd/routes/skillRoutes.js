@@ -1,5 +1,5 @@
-const express = require('express');
-const skillController = require('../controllers/skillController');
+import express from 'express';
+import skillController from '../controllers/skillController.js';
 
 const router = express.Router();
 
@@ -9,4 +9,5 @@ router.get('/skills/:id', skillController.getSkillById);
 router.put('/skills/:id', skillController.updateSkill);
 router.delete('/skills/:id', skillController.deleteSkill);
 
-module.exports = router;
+
+export default router;
