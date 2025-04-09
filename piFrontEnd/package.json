@@ -23,6 +23,7 @@
     "pixi.js": "^8.8.0",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
+    "react-feather": "^2.0.10",
     "react-google-recaptcha": "^3.1.0",
     "react-konva": "^19.0.3",
     "react-markdown": "^10.1.0",

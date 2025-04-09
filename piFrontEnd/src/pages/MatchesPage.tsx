@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, User, MessageCircle, Loader2, X } from 'lucide-react';
+import { ChevronLeft, User, MessageCircle, Loader2, X, AlertTriangle } from 'lucide-react';
 import axios from 'axios';
 import Sidebar from '../components/sidebar';
 
@@ -9,6 +9,7 @@ interface Match {
   userId: string;
   matchedUserId: string;
   createdAt: string;
+  _id?: string; // Added to handle MongoDB ObjectId
 }
 
 interface MatchedUser {
@@ -21,12 +22,20 @@ interface MatchedUser {
   profileImagePath: string;
 }
 
+interface BatchUserResult {
+  id: string;
+  user: MatchedUser | null;
+  exists: boolean;
+}
+
 const MatchesPage = () => {
   const [loading, setLoading] = useState(true);
   const [matches, setMatches] = useState<Match[]>([]);
   const [matchedUsers, setMatchedUsers] = useState<MatchedUser[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [userId, setUserId] = useState<string | null>(null);
+  const [invalidMatches, setInvalidMatches] = useState<string[]>([]);
+  const [debugInfo, setDebugInfo] = useState<any>(null);
 
   // Get user from localStorage
   useEffect(() => {
@@ -44,70 +53,98 @@ const MatchesPage = () => {
     }
   }, []);
 
-  // Fetch matches from database
+  // Fetch matches and matched users' data
   useEffect(() => {
     if (!userId) return;
 
-    const fetchMatches = async () => {
+    const fetchMatchesAndUsers = async () => {
       try {
         setLoading(true);
-        // Get matches for current user from API
-        const response = await axios.get(`http://localhost:3000/api/matches/${userId}`);
-        setMatches(response.data);
-        console.log("User matches from database:", response.data);
-      } catch (error) {
-        console.error("Error loading matches:", error);
-        setError("Failed to load matches data");
-      }
-    };
-
-    fetchMatches();
-  }, [userId]);
-
-  // Fetch matched users' details
-  useEffect(() => {
-    if (!matches.length) {
-      setLoading(false);
-      return;
-    }
-
-    const fetchMatchedUsers = async () => {
-      try {
-        // Extract matched user IDs
-        const matchedUserIds = matches.map(match => match.matchedUserId);
         
-        if (matchedUserIds.length === 0) {
+        // 1. Get all matches for current user
+        const matchesResponse = await axios.get(`http://localhost:3000/api/matches/${userId}`);
+        const userMatches = matchesResponse.data;
+        console.log("Fetched matches for user", userId, ":", userMatches);
+        
+        // Transform MongoDB _id to id if needed
+        const normalizedMatches = userMatches.map((match: any) => ({
+          id: match.id || match._id,
+          userId: match.userId,
+          matchedUserId: match.matchedUserId,
+          createdAt: match.createdAt,
+          _id: match._id
+        }));
+        
+        setMatches(normalizedMatches);
+        
+        if (normalizedMatches.length === 0) {
+          console.log("No matches found for user", userId);
           setLoading(false);
           return;
         }
         
-        // Get user details for all matched users
-        // This could be optimized with a specific endpoint that accepts an array of IDs
-        const matchedUsersData = await Promise.all(
-          matchedUserIds.map(async (id) => {
-            try {
-              const response = await axios.get(`http://localhost:3000/api/users/${id}`);
-              return response.data;
-            } catch (err) {
-              console.error(`Error fetching user ${id}:`, err);
-              return null;
-            }
-          })
+        // 2. Extract all matched user IDs
+        const matchedUserIds = normalizedMatches.map(match => 
+          match.userId === userId ? match.matchedUserId : match.userId
         );
+        console.log("Matched user IDs to fetch:", matchedUserIds);
         
-        // Filter out any failed requests
-        const validUsers = matchedUsersData.filter(user => user !== null);
-        setMatchedUsers(validUsers);
+        try {
+          const usersResponse = await axios.post('http://localhost:3000/api/users/batch', {
+            ids: matchedUserIds
+          });
+          
+          console.log("Batch API response data:", usersResponse.data);
+          
+          // Store debug info for troubleshooting
+          setDebugInfo({
+            matches: normalizedMatches,
+            batchRequest: { ids: matchedUserIds },
+            batchResponse: usersResponse.data
+          });
+          
+          // Check the structure of the response
+          if (!usersResponse.data || !Array.isArray(usersResponse.data.users)) {
+            console.error("Unexpected API response structure:", usersResponse.data);
+            setError("Invalid API response format");
+            setLoading(false);
+            return;
+          }
+          
+          const batchResults = usersResponse.data.users;
+          console.log("Batch results array:", batchResults);
+          
+          // Filter valid users (those with a non-null user property)
+          const validUsers = batchResults
+            .filter(result => result && result.user !== null)
+            .map(result => result.user as MatchedUser);
+          
+          // Filter invalid user IDs (those marked as not existing)
+          const invalidUserIds = batchResults
+            .filter(result => result && result.exists === false)
+            .map(result => result.id);
+          
+          console.log("Valid users after filtering:", validUsers);
+          console.log("Invalid user IDs after filtering:", invalidUserIds);
+          
+          setMatchedUsers(validUsers);
+          setInvalidMatches(invalidUserIds);
+          
+          console.log(`Found ${validUsers.length} valid matches and ${invalidUserIds.length} invalid matches`);
+        } catch (error) {
+          console.error("Error in batch API call:", error);
+          setError("Failed to fetch user details");
+        }
       } catch (error) {
-        console.error("Error fetching matched users:", error);
-        setError("Failed to load matched users' details");
+        console.error("Error loading matches and users:", error);
+        setError("Failed to load your matches. Please try again later.");
       } finally {
         setLoading(false);
       }
     };
 
-    fetchMatchedUsers();
-  }, [matches]);
+    fetchMatchesAndUsers();
+  }, [userId]);
 
   // Remove a match
   const removeMatch = async (matchId: string) => {
@@ -118,11 +155,11 @@ const MatchesPage = () => {
       await axios.delete(`http://localhost:3000/api/matches/${matchId}`);
       
       // Find the match to get the matchedUserId
-      const matchToRemove = matches.find(match => match.id === matchId);
+      const matchToRemove = matches.find(match => match.id === matchId || match._id === matchId);
       if (!matchToRemove) return;
       
       // Update state
-      setMatches(matches.filter(match => match.id !== matchId));
+      setMatches(matches.filter(match => match.id !== matchId && match._id !== matchId));
       setMatchedUsers(matchedUsers.filter(user => user.id !== matchToRemove.matchedUserId));
       
       console.log("Match removed successfully");
@@ -130,6 +167,78 @@ const MatchesPage = () => {
       console.error("Error removing match:", error);
       setError("Failed to remove match");
     }
+  };
+
+  // Clean up all invalid matches
+  const cleanupInvalidMatches = async () => {
+    if (!userId || invalidMatches.length === 0) return;
+    
+    try {
+      setLoading(true);
+      
+      // Find match IDs for invalid matched users
+      const invalidMatchIds = matches
+        .filter(match => invalidMatches.includes(match.matchedUserId))
+        .map(match => match.id || match._id);
+      
+      // Delete each invalid match in parallel
+      await Promise.all(
+        invalidMatchIds.map(matchId => 
+          axios.delete(`http://localhost:3000/api/matches/${matchId}`)
+            .catch(err => console.error(`Error removing match ${matchId}:`, err))
+        )
+      );
+      
+      // Remove invalid matches from state
+      setMatches(matches.filter(match => !invalidMatches.includes(match.matchedUserId)));
+      setInvalidMatches([]);
+      
+      console.log("Invalid matches cleaned up successfully");
+    } catch (error) {
+      console.error("Error cleaning up invalid matches:", error);
+      setError("Failed to clean up invalid matches");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Debugging component for raw match data
+  const MatchesDebugInfo = () => {
+    const [expanded, setExpanded] = useState(false);
+    
+    if (!matches || matches.length === 0) return null;
+    
+    return (
+      <div className="bg-gray-50 border border-gray-200 rounded-lg p-4 mb-6">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="text-sm font-medium text-gray-700">Raw Match Data</h3>
+          <button 
+            onClick={() => setExpanded(!expanded)}
+            className="text-xs text-indigo-600 hover:text-indigo-800"
+          >
+            {expanded ? 'Hide' : 'Show'} Details
+          </button>
+        </div>
+        
+        {expanded && (
+          <div className="mt-2 text-xs">
+            <pre className="bg-gray-100 p-3 rounded overflow-x-auto">
+              {JSON.stringify(matches, null, 2)}
+            </pre>
+          </div>
+        )}
+        
+        <p className="text-xs text-gray-500 mt-2">
+          Found {matches.length} matches, but couldn't load user details
+        </p>
+      </div>
+    );
+  };
+
+  // Function to reveal technical debug information
+  const showDebugInfo = () => {
+    console.log("Full debug information:", debugInfo);
+    alert("Debug information logged to console");
   };
 
   if (loading) {
@@ -158,6 +267,16 @@ const MatchesPage = () => {
           >
             Back to Skill Matching
           </Link>
+          {process.env.NODE_ENV === 'development' && debugInfo && (
+            <div className="mt-4">
+              <button 
+                onClick={showDebugInfo}
+                className="text-xs text-gray-500 underline"
+              >
+                Show Debug Info
+              </button>
+            </div>
+          )}
         </div>
       </div>
     );
@@ -177,10 +296,42 @@ const MatchesPage = () => {
               <span>Back to Matching</span>
             </Link>
             <h1 className="text-3xl font-bold text-gray-900">My Matches</h1>
+            
+            {process.env.NODE_ENV === 'development' && debugInfo && (
+              <button 
+                onClick={showDebugInfo}
+                className="ml-auto text-xs text-gray-400 hover:text-gray-600"
+              >
+                Debug Info
+              </button>
+            )}
           </div>
+          
+          {invalidMatches.length > 0 && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6 rounded">
+              <div className="flex items-start">
+                <AlertTriangle className="h-5 w-5 text-yellow-400 mr-2 mt-0.5" />
+                <div>
+                  <p className="text-sm text-yellow-700">
+                    {invalidMatches.length} match{invalidMatches.length !== 1 ? 'es' : ''} could not be displayed because the user account{invalidMatches.length !== 1 ? 's' : ''} no longer exist{invalidMatches.length === 1 ? 's' : ''}.
+                  </p>
+                  <button 
+                    onClick={cleanupInvalidMatches}
+                    className="mt-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium"
+                  >
+                    Clean up invalid matches
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+          
+          {matchedUsers.length === 0 && matches.length > 0 && (
+            <MatchesDebugInfo />
+          )}
         </div>
 
-        {matchedUsers.length === 0 ? (
+        {matches.length === 0 ? (
           <div className="bg-white rounded-xl shadow-md p-8 text-center">
             <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h2 className="text-2xl font-bold text-gray-800 mb-2">No matches yet</h2>
@@ -194,12 +345,32 @@ const MatchesPage = () => {
               Find Matches
             </Link>
           </div>
+        ) : matchedUsers.length === 0 && invalidMatches.length > 0 ? (
+          <div className="bg-white rounded-xl shadow-md p-8 text-center">
+            <AlertTriangle className="h-12 w-12 text-yellow-500 mx-auto mb-4" />
+            <h2 className="text-2xl font-bold text-gray-800 mb-2">No valid matches</h2>
+            <p className="text-gray-600 mb-6">
+              All your matches refer to users that no longer exist. Please clean up invalid matches and try finding new connections.
+            </p>
+            <Link 
+              to="/matches" 
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              Find Matches
+            </Link>
+          </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {matchedUsers.map((user) => {
               // Find the corresponding match object to get the match ID
-              const matchObj = matches.find(match => match.matchedUserId === user.id);
-              const matchId = matchObj ? matchObj.id : "";
+              const matchObj = matches.find(match => 
+                match.matchedUserId === user.id || 
+                (match.userId !== userId && match.userId === user.id)
+              );
+              const matchId = matchObj ? (matchObj.id || matchObj._id) : "";
+              
+              // Format the image path correctly
+              const imagePath = user.profileImagePath?.replace(/\\/g, "/") || "";
               
               return (
                 <div 
@@ -207,14 +378,20 @@ const MatchesPage = () => {
                   className="bg-white rounded-xl shadow-md overflow-hidden transition-transform hover:scale-105"
                 >
                   <div 
-                    className="h-48 bg-cover bg-center"
-                    style={{ backgroundImage: `url(${`http://localhost:3000/${user.profileImagePath}`})` }}
-                  />
+                    className="h-48 bg-cover bg-center bg-gray-200"
+                    style={{ backgroundImage: imagePath ? `url(${`http://localhost:3000/${imagePath}`})` : 'none' }}
+                  >
+                    {!imagePath && (
+                      <div className="h-full flex items-center justify-center">
+                        <User className="h-16 w-16 text-gray-400" />
+                      </div>
+                    )}
+                  </div>
                   <div className="p-4">
                     <div className="flex justify-between items-start">
                       <div>
                         <h3 className="text-xl font-bold text-gray-900">{user.firstName} {user.lastName}</h3>
-                        <p className="text-gray-600 text-sm">{user.location}</p>
+                        <p className="text-gray-600 text-sm">{user.location || "No location"}</p>
                       </div>
                       <button 
                         onClick={() => removeMatch(matchId)}
@@ -224,33 +401,42 @@ const MatchesPage = () => {
                         <X className="h-5 w-5" />
                       </button>
                     </div>
-                    
+
                     <div className="mt-3">
-                      <h4 className="text-sm font-semibold text-gray-700">Skills:</h4>
-                      <div className="flex flex-wrap gap-2 mt-1">
-                        {user.skills.slice(0, 3).map((skill, index) => (
-                          <span 
-                            key={index}
-                            className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs"
-                          >
-                            {skill}
-                          </span>
-                        ))}
-                        {user.skills.length > 3 && (
-                          <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-xs">
-                            +{user.skills.length - 3} more
-                          </span>
+                      <p className="text-gray-700 text-sm line-clamp-3">
+                        {user.bio || "No bio available"}
+                      </p>
+                    </div>
+
+                    <div className="mt-4">
+                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Skills</h4>
+                      <div className="flex flex-wrap gap-2">
+                        {user.skills && user.skills.length > 0 ? (
+                          user.skills.slice(0, 3).map((skill, index) => (
+                            <span 
+                              key={index}
+                              className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs"
+                            >
+                              {skill}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-gray-500 text-xs">No skills listed</span>
+                        )}
+                        {user.skills && user.skills.length > 3 && (
+                          <span className="text-xs text-gray-500">+{user.skills.length - 3} more</span>
                         )}
                       </div>
                     </div>
-                    
-                    <p className="text-gray-600 mt-3 text-sm line-clamp-2">{user.bio}</p>
-                    
-                    <div className="mt-4">
-                      <button className="w-full px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 flex items-center justify-center">
-                        <MessageCircle className="h-4 w-4 mr-2" />
-                        Message
-                      </button>
+
+                    <div className="mt-6 flex justify-end">
+                      <Link
+                        to={`/messages/${user.id}`}
+                        className="flex items-center text-indigo-600 hover:text-indigo-800"
+                      >
+                        <MessageCircle className="h-4 w-4 mr-1" />
+                        <span className="text-sm">Message</span>
+                      </Link>
                     </div>
                   </div>
                 </div>

@@ -14,7 +14,6 @@ const matchSchema = new mongoose.Schema({
     type: Date,
     default: Date.now
   },
-  // Optional: Add more fields as needed
   status: {
     type: String,
     enum: ['pending', 'accepted', 'rejected'],

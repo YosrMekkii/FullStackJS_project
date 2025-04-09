@@ -44,7 +44,67 @@ const updateUser = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getUsersByIds = async (req, res) => {
+  try {
+    const { ids } = req.body;
 
+    if (!ids || !Array.isArray(ids)) {
+      return res.status(400).json({ 
+        success: false, 
+        message: "Please provide an array of user IDs" 
+      });
+    }
+
+    console.log("Attempting to fetch users with IDs:", ids);
+
+    const users = await User.find(
+      { _id: { $in: ids } },
+      {
+        firstName: 1,
+        lastName: 1,
+        location: 1,
+        bio: 1,
+        skills: 1,
+        profileImagePath: 1
+      }
+    );
+
+    console.log(`Found ${users.length} users out of ${ids.length} requested IDs`);
+
+    // Format the response to match what the frontend expects
+    const formattedResults = ids.map(id => {
+      const user = users.find(u => u._id.toString() === id);
+      
+      return {
+        id,
+        user: user ? {
+          id: user._id.toString(),
+          firstName: user.firstName,
+          lastName: user.lastName,
+          location: user.location || "",
+          bio: user.bio || "",
+          skills: user.skills || [],
+          profileImagePath: user.profileImagePath || ""
+        } : null,
+        exists: !!user
+      };
+    });
+
+    console.log(`Formatted ${formattedResults.length} results`);
+    
+    res.status(200).json({
+      success: true,
+      users: formattedResults
+    });
+  } catch (error) {
+    console.error("Error fetching users by IDs:", error);
+    res.status(500).json({ 
+      success: false, 
+      message: "Error fetching users",
+      error: error.message
+    });
+  }
+};
 // ✅ Supprimer un utilisateur
 const deleteUser = async (req, res) => {
   try {
@@ -202,21 +262,30 @@ const getRecommendations = async (req, res) => {
   }
 };
 
-// ✅ Fetch users with matching skills
 export const getMatches = async (req, res) => {
-  const userId = req.params.id;  // Extract user ID from the request params
+  const userId = req.params.id;
+  
   try {
-      // Fetch match data using userId
-      const match = await Match.findOne({ userId: userId });
-
-      if (match) {
-          return res.json(match);  // Send the match data if found
-      } else {
-          return res.status(404).json({ error: "Match not found" });  // Handle no match found
-      }
+    console.log(`Fetching matches for user ID: ${userId}`);
+    
+    // Fetch all matches where the current user is either the user or the matched user
+    const matches = await Match.find({
+      $or: [
+        { userId: userId },
+        { matchedUserId: userId }
+      ]
+    });
+    
+    console.log(`Found ${matches.length} matches for user ${userId}`);
+    
+    if (matches.length === 0) {
+      return res.json([]);  // Return empty array instead of 404 error
+    }
+    
+    return res.json(matches);
   } catch (error) {
-      console.error(error);
-      return res.status(500).json({ error: "Server error" });  // Handle any server errors
+    console.error(`Error fetching matches for user ${userId}:`, error);
+    return res.status(500).json({ error: "Server error" });
   }
 };
 
@@ -445,4 +514,4 @@ export {
   updateSkills,
   updateInterests,
   logoutUser,
-};
+  getUsersByIds};

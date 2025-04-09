@@ -9,7 +9,8 @@ import {
   Award, 
   ChevronLeft, 
   ChevronRight,
-  Loader2
+  Loader2,
+  Image
 } from 'lucide-react';
 import axios from 'axios';
 import Sidebar from '../components/sidebar';
@@ -29,6 +30,7 @@ interface SkillUser {
 }
 
 interface Match {
+  id: string;
   userId: string;
   matchedUserId: string;
   createdAt: string;
@@ -68,37 +70,52 @@ const SkillMatching = () => {
     }
   }, []);
 
-  // Fetch users once we have the current user
+  // Fetch users and matches once we have the current user
   useEffect(() => {
     if (!user || !user.id) return;
     
-    const fetchUsers = async () => {
+    const fetchData = async () => {
       try {
         setLoading(true);
-        const response = await axios.get("http://localhost:3000/api/users");
+        
+        // Fetch users
+        const usersResponse = await axios.get("http://localhost:3000/api/users");
         
         // Log all users to see what we're working with
-        console.log("All users:", response.data);
+        console.log("All users:", usersResponse.data);
         console.log("Current user ID:", user.id);
         
         // Filter out the current user by ID
-        const filteredUsers = response.data.filter((u: SkillUser) => u.id !== user.id);
+        const filteredUsers = usersResponse.data.filter((u: SkillUser) => u.id !== user.id);
         console.log("Filtered users:", filteredUsers);
         
-        setUsers(filteredUsers);
+        // Fetch existing matches to potentially filter out users that are already matched
+        const matchesResponse = await axios.get(`http://localhost:3000/api/matches/${user.id}`);
+        const userMatches = matchesResponse.data;
+        console.log("User matches:", userMatches);
         
-        // Get existing matches
-        const existingMatches = JSON.parse(localStorage.getItem('skillMatches') || '[]');
-        setMatches(existingMatches);
+        // Set the matches state
+        setMatches(userMatches);
+        
+        // Filter out users that are already matched if needed
+        // Uncomment the following code if you want to hide users that are already matched
+        /*
+        const matchedUserIds = userMatches.map((match: Match) => match.matchedUserId);
+        const unMatchedUsers = filteredUsers.filter((u: SkillUser) => !matchedUserIds.includes(u.id));
+        setUsers(unMatchedUsers);
+        */
+        
+        // For now, just set all filtered users
+        setUsers(filteredUsers);
       } catch (error) {
-        console.error("Error fetching users:", error);
+        console.error("Error fetching data:", error);
         setError("Failed to load potential matches");
       } finally {
         setLoading(false);
       }
     };
     
-    fetchUsers();
+    fetchData();
   }, [user]);
   
   const saveMatch = async (matchedUserId: string) => {
@@ -111,16 +128,25 @@ const SkillMatching = () => {
         createdAt: new Date().toISOString()
       };
       
-      console.log("Match saved:", matchData);
+      console.log("Saving match to database:", matchData);
+      
+      // Save match to database
+      const response = await axios.post('http://localhost:3000/api/matches', matchData);
+      console.log("Match saved to database:", response.data);
+      
+      // Check if it's a mutual match
+      const mutualResponse = await axios.get(
+        `http://localhost:3000/api/matches/mutual/${user.id}/${matchedUserId}`
+      );
+      
+      const isMutual = mutualResponse.data.isMutual;
+      console.log("Is mutual match:", isMutual);
       
       // Add to local matches state
-      setMatches(prev => [...prev, matchData]);
+      const savedMatch = response.data;
+      setMatches(prev => [...prev, savedMatch]);
       
-      // Save to localStorage for persistence
-      const existingMatches = JSON.parse(localStorage.getItem('skillMatches') || '[]');
-      localStorage.setItem('skillMatches', JSON.stringify([...existingMatches, matchData]));
-      
-      return { ...matchData, isMutual: Math.random() > 0.7 };
+      return { ...savedMatch, isMutual };
     } catch (error) {
       console.error("Error saving match:", error);
       return null;
@@ -176,7 +202,7 @@ const SkillMatching = () => {
 
   // Handle navigation to matches page with direct window.location
   const goToMatchesPage = () => {
-    window.location.href = '/matches';
+    window.location.href = '/matchespage';
   };
 
   // Touch/mouse event handlers
@@ -292,6 +318,37 @@ const SkillMatching = () => {
     );
   }
 
+  // No users available
+  if (users.length === 0) {
+    return (
+      <div className="min-h-screen bg-gradient-to-b from-indigo-100 to-blue-50 flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-8 bg-white rounded-xl shadow-md">
+          <div className="text-indigo-500 mb-4">
+            <Info className="h-16 w-16 mx-auto" />
+          </div>
+          <h2 className="text-2xl font-bold text-gray-800 mb-2">No users available</h2>
+          <p className="text-gray-600 mb-6">
+            There are no potential skill matches at the moment. Check back later for new users!
+          </p>
+          <div className="flex flex-col space-y-3">
+            <Link 
+              to="/marketplace" 
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              Browse Skill Marketplace
+            </Link>
+            <button 
+              onClick={() => window.location.reload()}
+              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
+            >
+              Refresh Matches
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   // No more users to show
   if (currentIndex >= users.length) {
     return (
@@ -311,12 +368,12 @@ const SkillMatching = () => {
             >
               Browse Skill Marketplace
             </Link>
-            <a 
-              href="/matches" 
+            <Link 
+              to="/matchespage" 
               className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 text-center"
             >
               View My Matches ({matches.length})
-            </a>
+            </Link>
             <button 
               onClick={() => window.location.reload()}
               className="px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
@@ -330,10 +387,11 @@ const SkillMatching = () => {
   }
 
   const currentUser = users[currentIndex];
-  console.log("Image Path:", currentUser.profileImagePath);
-console.log("Full URL:", `http://localhost:3000/${currentUser.profileImagePath}`);
-
-const imagePath = currentUser.profileImagePath.replace(/\\/g, "/");
+  
+  // Handle potential null profileImagePath safely
+  const imagePath = currentUser && currentUser.profileImagePath 
+    ? currentUser.profileImagePath.replace(/\\/g, "/") 
+    : "";
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-indigo-100 to-blue-50 py-8 px-4">
@@ -370,9 +428,21 @@ const imagePath = currentUser.profileImagePath.replace(/\\/g, "/");
             <div className="h-full flex flex-col">
               {/* User Image */}
               <div 
-  className="relative h-[60%] bg-cover bg-center"
-  style={{ backgroundImage: `url(http://localhost:3000/${imagePath})` }}
->
+                className="relative h-[60%] bg-cover bg-center"
+                style={{ 
+                  backgroundImage: imagePath 
+                    ? `url(http://localhost:3000/${imagePath})` 
+                    : 'none',
+                  backgroundColor: !imagePath ? '#f3f4f6' : undefined
+                }}
+              >
+                {/* Placeholder if no image */}
+                {!imagePath && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Image className="h-16 w-16 text-gray-400" />
+                  </div>
+                )}
+                
                 {/* Swipe Indicators */}
                 {offsetX > 50 && (
                   <div className="absolute top-4 left-4 bg-green-500 text-white px-4 py-2 rounded-full font-bold transform -rotate-12 border-2 border-white">
@@ -390,7 +460,7 @@ const imagePath = currentUser.profileImagePath.replace(/\\/g, "/");
                   <h2 className="text-2xl font-bold">{currentUser.firstName} {currentUser.lastName}</h2>
                   <div className="flex items-center mt-1">
                     <MapPin className="h-4 w-4 mr-1" />
-                    <span className="text-sm">{currentUser.location}</span>
+                    <span className="text-sm">{currentUser.location || 'No location'}</span>
                   </div>
                 </div>
               </div>
@@ -401,7 +471,7 @@ const imagePath = currentUser.profileImagePath.replace(/\\/g, "/");
                   <div className="space-y-4">
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">About</h3>
-                      <p className="text-gray-600 mt-1">{currentUser.bio}</p>
+                      <p className="text-gray-600 mt-1">{currentUser.bio || 'No bio available'}</p>
                     </div>
                     
                     <div>
@@ -409,36 +479,44 @@ const imagePath = currentUser.profileImagePath.replace(/\\/g, "/");
                         <h3 className="text-lg font-semibold text-gray-900">Skills</h3>
                         <div className="flex items-center">
                           <Star className="h-4 w-4 text-yellow-500 mr-1" />
-                          <span className="text-sm font-medium">{currentUser.rating}</span>
+                          <span className="text-sm font-medium">{currentUser.rating || '0'}</span>
                         </div>
                       </div>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {currentUser.skills.map((skill, index) => (
-                          <span 
-                            key={index}
-                            className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm"
-                          >
-                            {skill}
-                          </span>
-                        ))}
+                        {currentUser.skills && currentUser.skills.length > 0 ? (
+                          currentUser.skills.map((skill, index) => (
+                            <span 
+                              key={index}
+                              className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm"
+                            >
+                              {skill}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-gray-500">No skills listed</span>
+                        )}
                       </div>
                     </div>
                     
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Experience Level</h3>
-                      <p className="text-gray-600 mt-1">{currentUser.experience}</p>
+                      <p className="text-gray-600 mt-1">{currentUser.experience || 'Not specified'}</p>
                     </div>
                     
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Achievements</h3>
-                      <ul className="mt-1 space-y-1">
-                        {currentUser.achievements.map((achievement, index) => (
-                          <li key={index} className="flex items-start">
-                            <Award className="h-5 w-5 text-yellow-500 mr-2 flex-shrink-0 mt-0.5" />
-                            <span className="text-gray-600">{achievement}</span>
-                          </li>
-                        ))}
-                      </ul>
+                      {currentUser.achievements && currentUser.achievements.length > 0 ? (
+                        <ul className="mt-1 space-y-1">
+                          {currentUser.achievements.map((achievement, index) => (
+                            <li key={index} className="flex items-start">
+                              <Award className="h-5 w-5 text-yellow-500 mr-2 flex-shrink-0 mt-0.5" />
+                              <span className="text-gray-600">{achievement}</span>
+                            </li>
+                          ))}
+                        </ul>
+                      ) : (
+                        <p className="text-gray-500 mt-1">No achievements listed</p>
+                      )}
                     </div>
                   </div>
                 ) : (
@@ -446,20 +524,24 @@ const imagePath = currentUser.profileImagePath.replace(/\\/g, "/");
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">Skills</h3>
                       <div className="flex flex-wrap gap-2 mt-2">
-                        {currentUser.skills.map((skill, index) => (
-                          <span 
-                            key={index}
-                            className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm"
-                          >
-                            {skill}
-                          </span>
-                        ))}
+                        {currentUser.skills && currentUser.skills.length > 0 ? (
+                          currentUser.skills.map((skill, index) => (
+                            <span 
+                              key={index}
+                              className="px-3 py-1 bg-indigo-100 text-indigo-800 rounded-full text-sm"
+                            >
+                              {skill}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-gray-500">No skills listed</span>
+                        )}
                       </div>
                     </div>
                     
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">About</h3>
-                      <p className="text-gray-600 mt-1 line-clamp-3">{currentUser.bio}</p>
+                      <p className="text-gray-600 mt-1 line-clamp-3">{currentUser.bio || 'No bio available'}</p>
                     </div>
                   </div>
                 )}
@@ -503,13 +585,13 @@ const imagePath = currentUser.profileImagePath.replace(/\\/g, "/");
             <span>Marketplace</span>
           </Link>
           
-          <a
-            href="/matchespage"
+          <Link
+            to="/matchespage"
             className="flex items-center text-indigo-600 hover:text-indigo-800"
           >
             <span>My Matches ({matches.length})</span>
             <ChevronRight className="h-5 w-5 ml-1" />
-          </a>
+          </Link>
         </div>
       </div>
     </div>

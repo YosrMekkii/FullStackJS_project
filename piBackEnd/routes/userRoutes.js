@@ -78,6 +78,7 @@ const upload = multer({ storage, fileFilter });
 // ✅ Routes utilisateurs
 router.post("/", userController.createUser);
 router.get("/", userController.getAllUsers);
+router.post("/batch", userController.getUsersByIds);
 router.get("/:id", userController.getUserById);
 router.put("/:id", userController.updateUser);
 router.delete("/:id", userController.deleteUser);
@@ -95,9 +96,9 @@ router.get("/auth/verify/:token", userController.verifyEmail); // ✅
 router.get('/email/:email', userController.getUserByEmail); // Appel de la fonction dans le controller
 router.post('/forgot-password', userController.forgotPassword);
 router.post('/reset-password/:token', userController.resetPassword);
+router.get('/matches/:id', userController.getMatches);
 
 
-//router.post("/test-email", userController.sendTestEmail);
 
 
 
