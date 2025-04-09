@@ -56,7 +56,7 @@ function App() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-indigo-800 to-purple-900">
-      <nav className="bg-white/10 backdrop-blur-md border-b border-white/10 sticky top-0 z-50">
+      <nav className="bg-blue-900 border-b border-white/10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16">
             {/* Logo */}
@@ -91,7 +91,7 @@ function App() {
                 </button>
                 
                 {isDropdownOpen && (
-                  <div className="absolute top-full right-0 mt-2 w-48 bg-white/10 backdrop-blur-md rounded-lg shadow-lg py-2 border border-white/20">
+                  <div className="absolute top-full right-0 mt-2 w-48 bg-blue-900 rounded-lg shadow-lg py-2 border border-white/20">
                     <Link
                       to="/challenges"
                       className="block px-4 py-2 text-blue-100 hover:bg-white/10 transition-colors"
@@ -179,7 +179,7 @@ function App() {
 
         {/* Mobile menu */}
         {isMobileMenuOpen && (
-          <div className="md:hidden bg-white/10 backdrop-blur-md border-t border-white/10">
+          <div className="md:hidden bg-blue-900 border-t border-white/10">
             <div className="px-2 pt-2 pb-3 space-y-1">
               <Link
                 to="/marketplace"
