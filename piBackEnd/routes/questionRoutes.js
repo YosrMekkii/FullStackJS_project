@@ -1,6 +1,6 @@
-const express = require('express');
+import express from 'express';
 const router = express.Router();
-const questionController = require('../controllers/questionController');
+import questionController from '../controllers/questionController.js';
 
 // Question routes
 router.post('/', questionController.createQuestion);
@@ -9,4 +9,4 @@ router.get('/:id', questionController.getQuestionById);
 router.put('/:id', questionController.updateQuestion);
 router.delete('/:id', questionController.deleteQuestion);
 
-module.exports = router;
+export default  router;

@@ -36,7 +36,7 @@ const Login = () => {
           // Stocker l'utilisateur dans le localStorage
           localStorage.setItem('user', JSON.stringify(data.user));
           // Rediriger vers la page d'accueil et mettre à jour l'état utilisateur dans le parent
-          navigate('/', { replace: true });
+          navigate('/profile1', { replace: true });
                   // Forcer un rafraîchissement immédiat de l'état
         window.location.reload(); // Rafraîchit la page de manière automatique
           

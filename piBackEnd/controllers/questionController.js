@@ -1,7 +1,7 @@
-const Question = require('../models/question');
+import Question from '../models/question.js';
 
 // Create a new question
-exports.createQuestion = async (req, res) => {
+const createQuestion = async (req, res) => {
   try {
     const question = new Question(req.body);
     await question.save();
@@ -12,7 +12,7 @@ exports.createQuestion = async (req, res) => {
 };
 
 // Get all questions
-exports.getAllQuestions = async (req, res) => {
+const getAllQuestions = async (req, res) => {
   try {
     const questions = await Question.find();
     res.json(questions);
@@ -22,7 +22,7 @@ exports.getAllQuestions = async (req, res) => {
 };
 
 // Get a single question by ID
-exports.getQuestionById = async (req, res) => {
+const getQuestionById = async (req, res) => {
   try {
     const question = await Question.findById(req.params.id);
     if (!question) {
@@ -35,18 +35,18 @@ exports.getQuestionById = async (req, res) => {
 };
 
 // Update a question
-exports.updateQuestion = async (req, res) => {
+const updateQuestion = async (req, res) => {
   try {
     const updatedQuestion = await Question.findByIdAndUpdate(
-      req.params.id, 
-      req.body, 
+      req.params.id,
+      req.body,
       { new: true, runValidators: true }
     );
-    
+
     if (!updatedQuestion) {
       return res.status(404).json({ error: 'Question not found' });
     }
-    
+
     res.json(updatedQuestion);
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -54,16 +54,24 @@ exports.updateQuestion = async (req, res) => {
 };
 
 // Delete a question
-exports.deleteQuestion = async (req, res) => {
+const deleteQuestion = async (req, res) => {
   try {
     const deletedQuestion = await Question.findByIdAndDelete(req.params.id);
-    
+
     if (!deletedQuestion) {
       return res.status(404).json({ error: 'Question not found' });
     }
-    
+
     res.json({ message: 'Question deleted successfully' });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
+};
+
+export default{
+  createQuestion,
+  getAllQuestions,
+  getQuestionById,
+  updateQuestion,
+  deleteQuestion,
 };
