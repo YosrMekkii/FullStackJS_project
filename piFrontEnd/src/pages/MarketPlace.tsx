@@ -7,6 +7,9 @@ import DigitalMarketing from "../assets/Capa-do-Blog-Marketing-Digital.png";
 import AI from "../assets/real-ai.jpg";
 import French from "../assets/image.png";
 import Marketing from "../assets/What-is-marketing.webp";
+import Sidebar from "../components/sidebar";
+
+
 
 const allSkills = [
   { 
@@ -117,6 +120,7 @@ const SkillMarketplace = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-700 via-indigo-600 to-purple-800 text-white py-10 px-6 flex flex-col items-center">
+      <Sidebar/>
       <div className="max-w-7xl mx-auto w-full relative">
         {/* Filter Dropdown */}
         <div className="absolute top-0 left-0">

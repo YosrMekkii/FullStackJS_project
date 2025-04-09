@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import AIChat from './components/AIChat';
+import { useNavigate } from 'react-router-dom';
+import Sidebar from '../components/sidebar'; // Import the Sidebar component
 import { 
   Mail, 
   MapPin, 
@@ -18,7 +20,7 @@ import {
   AlertTriangle,
   Trash2,
   Camera,
-  Upload
+  Upload,
 } from 'lucide-react';
 
 const Profile = () => {
@@ -235,6 +237,7 @@ const Profile = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
+      <Sidebar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* GDPR Controls */}
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 mb-4 p-4">
