@@ -3,13 +3,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock } from 'lucide-react';
 import ReCAPTCHA from "react-google-recaptcha";
 
-const Login = () => {
+const Login = ({ setUser }: { setUser: (user: any) => void }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [recaptchaToken, setRecaptchaToken] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const navigate = useNavigate();
+  const [rememberMe, setRememberMe] = useState(false);
+
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -34,11 +36,15 @@ const Login = () => {
 
         if (data.message === "Connexion réussie") {
           // Stocker l'utilisateur dans le localStorage
-          localStorage.setItem('user', JSON.stringify(data.user));
+          if (rememberMe) {
+            localStorage.setItem('user', JSON.stringify(data.user));
+          } else {
+            sessionStorage.setItem('user', JSON.stringify(data.user));
+          }
+          setUser(data.user);
           // Rediriger vers la page d'accueil et mettre à jour l'état utilisateur dans le parent
           navigate('/profile1', { replace: true });
                   // Forcer un rafraîchissement immédiat de l'état
-        window.location.reload(); // Rafraîchit la page de manière automatique
           
         } else {
           setErrorMessage(data.message || "Échec de la connexion");
@@ -123,6 +129,8 @@ const Login = () => {
                 id="remember-me"
                 name="remember-me"
                 type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
                 className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
               />
               <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-900">

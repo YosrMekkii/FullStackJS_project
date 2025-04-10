@@ -36,7 +36,7 @@ function App() {
   };
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
@@ -44,12 +44,14 @@ function App() {
       } catch (error) {
         console.error("Error parsing user data:", error);
         localStorage.removeItem("user");
+        sessionStorage.removeItem("user");
       }
     }
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("user");
+    sessionStorage.removeItem("user");
     setUser(null);
     navigate("/login");
   };
@@ -249,7 +251,7 @@ function App() {
 
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<Login setUser={setUser} />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/profile1" element={<Profile />} />
         <Route path="/dashboard" element={<Dashboard />} />

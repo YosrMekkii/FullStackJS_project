@@ -111,7 +111,7 @@ const allSkills = [
 const categories = ["All", "Tech", "Design", "Marketing", "Language"];
 
 const SkillMarketplace = () => {
-  const isAuthenticated = !!localStorage.getItem("user");
+  const isAuthenticated = !!localStorage.getItem("user") || sessionStorage.getItem("user");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   
