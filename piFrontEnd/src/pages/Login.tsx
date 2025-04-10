@@ -42,9 +42,12 @@ const Login = ({ setUser }: { setUser: (user: any) => void }) => {
             sessionStorage.setItem('user', JSON.stringify(data.user));
           }
           setUser(data.user);
-          // Rediriger vers la page d'accueil et mettre à jour l'état utilisateur dans le parent
-          navigate('/profile1', { replace: true });
-                  // Forcer un rafraîchissement immédiat de l'état
+           // Rediriger vers la page en fonction du rôle
+        if (data.user.role === 'admin') {
+          navigate('/admindashboard', { replace: true });  // Redirigez vers le tableau de bord admin
+        } else {
+          navigate('/profile1', { replace: true });  // Redirigez vers le profil de l'utilisateur
+        }
           
         } else {
           setErrorMessage(data.message || "Échec de la connexion");

@@ -131,13 +131,16 @@ function App() {
                   <button className="p-2 text-blue-100 hover:bg-white/10 rounded-lg transition-all duration-300">
                     <Bell className="h-5 w-5" />
                   </button>
-                  <Link 
-                    to="/profile1" 
-                    className="flex items-center space-x-2 px-4 py-2 rounded-lg text-blue-100 font-medium transition-all duration-300 hover:bg-white/10"
-                  >
-                    <User className="h-5 w-5" />
-                    <span>{user.firstName} {user.lastName}</span>
+                  <Link to={user?.role === 'admin' ? '/admindashboard' : '/profile1'} className="flex items-center space-x-2 px-4 py-2 rounded-lg text-blue-100 font-medium transition-all duration-300 hover:bg-white/10">
+                  <User className="h-5 w-5" />
+                  <span>{user.firstName} {user.lastName}</span>
                   </Link>
+                  {/* Admin Role Label */}
+      {user?.role === 'admin' && (
+        <span className="absolute right-0 text-sm text-red-500 font-semibold">
+          Admin
+        </span>
+      )}
                   <button
                     onClick={handleLogout}
                     className="px-4 py-2 rounded-lg bg-red-500/80 text-white font-medium transition-all duration-300 hover:bg-red-600"
@@ -216,7 +219,7 @@ function App() {
               {user ? (
                 <>
                   <Link
-                    to="/profile1"
+                    to={user?.role === 'admin' ? '/admindashboard' : '/profile1'} 
                     className="block px-3 py-2 rounded-lg text-blue-100 font-medium hover:bg-white/10 transition-all duration-300"
                   >
                     Profile
