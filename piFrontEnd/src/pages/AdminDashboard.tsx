@@ -475,7 +475,7 @@ const AdminDashboard = () => {
                       <div className="flex items-center space-x-8">
                         <div className="flex items-center space-x-2">
                         <img
-                            src={`http://localhost:3000/${report.reporter.profileImagePath}`}  // Chemin de l'image de l'utilisateur
+                            src={`http://localhost:3000${report.reporter.profileImagePath}`}  // Chemin de l'image de l'utilisateur
                             alt={report.reporter.firstName}
                             className="h-8 w-8 rounded-full"
                           />
@@ -487,7 +487,7 @@ const AdminDashboard = () => {
                         <AlertTriangle className="h-5 w-5 text-red-500" />
                         <div className="flex items-center space-x-2">
                           <img
-                            src={`http://localhost:3000/${report.reportedUser.profileImagePath}`}  // Chemin de l'image de l'utilisateur
+                            src={`http://localhost:3000${report.reportedUser.profileImagePath}`}  // Chemin de l'image de l'utilisateur
                             alt={report.reportedUser.firstName}
                             className="h-8 w-8 rounded-full"
                           />
