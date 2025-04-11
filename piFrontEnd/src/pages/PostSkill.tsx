@@ -14,7 +14,10 @@ const PostSkill: React.FC = () => {
   const navigate = useNavigate();
   
   // Pour récupérer l'ID de l'utilisateur connecté
-  const userId = localStorage.getItem("userId");
+  const storedUser =
+  sessionStorage.getItem("user") || localStorage.getItem("user");
+
+const userId = storedUser ? JSON.parse(storedUser).id : null;
 
   const handleImageChange = (e: ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
