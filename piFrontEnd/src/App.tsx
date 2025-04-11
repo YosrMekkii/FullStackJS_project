@@ -260,7 +260,7 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/marketplace" element={<SkillMarketplace />} />
         <Route path="/postskill" element={<PostSkill />} />
-        <Route path="/interests" element={<Interests />} />
+        <Route path="/interests/:id" element={<Interests />} />
         <Route path="/skills/:id" element={<SkillDetails />} />
         <Route path="/admindashboard" element={<AdminDashboard />} />
         <Route path='/learningsession' element={<LearningSession />} />
@@ -275,6 +275,8 @@ function App() {
         <Route path="/matchesPage" element={<MatchesPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/verify-email/invalid" element={<p>Token invalide ou expiré</p>} />
+<Route path="/verify-email/error" element={<p>Une erreur est survenue</p>} />
       </Routes>
     </div>
   );

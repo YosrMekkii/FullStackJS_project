@@ -1,4 +1,6 @@
 import * as reportService from "../services/reportService.js";
+import Report from "../models/report.js";
+
 
 export const createReport = async (req, res) => {
   try {
@@ -11,9 +13,13 @@ export const createReport = async (req, res) => {
 
 export const getAllReports = async (req, res) => {
   try {
-    const reports = await reportService.getAllReports();
-    res.json(reports);
+    const reports = await Report.find()
+      .populate("reporter", "username email firstName lastName profileImagePath")
+      .populate("reportedUser", "username email firstName lastName profileImagePath"); // optionnel
+
+    res.status(200).json(reports);
   } catch (error) {
+    console.error("❌ Erreur dans getAllReports :", error);  // Ajoute ceci
     res.status(500).json({ error: error.message });
   }
 };

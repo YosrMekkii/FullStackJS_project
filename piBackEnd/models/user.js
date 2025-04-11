@@ -3,7 +3,7 @@ import path from "path";
 
 const userSchema = new mongoose.Schema({
   // 🔹 Identifiant unique
-  id: { type: mongoose.Schema.Types.ObjectId, auto: true },
+  //id: { type: mongoose.Schema.Types.ObjectId, auto: true },
 
   // 🔹 Authentification & Sécurité
   email: { type: String, required: true, unique: true },

@@ -475,7 +475,7 @@ const AdminDashboard = () => {
                       <div className="flex items-center space-x-8">
                         <div className="flex items-center space-x-2">
                         <img
-                            src={`http://localhost:3000/${report.reporter.profileImagePath}`}  // Chemin de l'image de l'utilisateur
+                            src={`http://localhost:3000${report.reporter.profileImagePath}`}  // Chemin de l'image de l'utilisateur
                             alt={report.reporter.firstName}
                             className="h-8 w-8 rounded-full"
                           />
@@ -487,7 +487,7 @@ const AdminDashboard = () => {
                         <AlertTriangle className="h-5 w-5 text-red-500" />
                         <div className="flex items-center space-x-2">
                           <img
-                            src={`http://localhost:3000/${report.reportedUser.profileImagePath}`}  // Chemin de l'image de l'utilisateur
+                            src={`http://localhost:3000${report.reportedUser.profileImagePath}`}  // Chemin de l'image de l'utilisateur
                             alt={report.reportedUser.firstName}
                             className="h-8 w-8 rounded-full"
                           />
@@ -498,9 +498,9 @@ const AdminDashboard = () => {
                         </div>
                       </div>
                       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        report.status === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
+                        report.status.toLowerCase() === 'pending' ? 'bg-yellow-100 text-yellow-800' : 'bg-green-100 text-green-800'
                       }`}>
-                        {report.status}
+                        {report.status.toLowerCase()}
                       </span>
                     </div>
                     <div className="ml-10">
@@ -514,7 +514,7 @@ const AdminDashboard = () => {
                       </div>
                       <div className="flex items-center justify-between">
                         <p className="text-sm text-gray-500">Reported on: {report.date}</p>
-                        {report.status === 'pending' && (
+                        {report.status.toLowerCase() === 'pending' && (
                           <div className="flex space-x-4">
                             <button
                               onClick={() => {
@@ -551,7 +551,7 @@ const AdminDashboard = () => {
             setShowActionModal(false);
             setSelectedReport(null);
           }}
-          onAction={(action, details) => handleReportAction(selectedReport.id, action, details)}
+          onAction={(action, details) => handleReportAction(selectedReport._id, action, details)}
           reportedUser={selectedReport.reported.name}
         />
       )}
