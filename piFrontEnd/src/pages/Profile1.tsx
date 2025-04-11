@@ -31,6 +31,7 @@ const Profile = () => {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [showGDPRInfo, setShowGDPRInfo] = useState(false);
   const [profilePicture, setProfilePicture] = useState('');
+  const [uploadPreview, setUploadPreview] = useState(null);
   const fileInputRef = useRef(null);
   const [profile, setProfile] = useState({
     firstName: "",
@@ -57,7 +58,10 @@ const Profile = () => {
     },
     profileImagePath: '',
   });
-  const [user, setUser] = useState<any | null>(null);
+  const [user, setUser] = useState(null);
+  const [matches, setMatches] = useState([]); // Add state for matches
+  const [isLoadingMatches, setIsLoadingMatches] = useState(false); // Add loading state
+  
   useEffect(() => {
     const storedUser = localStorage.getItem("user");
     if (storedUser) {
@@ -70,9 +74,9 @@ const Profile = () => {
       }
     }
   }, []);
+  
   const userId = user ? user.id : null;
  
-
   useEffect(() => {
     const fetchUserData = async () => {
       try {
@@ -94,33 +98,56 @@ const Profile = () => {
         console.error("Error fetching user data:", error);
       }
     };
-    fetchUserData();
+    
+    if (userId) {
+      fetchUserData();
+    }
   }, [userId]);
 
-  const matches = [
-    {
-      id: 1,
-      partner: {
-        name: "Jean Dupont",
-        avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop",
-      },
-      skillShared: "JavaScript Programming",
-      skillLearned: "French Language",
-      status: "Active",
-      startDate: "2024-02-15"
-    },
-    {
-      id: 2,
-      partner: {
-        name: "Marie Laurent",
-        avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop",
-      },
-      skillShared: "Web Development",
-      skillLearned: "French Conversation",
-      status: "Completed",
-      startDate: "2024-01-10"
+  // Add new useEffect to fetch matches
+  useEffect(() => {
+    const fetchMatches = async () => {
+      if (!userId) return;
+      
+      setIsLoadingMatches(true);
+      try {
+        const response = await axios.get(`http://localhost:3000/api/matches/${userId}`);
+        console.log("Fetched matches:", response.data);
+        
+        // Check the structure of the response
+        const matchesData = response.data.success ? response.data.matches : response.data;
+        
+        // Process matches data to match the format expected by your UI
+        const formattedMatches = matchesData.map(match => {
+          return {
+            id: match.matchId || match._id,
+            partner: {
+              name: match.matchedUser ? `${match.matchedUser.firstName} ${match.matchedUser.lastName}` : "Unknown User",
+              avatar: match.matchedUser?.profileImagePath ? 
+                `http://localhost:3000${match.matchedUser.profileImagePath}` : 
+                "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop", // Fallback avatar
+            },
+            skillShared: match.skillOffered || "Not specified",
+            skillLearned: match.skillRequested || "Not specified",
+            status: match.status || "Active",
+            startDate: new Date(match.createdAt || Date.now()).toISOString().split('T')[0]
+          };
+        });
+        
+        setMatches(formattedMatches);
+      } catch (error) {
+        console.error("Error fetching matches:", error);
+        // Set empty array on error
+        setMatches([]);
+      } finally {
+        setIsLoadingMatches(false);
+      }
+    };
+    
+    if (userId) {
+      fetchMatches();
     }
-  ];
+  }, [userId]);
 
   const handleSave = async () => {
     try {
@@ -131,6 +158,7 @@ const Profile = () => {
       
       await axios.put(`http://localhost:3000/api/users/${userId}`, dataToSave);
       setIsEditing(false);
+      setUploadPreview(null); // Clear preview after saving
     } catch (error) {
       console.error("Error saving profile:", error);
     }
@@ -158,6 +186,7 @@ const Profile = () => {
     reader.onloadend = () => {
       const base64String = reader.result;
       setProfilePicture(base64String);
+      setUploadPreview(base64String);
       // Also update in the profile state
       setProfile(prev => ({
         ...prev,
@@ -309,11 +338,31 @@ const Profile = () => {
           <div className="p-8">
             <div className="flex justify-between items-start">
               <div className="flex space-x-6">
-                <img
-                src={`http://localhost:3000${profile.profileImagePath}`}
-                alt="Profile"
-                  className="h-32 w-32 rounded-full border-4 border-white shadow-lg"
-                />
+                {/* Profile Image with Upload Option */}
+                <div className="relative">
+                  <img
+                    src={uploadPreview || (profile.profileImagePath ? `http://localhost:3000${profile.profileImagePath}` : profilePicture || '/default-avatar.png')}
+                    alt="Profile"
+                    className="h-32 w-32 rounded-full border-4 border-white shadow-lg object-cover"
+                  />
+                  
+                  {isEditing && (
+                    <div 
+                      className="absolute bottom-0 right-0 bg-indigo-600 text-white p-2 rounded-full cursor-pointer shadow-lg"
+                      onClick={triggerFileInput}
+                    >
+                      <Camera className="h-5 w-5" />
+                      <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        className="hidden"
+                        accept="image/jpeg, image/png, image/gif"
+                        onChange={handleFileChange}
+                      />
+                    </div>
+                  )}
+                </div>
+                
                 <div>
                   <div className="flex items-center space-x-4">
                     <h1 className="text-2xl font-bold text-gray-900">
@@ -355,7 +404,10 @@ const Profile = () => {
                           <span>Save</span>
                         </button>
                         <button
-                          onClick={() => setIsEditing(false)}
+                          onClick={() => {
+                            setIsEditing(false);
+                            setUploadPreview(null);
+                          }}
                           className="flex items-center space-x-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 rounded-lg"
                         >
                           <X className="h-4 w-4" />
@@ -606,36 +658,48 @@ const Profile = () => {
                 </button>
               </div>
               <div className="space-y-6">
-                {matches.map((match) => (
-                  <div key={match.id} className="border-b border-gray-200 last:border-0 pb-4 last:pb-0">
-                    <div className="flex items-center space-x-3 mb-2">
-                      <img
-                        src={match.partner.avatar}
-                        alt={match.partner.name}
-                        className="h-10 w-10 rounded-full"
-                      />
-                      <div>
-                        <h3 className="text-sm font-medium text-gray-900">{match.partner.name}</h3>
-                        <p className="text-xs text-gray-500">Started {match.startDate}</p>
-                      </div>
-                    </div>
-                    <div className="space-y-1">
-                      <p className="text-sm">
-                        <span className="text-gray-600">Teaching:</span>{" "}
-                        <span className="text-indigo-600">{match.skillShared}</span>
-                      </p>
-                      <p className="text-sm">
-                        <span className="text-gray-600">Learning:</span>{" "}
-                        <span className="text-indigo-600">{match.skillLearned}</span>
-                      </p>
-                    </div>
-                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${
-                      match.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {match.status}
-                    </span>
+                {isLoadingMatches ? (
+                  <div className="flex items-center justify-center py-8">
+                    <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
+                    <span className="ml-2 text-gray-600">Loading matches...</span>
                   </div>
-                ))}
+                ) : matches.length > 0 ? (
+                  matches.map((match) => (
+                    <div key={match.id} className="border-b border-gray-200 last:border-0 pb-4 last:pb-0">
+                      <div className="flex items-center space-x-3 mb-2">
+                        <img
+                          src={match.partner.avatar}
+                          alt={match.partner.name}
+                          className="h-10 w-10 rounded-full object-cover"
+                        />
+                        <div>
+                          <h3 className="text-sm font-medium text-gray-900">{match.partner.name}</h3>
+                          <p className="text-xs text-gray-500">Started {match.startDate}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-sm">
+                          <span className="text-gray-600">Teaching:</span>{" "}
+                          <span className="text-indigo-600">{match.skillShared}</span>
+                        </p>
+                        <p className="text-sm">
+                          <span className="text-gray-600">Learning:</span>{" "}
+                          <span className="text-indigo-600">{match.skillLearned}</span>
+                        </p>
+                      </div>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${
+                        match.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
+                        {match.status}
+                      </span>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-6">
+                    <p className="text-gray-500">No matches found</p>
+                    <p className="text-sm text-gray-400 mt-1">Start connecting with other users to create matches</p>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -672,7 +736,6 @@ const Profile = () => {
             </div>
           </div>
         )}
-
         {/* Delete Account Modal */}
         {showDeleteConfirm && (
           <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50">

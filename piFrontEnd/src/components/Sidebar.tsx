@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { 
   Layout, 
- 
   Speech,
-  MessageCircleQuestion ,
+  MessageCircleQuestion,
   Settings,
- 
   ShoppingBag,
   Trophy,
   UserCheck,
@@ -15,7 +13,7 @@ import {
 } from 'lucide-react';
 
 const Sidebar = () => {
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [isCollapsed, setIsCollapsed] = useState(true);
 
   const toggleSidebar = () => {
     setIsCollapsed(!isCollapsed);
@@ -23,10 +21,9 @@ const Sidebar = () => {
 
   return (
     <>
-     
       {/* Sidebar with transition */}
       <div 
-        className={`bg-white border-r border-gray-200 fixed top-16 bottom-0 left-0 z-10 transition-all duration-300 ease-in-out ${
+        className={`bg-white border-r border-gray-200 fixed top-0 bottom-0 left-0 z-10 transition-all duration-300 ease-in-out ${
           isCollapsed ? 'w-16' : 'w-64'
         }`}
       >
@@ -64,11 +61,11 @@ const Sidebar = () => {
           </a>
          
           <a href="/community" className={`flex items-center ${isCollapsed ? 'justify-center' : 'px-4'} py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg`}>
-          <Speech  className="h-5 w-5 flex-shrink-0" />
+            <Speech className="h-5 w-5 flex-shrink-0" />
             {!isCollapsed && <span className="ml-3">Community</span>}
           </a>
           <a href="/qa" className={`flex items-center ${isCollapsed ? 'justify-center' : 'px-4'} py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg`}>
-          <MessageCircleQuestion  className="h-5 w-5 flex-shrink-0" />
+            <MessageCircleQuestion className="h-5 w-5 flex-shrink-0" />
             {!isCollapsed && <span className="ml-3">Q&A</span>}
           </a>
           <a href="#" className={`flex items-center ${isCollapsed ? 'justify-center' : 'px-4'} py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg`}>

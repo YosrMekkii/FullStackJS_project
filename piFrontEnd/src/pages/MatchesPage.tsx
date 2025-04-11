@@ -377,67 +377,83 @@ const MatchesPage = () => {
                   key={user.id} 
                   className="bg-white rounded-xl shadow-md overflow-hidden transition-transform hover:scale-105"
                 >
-                  <div 
-                    className="h-48 bg-cover bg-center bg-gray-200"
-                    style={{ backgroundImage: imagePath ? `url(${`http://localhost:3000/${imagePath}`})` : 'none' }}
-                  >
-                    {!imagePath && (
-                      <div className="h-full flex items-center justify-center">
-                        <User className="h-16 w-16 text-gray-400" />
+                  {/* Make the entire card clickable except for the remove button */}
+                  <Link to={`/profile1/${user.id}`} className="block">
+                    {/* Image section */}
+                    <div 
+                      className="h-48 bg-cover bg-center bg-gray-200"
+                      style={{ backgroundImage: imagePath ? `url(${`http://localhost:3000/${imagePath}`})` : 'none' }}
+                    >
+                      {!imagePath && (
+                        <div className="h-full flex items-center justify-center">
+                          <User className="h-16 w-16 text-gray-400" />
+                        </div>
+                      )}
+                    </div>
+                    
+                    {/* Content section */}
+                    <div className="p-4">
+                      {/* User name and location */}
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <h3 className="text-xl font-bold text-gray-900">{user.firstName} {user.lastName}</h3>
+                          <p className="text-gray-600 text-sm">{user.location || "No location"}</p>
+                        </div>
+                        {/* Move the remove button outside of the Link to prevent navigation when clicking it */}
                       </div>
-                    )}
-                  </div>
-                  <div className="p-4">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <h3 className="text-xl font-bold text-gray-900">{user.firstName} {user.lastName}</h3>
-                        <p className="text-gray-600 text-sm">{user.location || "No location"}</p>
+                      {/* Bio */}
+                      <div className="mt-3">
+                        <p className="text-gray-700 text-sm line-clamp-3">
+                          {user.bio || "No bio available"}
+                        </p>
                       </div>
-                      <button 
-                        onClick={() => removeMatch(matchId)}
-                        className="p-1 text-gray-400 hover:text-red-500"
-                        title="Remove match"
-                      >
-                        <X className="h-5 w-5" />
-                      </button>
-                    </div>
-
-                    <div className="mt-3">
-                      <p className="text-gray-700 text-sm line-clamp-3">
-                        {user.bio || "No bio available"}
-                      </p>
-                    </div>
-
-                    <div className="mt-4">
-                      <h4 className="text-sm font-semibold text-gray-700 mb-2">Skills</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {user.skills && user.skills.length > 0 ? (
-                          user.skills.slice(0, 3).map((skill, index) => (
-                            <span 
-                              key={index}
-                              className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs"
-                            >
-                              {skill}
-                            </span>
-                          ))
-                        ) : (
-                          <span className="text-gray-500 text-xs">No skills listed</span>
-                        )}
-                        {user.skills && user.skills.length > 3 && (
-                          <span className="text-xs text-gray-500">+{user.skills.length - 3} more</span>
-                        )}
+                      {/* Skills */}
+                      <div className="mt-4">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Skills</h4>
+                        <div className="flex flex-wrap gap-2">
+                          {user.skills && user.skills.length > 0 ? (
+                            user.skills.slice(0, 3).map((skill, index) => (
+                              <span 
+                                key={index}
+                                className="px-2 py-1 bg-indigo-100 text-indigo-800 rounded-full text-xs"
+                              >
+                                {skill}
+                              </span>
+                            ))
+                          ) : (
+                            <span className="text-gray-500 text-xs">No skills listed</span>
+                          )}
+                          {user.skills && user.skills.length > 3 && (
+                            <span className="text-xs text-gray-500">+{user.skills.length - 3} more</span>
+                          )}
+                        </div>
+                      </div>
+                      {/* Message button */}
+                      <div className="mt-6 flex justify-end">
+                        <Link
+                          to={`/messages/${user.id}`}
+                          className="flex items-center text-indigo-600 hover:text-indigo-800"
+                          onClick={(e) => e.stopPropagation()} // Prevent triggering the parent Link
+                        >
+                          <MessageCircle className="h-4 w-4 mr-1" />
+                          <span className="text-sm">Message</span>
+                        </Link>
                       </div>
                     </div>
-
-                    <div className="mt-6 flex justify-end">
-                      <Link
-                        to={`/messages/${user.id}`}
-                        className="flex items-center text-indigo-600 hover:text-indigo-800"
-                      >
-                        <MessageCircle className="h-4 w-4 mr-1" />
-                        <span className="text-sm">Message</span>
-                      </Link>
-                    </div>
+                  </Link>
+                  
+                  {/* Remove button outside the Link so it doesn't trigger navigation */}
+                  <div className="absolute top-2 right-2">
+                    <button 
+                      onClick={(e) => {
+                        e.preventDefault();
+                        removeMatch(matchId);
+                      }}
+                      className="p-1 bg-white rounded-full shadow-md text-gray-400 hover:text-red-500"
+                      title="Remove match"
+                    >
+                      <X className="h-5 w-5" />
+                    </button>
                   </div>
                 </div>
               );
