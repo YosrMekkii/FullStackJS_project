@@ -35,37 +35,19 @@ const Login = ({ setUser }: { setUser: (user: any) => void }) => {
         setLoading(false);
 
         if (data.message === "Connexion réussie") {
-          
-          const userId = data.user.id || data.user._id;
-
-          // 🔁 Nouvelle requête pour récupérer l'utilisateur complet
-          fetch(`http://localhost:3000/api/users/${userId}`)
-            .then((res) => res.json())
-            .then((fullUser) => {
-              console.log("Utilisateur complet :", fullUser);
-  
-              // Stocker dans localStorage ou sessionStorage
-              if (rememberMe) {
-                localStorage.setItem("user", JSON.stringify(fullUser));
-              } else {
-                sessionStorage.setItem("user", JSON.stringify(fullUser));
-              }
-  
-              setUser(fullUser);
-  
-              console.log("Rôle de l'utilisateur :", fullUser.role);
-  
-              // Redirection selon le rôle
-              if (fullUser.role === "admin") {
-                navigate("/admindashboard", { replace: true });
-              } else {
-                navigate("/profile1", { replace: true });
-              }
-            })
-            .catch((err) => {
-              console.error("Erreur lors de la récupération complète :", err);
-              setErrorMessage("Erreur lors de la récupération des infos utilisateur.");
-            });
+          // Stocker l'utilisateur dans le localStorage
+          if (rememberMe) {
+            localStorage.setItem('user', JSON.stringify(data.user));
+          } else {
+            sessionStorage.setItem('user', JSON.stringify(data.user));
+          }
+          setUser(data.user);
+           // Rediriger vers la page en fonction du rôle
+        if (data.user.role === 'admin') {
+          navigate('/admindashboard', { replace: true });  // Redirigez vers le tableau de bord admin
+        } else {
+          navigate('/profile1', { replace: true });  // Redirigez vers le profil de l'utilisateur
+        }
           
         } else {
           setErrorMessage(data.message || "Échec de la connexion");
