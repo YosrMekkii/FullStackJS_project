@@ -240,7 +240,21 @@ const loginUser = async (req, res) => {
     res.status(200).json({
       message: 'Connexion réussie',
       token,
-      user: { id: user._id,firstName: user.firstName,lastName: user.lastName, email: user.email }
+      user: { 
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,  // Ajouter le rôle
+        skills: user.skills,  // Ajouter les compétences
+        city: user.city,  // Ajouter la ville
+        country: user.country,  // Ajouter le pays
+        bio: user.bio,  // Ajouter la biographie
+        educationLevel: user.educationLevel,  // Ajouter le niveau d'éducation
+        dateInscription: user.dateInscription,  // Ajouter la date d'inscription
+        isVerified: user.isVerified,  // Ajouter l'état de vérification
+        profileImagePath: user.profileImagePath || ''  // Ajouter le chemin de l'image de profil (si disponible)
+      }
     });
   } catch (error) {
     console.error('Erreur lors de la connexion:', error);
