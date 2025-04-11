@@ -474,7 +474,7 @@ const SkillMatching = () => {
                 className="relative h-[60%] bg-cover bg-center"
                 style={{ 
                   backgroundImage: imagePath 
-                    ? `url(http://localhost:3000/${imagePath})` 
+                    ? `url(http://localhost:3000${imagePath})` 
                     : 'none',
                   backgroundColor: !imagePath ? '#f3f4f6' : undefined
                 }}
