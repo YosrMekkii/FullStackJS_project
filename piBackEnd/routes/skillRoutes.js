@@ -4,13 +4,18 @@ import { authenticateToken } from '../services/userService.js';
 
 const router = express.Router();
 
-
-router.post('/skills', skillController.createSkill);
+// Public routes (no authentication required)
 router.get('/skills', skillController.getAllSkills);
 router.get('/skills/:id', skillController.getSkillById);
 router.get('/user/:userId', skillController.getUserSkills);
-router.put('/skills/:id', skillController.updateSkill);
-router.delete('/skills/:id', skillController.deleteSkill);
 
+// Protected routes (authentication required)
+// Utilisez le middleware d'authentification si vous le souhaitez
+// router.use(authenticateToken);
+
+// Ajout du middleware upload.single pour la gestion des images
+router.put('/skills/:id',  skillController.updateSkill);
+router.delete('/skills/:id', skillController.deleteSkill);
+router.post('/skills', skillController.createSkill);
 
 export default router;

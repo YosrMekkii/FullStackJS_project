@@ -5,6 +5,9 @@ import path from 'path';
 import url from 'url'; 
 import fs from 'fs';
 
+import dotenv from 'dotenv';
+
+
 
 import userRoutes from './routes/userRoutes.js';
 import skillRoutes from './routes/skillRoutes.js';

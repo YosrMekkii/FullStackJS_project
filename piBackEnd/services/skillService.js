@@ -32,7 +32,7 @@ const updateSkill = async (id, updateData) => {
     } catch (error) {
         throw new Error(`Error updating skill: ${error.message}`);
     }
-
+};
 const deleteSkill = async (id) => {
     try {
         return await Skill.findByIdAndDelete(id);
