@@ -9,11 +9,11 @@ interface Match {
   userId: string;
   matchedUserId: string;
   createdAt: string;
-  _id?: string; // Added to handle MongoDB ObjectId
+ // _id?: string; // Added to handle MongoDB ObjectId
 }
 
 interface MatchedUser {
-  id: string;
+  _id: string;
   firstName: string;
   lastName: string;
   location: string;
