@@ -275,13 +275,13 @@ const getRecommendations = async (req, res) => {
   }
 };
 
-export const getMatches = async (req, res) => {
-  const userId = req.params.id;
+export const getMatchesFor = async (req, res) => {
+  const userId = req.params.userId;
   
   try {
-    console.log(`Fetching matches for user ID: ${userId}`);
+    console.log(`Fetching formatted matches for user ID: ${userId}`);
     
-    // Fetch all matches where the current user is either the user or the matched user
+    // Find all matches where the current user is either the user or the matched user
     const matches = await Match.find({
       $or: [
         { userId: userId },
@@ -289,15 +289,60 @@ export const getMatches = async (req, res) => {
       ]
     });
     
-    console.log(`Found ${matches.length} matches for user ${userId}`);
-    
     if (matches.length === 0) {
       return res.json([]);  // Return empty array instead of 404 error
     }
     
-    return res.json(matches);
+    // Collect all the user IDs we need to fetch
+    const userIds = matches.map(match => 
+      match.userId === userId ? match.matchedUserId : match.userId
+    );
+    
+    // Fetch all users at once
+    const users = await User.find(
+      { _id: { $in: userIds } },
+      {
+        _id: 1,
+        firstName: 1,
+        lastName: 1,
+        location: 1,
+        skills: 1,
+        profileImagePath: 1
+      }
+    );
+    
+    // Map users to a dictionary for quick lookup
+    const userMap = {};
+    users.forEach(user => {
+      userMap[user._id.toString()] = user;
+    });
+    
+    // Build the final response with matched user details
+    const formattedMatches = matches.map(match => {
+      const matchedUserId = match.userId === userId ? match.matchedUserId : match.userId;
+      const matchedUser = userMap[matchedUserId];
+      
+      return {
+        _id: match._id,
+        matchId: match._id,
+        userId: match.userId,
+        matchedUserId: match.matchedUserId,
+        createdAt: match.createdAt,
+        // Include matched user details
+        matchedUser: matchedUser ? {
+          _id: matchedUser._id,
+          firstName: matchedUser.firstName,
+          lastName: matchedUser.lastName,
+          location: matchedUser.location,
+          skills: matchedUser.skills,
+          profileImagePath: matchedUser.profileImagePath
+        } : null
+      };
+    });
+    
+    return res.json(formattedMatches);
   } catch (error) {
-    console.error(`Error fetching matches for user ${userId}:`, error);
+    console.error(`Error fetching formatted matches for user ${userId}:`, error);
     return res.status(500).json({ error: "Server error" });
   }
 };
