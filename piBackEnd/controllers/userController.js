@@ -57,15 +57,21 @@ const getUsersByIds = async (req, res) => {
 
     console.log("Attempting to fetch users with IDs:", ids);
 
-    // IMPORTANT FIX: Query against BOTH _id and id fields
+    // Convert string IDs to ObjectId if they're not already
+    const objectIds = ids.map(id => {
+      try {
+        return typeof id === 'string' ? new ObjectId(id) : id;
+      } catch (err) {
+        console.warn(`Invalid ObjectId format for: ${id}`);
+        return id; // Keep original if conversion fails
+      }
+    });
+
+    // Query only against _id field since that's all we have now
     const users = await User.find(
-      { $or: [
-        { _id: { $in: ids } },
-        { id: { $in: ids } }  // Add this line to check the 'id' field too
-      ]},
+      { _id: { $in: objectIds } },
       {
         _id: 1,
-        id: 1,
         firstName: 1,
         lastName: 1,
         location: 1,
@@ -79,16 +85,13 @@ const getUsersByIds = async (req, res) => {
 
     // Format the response to match what the frontend expects
     const formattedResults = ids.map(id => {
-      // Look for a user that matches either _id or id field
-      const user = users.find(u => 
-        (u._id && u._id.toString() === id) || 
-        (u.id && u.id.toString() === id)
-      );
+      // Convert both to string for comparison
+      const user = users.find(u => u._id.toString() === id.toString());
       
       return {
         id,
         user: user ? {
-          id: user.id?.toString() || user._id.toString(), // Prefer id field if exists
+          id: user._id.toString(), // Use _id as the id in the response
           firstName: user.firstName,
           lastName: user.lastName,
           location: user.location || "",
