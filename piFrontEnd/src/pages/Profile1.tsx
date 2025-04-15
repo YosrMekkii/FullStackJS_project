@@ -108,46 +108,47 @@ const Profile = () => {
   useEffect(() => {
     const fetchMatches = async () => {
       if (!userId) return;
-      
       setIsLoadingMatches(true);
+  
       try {
-        const response = await axios.get(`http://localhost:3000/api/matches/${userId}`);
-        console.log("Fetched matches:", response.data);
-        
-        // Check the structure of the response
-        const matchesData = response.data.success ? response.data.matches : response.data;
-        
-        // Process matches data to match the format expected by your UI
+        const response = await axios.get(`http://localhost:3000/api/matches/getmatchesfor/${userId}`);
+        const matchesData = Array.isArray(response.data)
+          ? response.data
+          : response.data.matches || [];
+  
         const formattedMatches = matchesData.map(match => {
+          const fullName = match.partner?.name || 
+            (match.matchedUser 
+              ? `${match.matchedUser.firstName} ${match.matchedUser.lastName}` 
+              : "Unknown User");
+  
           return {
-            id: match.matchId || match._id,
+            id: match._id || match.matchId,
             partner: {
-              name: match.matchedUser ? `${match.matchedUser.firstName} ${match.matchedUser.lastName}` : "Unknown User",
-              avatar: match.matchedUser?.profileImagePath ? 
-                `http://localhost:3000${match.matchedUser.profileImagePath}` : 
-                "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop", // Fallback avatar
+              name: fullName,
+              avatar: match.partner?.avatar || 
+                      (match.matchedUser?.profileImagePath
+                        ? `http://localhost:3000${match.matchedUser.profileImagePath}`
+                        : "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop")
             },
-            skillShared: match.skillOffered || "Not specified",
-            skillLearned: match.skillRequested || "Not specified",
+            skillShared: match.skillOffered || match.skillShared || "Not specified",
+            skillLearned: match.skillRequested || match.skillLearned || "Not specified",
             status: match.status || "Active",
             startDate: new Date(match.createdAt || Date.now()).toISOString().split('T')[0]
           };
         });
-        
+  
         setMatches(formattedMatches);
       } catch (error) {
         console.error("Error fetching matches:", error);
-        // Set empty array on error
-        setMatches([]);
       } finally {
         setIsLoadingMatches(false);
       }
     };
-    
-    if (userId) {
-      fetchMatches();
-    }
+  
+    fetchMatches();
   }, [userId]);
+  
 
   const handleSave = async () => {
     try {

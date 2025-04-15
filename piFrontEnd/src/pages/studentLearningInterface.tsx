@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Editor from "@monaco-editor/react";
 import Peer from 'peerjs';
 import { io } from 'socket.io-client';
+import axios from 'axios';
 import { 
   Video,
   VideoOff,
@@ -25,6 +26,7 @@ import {
   User,
   HelpCircle
 } from 'lucide-react';
+
 
 interface Message {
   id: string;
@@ -56,6 +58,26 @@ interface CompileResult {
   executionTime: number;
 }
 
+interface ChatMessage {
+  role: 'user' | 'assistant' | 'system';
+  content: string;
+}
+interface OpenAIStreamChunk {
+  id: string;
+  object: string;
+  created: number;
+  model: string;
+  choices: {
+    index: number;
+    delta: {
+      content?: string;
+      role?: string;
+    };
+    finish_reason: string | null;
+  }[];
+}
+
+
 function StudentInterface() {
   const { sessionId } = useParams();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -77,6 +99,8 @@ function StudentInterface() {
   const [showOutput, setShowOutput] = useState(false);
   const [aiQuestion, setAiQuestion] = useState('');
   const [aiResponding, setAiResponding] = useState(false);
+  const [aiTyping, setAiTyping] = useState(false);
+  const [aiStream, setAiStream] = useState<string>('');
   const [aiMessages, setAiMessages] = useState<Message[]>([
     {
       id: uuidv4(),
@@ -85,6 +109,9 @@ function StudentInterface() {
       timestamp: new Date(),
       isAI: true
     }
+  ]);
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
+    {role: 'assistant', content: "Hello! I'm your AI learning assistant. How can I help you with your studies today?"}
   ]);
   const [mentorStatus, setMentorStatus] = useState<'online' | 'away' | 'offline'>('online');
   const [showChatOptions, setShowChatOptions] = useState(false);
@@ -134,6 +161,16 @@ function StudentInterface() {
 
     initializeWebRTC();
 
+    // Initialize canvas if it exists
+    if (canvasRef.current) {
+      const canvas = canvasRef.current;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+    }
+
     // Cleanup function
     return () => {
       if (streamRef.current) {
@@ -167,7 +204,7 @@ function StudentInterface() {
     if (aiChatContainerRef.current) {
       aiChatContainerRef.current.scrollTop = aiChatContainerRef.current.scrollHeight;
     }
-  }, [aiMessages]);
+  }, [aiMessages, aiStream]);
 
   // Scroll to bottom of output when compile result changes
   useEffect(() => {
@@ -286,7 +323,8 @@ function StudentInterface() {
     setMessages(prev => [...prev, message]);
   };
 
-  const handleAskAI = () => {
+  // Update the handleAskAI function
+  const handleAskAI = async () => {
     if (aiQuestion.trim()) {
       // Add user question to AI chat
       const userQuestion: Message = {
@@ -297,39 +335,73 @@ function StudentInterface() {
       };
       
       setAiMessages(prev => [...prev, userQuestion]);
-      setAiResponding(true);
       
-      // Simulate AI thinking and responding
-      setTimeout(() => {
-        generateAIResponse(aiQuestion);
+      // Update chat history for context
+      const updatedHistory = [...chatHistory, {role: 'user' as const, content: aiQuestion}];
+      setChatHistory(updatedHistory);
+      
+      // Set typing indicators
+      setAiTyping(true);
+      setAiResponding(true);
+      setAiStream('');
+      
+      try {
+        // Call the real OpenAI API
+        await callOpenAI(aiQuestion, updatedHistory);
+      } catch (error) {
+        console.error("Error calling AI API:", error);
+        // Fallback response if API fails
+        const errorMessage: Message = {
+          id: uuidv4(),
+          sender: 'AI Assistant',
+          content: "I'm sorry, I'm having trouble connecting right now. Please try again in a moment.",
+          timestamp: new Date(),
+          isAI: true
+        };
+        setAiMessages(prev => [...prev, errorMessage]);
+        setChatHistory(prev => [...prev, {role: 'assistant' as const, content: errorMessage.content}]);
+      } finally {
         setAiQuestion('');
+        setAiTyping(false);
         setAiResponding(false);
-      }, 1500);
+      }
     }
   };
 
-  const generateAIResponse = (question: string) => {
-    // This would connect to an actual AI service in production
-    const aiResponses = [
-      `Based on your question about "${question.slice(0, 20)}...", I would recommend focusing on these key concepts: 1) Understanding the fundamentals first, 2) Practice with simple examples, 3) Then gradually tackle more complex problems.`,
-      `Great question! When working with ${question.includes('code') ? 'this code' : 'this concept'}, remember that breaking down the problem into smaller parts will help you understand it better. Would you like me to explain a specific part in more detail?`,
-      `I've analyzed your question about ${question.slice(0, 15)}... This is a common area where students face challenges. The most important thing to understand is the underlying principle rather than memorizing steps. Let me know if you'd like a specific example.`,
-      `For your question, I'd recommend this approach: first, make sure you understand what the problem is asking for. Then, identify the key concepts involved. Finally, try solving simpler versions before tackling the full problem.`
-    ];
-    
-    const response = aiResponses[Math.floor(Math.random() * aiResponses.length)];
-    
-    const aiMessage: Message = {
-      id: uuidv4(),
-      sender: 'AI Assistant',
-      content: response,
-      timestamp: new Date(),
-      isAI: true
-    };
-    
-    setAiMessages(prev => [...prev, aiMessage]);
+  // Replace the OpenAI API call function with a real implementation
+  const callOpenAI = async (question: string, history: ChatMessage[]) => {
+    try {
+      const response = await fetch('http://localhost:3000/api/openai/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, history })
+      });
+  
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch from backend');
+      }
+  
+      const data = await response.json();
+      const aiResponse = data.response;
+  
+      // Update AI response in frontend (assuming you're using React or similar)
+      setAiMessages(prev => [...prev, {
+        id: uuidv4(),
+        sender: 'AI Assistant',
+        content: aiResponse,
+        timestamp: new Date(),
+        isAI: true
+      }]);
+  
+      setChatHistory(prev => [...prev, { role: 'assistant', content: aiResponse }]);
+    } catch (error) {
+      console.error("Error calling AI API:", error);
+      throw error;
+    }
   };
-
+  
+  
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -684,169 +756,125 @@ function StudentInterface() {
                         </p>
                       </div>
                       
-                      {messages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={`flex ${
-                            message.sender === 'You' ? 'justify-end' : 'justify-start'
-                          }`}
-                        >
-                          {message.sender === 'System' ? (
-                            <div className="max-w-full w-full text-center">
-                              <div className="inline-block bg-gray-200 px-3 py-1 rounded-full">
-                                <p className="text-xs text-gray-700">{message.content}</p>
-                              </div>
+                      {messages.map(message => (
+                        <div key={message.id} className={`flex ${message.sender === 'You' ? 'justify-end' : 'justify-start'}`}>
+                          <div className={`max-w-[70%] p-3 rounded-lg ${
+                            message.sender === 'You' 
+                              ? 'bg-indigo-100 text-gray-800' 
+                              : message.sender === 'Mentor'
+                                ? 'bg-gray-100 text-gray-800'
+                                : 'bg-green-50 text-gray-800'
+                          }`}>
+                            {message.sender !== 'You' && (
+                              <div className="font-medium text-xs text-gray-500 mb-1">{message.sender}</div>
+                            )}
+                            <p className="text-sm">{message.content}</p>
+                            <div className="text-xs text-gray-500 mt-1 text-right">
+                              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                             </div>
-                          ) : (
-                            <div
-                              className={`max-w-xs px-4 py-2 rounded-lg ${
-                                message.sender === 'You'
-                                  ? 'bg-indigo-600 text-white'
-                                  : message.sender === 'Mentor'
-                                  ? 'bg-green-600 text-white'
-                                  : 'bg-gray-100 text-gray-900'
-                              }`}
-                            >
-                              {message.sender !== 'You' && (
-                                <p className="text-xs font-medium mb-1 opacity-75">{message.sender}</p>
-                              )}
-                              <p className="text-sm">{message.content}</p>
-                              <p className="text-xs mt-1 opacity-75">
-                                {message.timestamp.toLocaleTimeString()}
-                              </p>
-                            </div>
-                          )}
+                          </div>
                         </div>
                       ))}
                     </div>
 
-                    {/* File Sharing */}
+                    {/* File attachments section */}
                     {files.length > 0 && (
                       <div className="mb-4">
                         <h3 className="text-sm font-medium text-gray-700 mb-2">Shared Files</h3>
-                        <div className="space-y-2">
-                          {files.map((file) => (
-                            <div
+                        <div className="flex flex-wrap gap-2">
+                          {files.map(file => (
+                            <a
                               key={file.id}
-                              className="flex items-center justify-between bg-gray-50 p-2 rounded-lg"
+                              href={file.url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="flex items-center px-3 py-2 bg-gray-100 rounded-lg hover:bg-gray-200"
                             >
-                              <div className="flex items-center">
-                                <Share className="h-5 w-5 text-gray-400 mr-2" />
-                                <div>
-                                  <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                                  <p className="text-xs text-gray-500">
-                                    {(file.size / 1024 / 1024).toFixed(2)} MB
-                                  </p>
+                              <Download className="h-4 w-4 mr-2 text-gray-600" />
+                              <div>
+                                <div className="text-sm font-medium">{file.name}</div>
+                                <div className="text-xs text-gray-500">
+                                  {(file.size / 1024).toFixed(1)} KB
                                 </div>
                               </div>
-                              <a
-                                href={file.url}
-                                download={file.name}
-                                className="p-2 text-gray-400 hover:text-indigo-600"
-                              >
-                                <Download className="h-5 w-5" />
-                              </a>
-                            </div>
+                            </a>
                           ))}
                         </div>
                       </div>
                     )}
 
-                    {/* Message Input */}
-                    <div className="flex space-x-4">
-                      <div className="relative flex-1">
-                        <input
-                          type="text"
-                          value={newMessage}
-                          onChange={(e) => setNewMessage(e.target.value)}
-                          onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                          placeholder="Type a message to your mentor..."
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        />
+                    {/* Chat Input */}
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                        placeholder="Type your message..."
+                        className="w-full p-3 pr-24 border border-gray-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500"
+                      />
+                      <div className="absolute right-2 top-1/2 transform -translate-y-1/2 flex space-x-2">
                         <button
-                          onClick={() => setShowChatOptions(!showChatOptions)}
-                          className="absolute right-3 top-2 text-gray-400 hover:text-gray-600"
+                          onClick={() => document.getElementById('file-upload')?.click()}
+                          className="p-2 text-gray-500 hover:text-indigo-600"
+                          title="Share file"
                         >
-                          <HelpCircle className="h-5 w-5" />
+                          <Share className="h-5 w-5" />
                         </button>
-                        
-                        {showChatOptions && (
-                          <div className="absolute bottom-12 right-0 bg-white shadow-lg rounded-lg p-3 border border-gray-200 w-64">
-                            <p className="text-sm font-medium text-gray-700 mb-2">Quick Messages:</p>
-                            <div className="space-y-2">
-                              {["I need help with this problem", "Could you explain the concept again?", "I'm stuck on this part", "Can we try a different approach?"].map((msg, i) => (
-                                <button
-                                  key={i}
-                                  onClick={() => {
-                                    setNewMessage(msg);
-                                    setShowChatOptions(false);
-                                  }}
-                                  className="w-full text-left text-sm p-2 hover:bg-gray-100 rounded"
-                                >
-                                  {msg}
-                                </button>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                      <label className="p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 flex items-center justify-center">
                         <input
+                          id="file-upload"
                           type="file"
                           className="hidden"
                           onChange={handleFileUpload}
                         />
-                        <Share className="h-5 w-5 text-gray-500" />
-                      </label>
-                      <button
-                        onClick={handleSendMessage}
-                        disabled={!newMessage.trim()}
-                        className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Send className="h-5 w-5" />
-                      </button>
+                        <button
+                          onClick={handleSendMessage}
+                          className="p-2 text-white bg-indigo-600 rounded-full hover:bg-indigo-700"
+                        >
+                          <Send className="h-5 w-5" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                 )}
 
                 {activeTab === 'code' && (
                   <div className="h-[600px] flex flex-col">
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="flex space-x-2 items-center">
-                        <select
-                          value={language}
-                          onChange={(e) => setLanguage(e.target.value)}
-                          className="border border-gray-300 rounded px-2 py-1 text-sm"
-                        >
-                          <option value="javascript">JavaScript</option>
-                          <option value="typescript">TypeScript</option>
-                          <option value="python">Python</option>
-                          <option value="java">Java</option>
-                          <option value="cpp">C++</option>
-                        </select>
+                    <div className="flex justify-between items-center mb-2">
+                      <select
+                        value={language}
+                        onChange={(e) => setLanguage(e.target.value)}
+                        className="p-2 border border-gray-300 rounded-md text-sm"
+                      >
+                        <option value="javascript">JavaScript</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="python">Python</option>
+                        <option value="java">Java</option>
+                        <option value="cpp">C++</option>
+                      </select>
+                      <div className="flex space-x-2">
                         <button
-                          onClick={compileCode}
-                          disabled={isCompiling}
-                          className="flex items-center px-3 py-1 bg-indigo-600 text-white rounded text-sm hover:bg-indigo-700"
+                          onClick={handleAskForHelp}
+                          className="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-md text-sm hover:bg-indigo-200 flex items-center"
                         >
-                          {isCompiling ? 'Running...' : 'Run'}
-                          {!isCompiling && <Play className="h-4 w-4 ml-1" />}
+                          <HelpCircle className="h-4 w-4 mr-1" />
+                          Get Help
                         </button>
                         <button
                           onClick={handleSaveCode}
-                          className="flex items-center px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
+                          className="px-3 py-1 bg-gray-100 text-gray-700 rounded-md text-sm hover:bg-gray-200 flex items-center"
                         >
+                          <Save className="h-4 w-4 mr-1" />
                           Save
-                          <Save className="h-4 w-4 ml-1" />
+                        </button>
+                        <button
+                          onClick={compileCode}
+                          className="px-3 py-1 bg-green-600 text-white rounded-md text-sm hover:bg-green-700 flex items-center"
+                        >
+                          <Play className="h-4 w-4 mr-1" />
+                          Run
                         </button>
                       </div>
-                      <button
-                        onClick={handleAskForHelp}
-                        className="flex items-center px-3 py-1 bg-green-600 text-white rounded text-sm hover:bg-green-700"
-                      >
-                        Ask for Help
-                        <HelpCircle className="h-4 w-4 ml-1" />
-                      </button>
                     </div>
                     
                     <div className="flex-1 border border-gray-300 rounded-lg overflow-hidden">
@@ -866,33 +894,35 @@ function StudentInterface() {
                     </div>
                     
                     {showOutput && (
-                      <div 
-                        ref={outputRef}
-                        className="mt-4 bg-black text-white p-3 rounded-lg h-32 overflow-y-auto font-mono text-sm"
-                      >
+                      <div className="mt-2 border border-gray-300 rounded-lg overflow-hidden bg-black text-white p-4 h-48 overflow-y-auto" ref={outputRef}>
                         <div className="flex justify-between items-center mb-2">
-                          <h3 className="text-xs uppercase tracking-wider text-gray-400">
-                            Output {compileResult && !compileResult.error && `(${compileResult.executionTime.toFixed(0)}ms)`}
-                          </h3>
-                          <button 
-                            onClick={() => setShowOutput(false)}
-                            className="text-gray-500 hover:text-white"
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
-                        </div>
-                        {isCompiling ? (
-                          <div className="text-yellow-300">Running your code...</div>
-                        ) : compileResult ? (
-                          <>
-                            {compileResult.error ? (
-                              <div className="text-red-400 whitespace-pre-wrap">{compileResult.error}</div>
-                            ) : (
-                              <div className="text-green-300 whitespace-pre-wrap">{compileResult.output}</div>
+                          <h3 className="text-sm font-medium">Output</h3>
+                          <div className="flex items-center">
+                            {isCompiling && (
+                              <div className="text-xs text-gray-400 mr-2">Running...</div>
                             )}
-                          </>
-                        ) : (
-                          <div className="text-gray-400">Click Run to execute your code</div>
+                            {compileResult && !isCompiling && (
+                              <div className="text-xs text-gray-400 mr-2">
+                                Executed in {compileResult.executionTime.toFixed(2)}ms
+                              </div>
+                            )}
+                            <button
+                              onClick={() => setShowOutput(false)}
+                              className="text-gray-400 hover:text-white"
+                            >
+                              <X className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                        
+                        {compileResult && (
+                          <div className="font-mono text-sm whitespace-pre-wrap">
+                            {compileResult.error ? (
+                              <span className="text-red-400">{compileResult.error}</span>
+                            ) : (
+                              <span>{compileResult.output || "No output"}</span>
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
@@ -901,30 +931,34 @@ function StudentInterface() {
 
                 {activeTab === 'whiteboard' && (
                   <div className="h-[600px] flex flex-col">
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="flex space-x-2 items-center">
-                        <button
-                          onClick={() => setTool('pen')}
-                          className={`p-2 rounded ${tool === 'pen' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-700'}`}
-                        >
-                          <Pencil className="h-5 w-5" />
-                        </button>
-                        <button
-                          onClick={() => setTool('eraser')}
-                          className={`p-2 rounded ${tool === 'eraser' ? 'bg-indigo-100 text-indigo-800' : 'bg-gray-100 text-gray-700'}`}
-                        >
-                          <Eraser className="h-5 w-5" />
-                        </button>
-                        <input 
-                          type="color" 
-                          value={currentColor}
-                          onChange={(e) => setCurrentColor(e.target.value)}
-                          className="border border-gray-300 rounded h-8 w-10 cursor-pointer"
-                        />
+                    <div className="flex justify-between items-center mb-2">
+                      <div className="flex space-x-2">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => setTool('pen')}
+                            className={`p-2 rounded-md ${tool === 'pen' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-700'}`}
+                          >
+                            <Pencil className="h-5 w-5" />
+                          </button>
+                          <button
+                            onClick={() => setTool('eraser')}
+                            className={`p-2 rounded-md ${tool === 'eraser' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-700'}`}
+                          >
+                            <Eraser className="h-5 w-5" />
+                          </button>
+                          {tool === 'pen' && (
+                            <input
+                              type="color"
+                              value={currentColor}
+                              onChange={(e) => setCurrentColor(e.target.value)}
+                              className="w-8 h-8 p-0 border-0 rounded-md"
+                            />
+                          )}
+                        </div>
                       </div>
                       <button
                         onClick={clearWhiteboard}
-                        className="px-3 py-1 bg-gray-600 text-white rounded text-sm hover:bg-gray-700"
+                        className="px-3 py-1 bg-red-100 text-red-700 rounded-md text-sm hover:bg-red-200"
                       >
                         Clear
                       </button>
@@ -945,76 +979,78 @@ function StudentInterface() {
                   </div>
                 )}
 
-                {activeTab === 'ai-help' && (
-                  <div className="h-[600px] flex flex-col">
-                    {/* AI Chat Messages */}
-                    <div
-                      ref={aiChatContainerRef}
-                      className="flex-1 overflow-y-auto mb-4 space-y-4 p-2"
-                    >
-                      {aiMessages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={`flex ${
-                            message.sender === 'You' ? 'justify-end' : 'justify-start'
-                          }`}
-                        >
-                          <div
-                            className={`max-w-md px-4 py-2 rounded-lg ${
-                              message.sender === 'You'
-                                ? 'bg-indigo-600 text-white'
-                                : 'bg-gray-100 text-gray-900'
-                            }`}
-                          >
-                            <div className="flex items-center mb-1">
-                              {message.isAI ? (
-                                <Bot className="h-4 w-4 mr-1 opacity-75" />
-                              ) : (
-                                <User className="h-4 w-4 mr-1 opacity-75" />
-                              )}
-                              <p className="text-xs font-medium opacity-75">{message.sender}</p>
-                            </div>
-                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
-                            <p className="text-xs mt-1 opacity-75">
-                              {message.timestamp.toLocaleTimeString()}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                      
-                      {aiResponding && (
-                        <div className="flex justify-start">
-                          <div className="max-w-md px-4 py-2 rounded-lg bg-gray-100 text-gray-900">
-                            <div className="flex items-center mb-1">
-                              <Bot className="h-4 w-4 mr-1 opacity-75" />
-                              <p className="text-xs font-medium opacity-75">AI Assistant</p>
-                            </div>
-                            <p className="text-sm">Thinking...</p>
-                          </div>
-                        </div>
-                      )}
-                    </div>
-
-                    {/* AI Question Input */}
-                    <div className="flex space-x-2">
-                      <input
-                        type="text"
-                        value={aiQuestion}
-                        onChange={(e) => setAiQuestion(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleAskAI()}
-                        placeholder="Ask the AI Assistant for help..."
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                      <button
-                        onClick={handleAskAI}
-                        disabled={!aiQuestion.trim() || aiResponding}
-                        className="p-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                      >
-                        <Send className="h-5 w-5" />
-                      </button>
-                    </div>
+{activeTab === 'ai-help' && (
+      <div className="h-[600px] flex flex-col">
+        {/* AI Chat Messages - Keep this section the same */}
+        <div
+          ref={aiChatContainerRef}
+          className="flex-1 overflow-y-auto mb-4 space-y-4"
+        >
+          {aiMessages.map(message => (
+            <div key={message.id} className={`flex ${message.isAI ? 'justify-start' : 'justify-end'}`}>
+              <div className={`max-w-[80%] p-3 rounded-lg ${
+                message.isAI 
+                  ? 'bg-blue-50 text-gray-800' 
+                  : 'bg-indigo-100 text-gray-800'
+              }`}>
+                <div className="flex items-center mb-1">
+                  {message.isAI ? (
+                    <Bot className="h-4 w-4 mr-1 text-blue-600" />
+                  ) : (
+                    <User className="h-4 w-4 mr-1 text-indigo-600" />
+                  )}
+                  <div className="font-medium text-xs text-gray-500">
+                    {message.isAI ? 'AI Assistant' : 'You'}
                   </div>
-                )}
+                </div>
+                <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                <div className="text-xs text-gray-500 mt-1 text-right">
+                  {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              </div>
+            </div>
+          ))}
+          
+          {aiTyping && (
+            <div className="flex justify-start">
+              <div className="max-w-[80%] p-3 rounded-lg bg-blue-50 text-gray-800">
+                <div className="flex items-center mb-1">
+                  <Bot className="h-4 w-4 mr-1 text-blue-600" />
+                  <div className="font-medium text-xs text-gray-500">
+                    AI Assistant
+                  </div>
+                </div>
+                <p className="text-sm whitespace-pre-wrap">{aiStream}</p>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* AI Chat Input - Keep this section the same */}
+        <div className="relative">
+          <input
+            type="text"
+            value={aiQuestion}
+            onChange={(e) => setAiQuestion(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && !aiResponding && handleAskAI()}
+            placeholder="Ask the AI assistant a question..."
+            className="w-full p-3 pr-12 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+            disabled={aiResponding}
+          />
+          <button
+            onClick={handleAskAI}
+            disabled={aiResponding || !aiQuestion.trim()}
+            className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-white rounded-full ${
+              aiResponding || !aiQuestion.trim() 
+                ? 'bg-gray-400' 
+                : 'bg-blue-600 hover:bg-blue-700'
+            }`}
+          >
+            <Send className="h-5 w-5" />
+          </button>
+        </div>
+      </div>
+    )}
               </div>
             </div>
           </div>

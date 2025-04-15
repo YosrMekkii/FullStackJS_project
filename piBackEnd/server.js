@@ -11,6 +11,8 @@ import skillRoutes from './routes/skillRoutes.js';
 import reportRoutes from "./routes/reportRoutes.js";
 import questionRoutes from "./routes/questionRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
+import openaiRoutes from './routes/openaiRoutes.js'; // Add this line near other route imports
+
 
 import cors from 'cors'; // ✅ Import CORS
 //import imageModel from './models/image.model.js';
@@ -122,6 +124,8 @@ app.use("/api/reports", reportRoutes);
 app.use("/questions", questionRoutes);
 app.use("/api/matches", matchRoutes);
 app.use('/uploads', express.static('uploads'));
+app.use("/api/openai", openaiRoutes); // Add this before 404 handler
+
 
 
 app.use((req, res) => {
