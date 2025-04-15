@@ -243,7 +243,21 @@ const loginUser = async (req, res) => {
     res.status(200).json({
       message: 'Connexion réussie',
       token,
-      user: { id: user._id,firstName: user.firstName,lastName: user.lastName, email: user.email }
+      user: { 
+        id: user._id,
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        role: user.role,  // Ajouter le rôle
+        skills: user.skills,  // Ajouter les compétences
+        city: user.city,  // Ajouter la ville
+        country: user.country,  // Ajouter le pays
+        bio: user.bio,  // Ajouter la biographie
+        educationLevel: user.educationLevel,  // Ajouter le niveau d'éducation
+        dateInscription: user.dateInscription,  // Ajouter la date d'inscription
+        isVerified: user.isVerified,  // Ajouter l'état de vérification
+        profileImagePath: user.profileImagePath || ''  // Ajouter le chemin de l'image de profil (si disponible)
+      }
     });
   } catch (error) {
     console.error('Erreur lors de la connexion:', error);
@@ -448,11 +462,13 @@ const verifyEmail = async (req, res) => {
     user.verificationToken = undefined; // On supprime le token
     await user.save();
 
-    res.status(200).json({ message: "Votre email a été vérifié avec succès !" });
+    // ✅ Redirection vers la page /interests après vérification réussie
+    res.redirect(`http://localhost:5173/interests/${user._id}`);
   } catch (error) {
     console.error("Erreur lors de la vérification de l'email :", error);
-    res.status(500).json({ error: "Erreur serveur" });
+    res.redirect("http://localhost:5173/verify-email/error");
   }
+
 };
 
 
@@ -554,7 +570,30 @@ const resetPassword = async (req, res) => {
   }
 };
 
+const updateUserInterests = async (req, res) => {
+  const { id } = req.params;
+  const { interests } = req.body;
+
+  try {
+    const updatedUser = await User.findByIdAndUpdate(
+      id,
+      { interests }, // ou { $set: { interests } } si plus clair
+      { new: true }
+    );
+
+    if (!updatedUser) {
+      return res.status(404).json({ error: "Utilisateur non trouvé." });
+    }
+
+    res.status(200).json({ message: "Intérêts mis à jour avec succès", user: updatedUser });
+  } catch (error) {
+    console.error("Erreur updateUser:", error);
+    res.status(500).json({ error: "Erreur serveur lors de la mise à jour" });
+  }
+};
+
 export {
+  updateUserInterests,
   forgotPassword,
   resetPassword,
   getUserByEmail,

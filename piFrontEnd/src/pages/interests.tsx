@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { Code2, Languages, Palette, Music, Camera, BarChart as ChartBar, Brain, Dumbbell, Book } from 'lucide-react';
+import { useParams } from 'react-router-dom';
+import {
+  Code2, Languages, Palette
+} from 'lucide-react';
 
 interface Category {
   name: string;
@@ -12,55 +15,62 @@ const CATEGORIES: Category[] = [
     name: "Web Development",
     icon: <Code2 className="h-6 w-6" />,
     skills: [
-      "HTML & CSS",
-      "JavaScript",
-      "React",
-      "Node.js",
-      "TypeScript",
-      "Vue.js",
-      "Angular",
-      "Python Django"
+      "HTML & CSS", "JavaScript", "React", "Node.js", "TypeScript", "Vue.js", "Angular", "Python Django"
     ]
   },
   {
     name: "Languages",
     icon: <Languages className="h-6 w-6" />,
     skills: [
-      "Spanish",
-      "French",
-      "German",
-      "Mandarin",
-      "Japanese",
-      "Italian",
-      "Korean",
-      "Arabic"
+      "Spanish", "French", "German", "Mandarin", "Japanese", "Italian", "Korean", "Arabic"
     ]
   },
   {
     name: "Design",
     icon: <Palette className="h-6 w-6" />,
     skills: [
-      "UI/UX Design",
-      "Graphic Design",
-      "Adobe Photoshop",
-      "Illustrator",
-      "Figma",
-      "Motion Graphics",
-      "3D Modeling",
-      "Typography"
+      "UI/UX Design", "Graphic Design", "Adobe Photoshop", "Illustrator", "Figma", "Motion Graphics", "3D Modeling", "Typography"
     ]
-    },
+  }
 ];
 
 export function Interests() {
+  const { id } = useParams(); // 👈 Récupérer l'ID de l'utilisateur depuis l'URL
   const [selectedSkills, setSelectedSkills] = useState<string[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [successMsg, setSuccessMsg] = useState("");
 
   const toggleSkill = (skill: string) => {
-    setSelectedSkills(prev => 
+    setSelectedSkills(prev =>
       prev.includes(skill)
         ? prev.filter(s => s !== skill)
         : [...prev, skill]
     );
+  };
+
+  const handleSubmit = async () => {
+    setLoading(true);
+    setSuccessMsg("");
+  
+    try {
+      const res = await fetch(`http://localhost:3000/api/users/interests/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ interests: selectedSkills })
+      });
+  
+      const data = await res.json();
+  
+      if (!res.ok) throw new Error(data.error || "Une erreur est survenue");
+  
+      setSuccessMsg("Vos intérêts ont été mis à jour !");
+    } catch (err: any) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -71,7 +81,7 @@ export function Interests() {
             What would you like to learn?
           </h1>
           <p className="text-xl text-gray-600">
-            Select the skills you're interested in learning. We'll help you connect with the right mentors.
+            Select the skills you're interested in. We'll update your profile accordingly.
           </p>
         </div>
 
@@ -109,13 +119,19 @@ export function Interests() {
 
         {selectedSkills.length > 0 && (
           <div className="mt-12 text-center">
-            <button className="bg-indigo-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-indigo-700 transition-colors duration-200">
-              Continue with {selectedSkills.length} selected skills
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="bg-indigo-600 text-white px-8 py-3 rounded-lg text-lg font-semibold hover:bg-indigo-700 transition-colors duration-200"
+            >
+              {loading ? "Saving..." : `Continue with ${selectedSkills.length} selected skill(s)`}
             </button>
+            {successMsg && <p className="mt-4 text-green-600">{successMsg}</p>}
           </div>
         )}
       </div>
     </div>
   );
 }
+
 export default Interests;

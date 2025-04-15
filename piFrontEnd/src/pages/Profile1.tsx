@@ -63,7 +63,7 @@ const Profile = () => {
   const [isLoadingMatches, setIsLoadingMatches] = useState(false); // Add loading state
   
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
@@ -71,6 +71,7 @@ const Profile = () => {
       } catch (error) {
         console.error("Erreur lors du parsing des données utilisateur :", error);
         localStorage.removeItem("user"); // Supprime les données corrompues
+        sessionStorage.removeItem("user");
       }
     }
   }, []);

@@ -101,7 +101,8 @@ const SignUp = () => {
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.error || "Erreur lors de l'inscription");
+        showNotification('error', result.error || "Erreur lors de l'inscription.");
+        return;
       }
 
       showNotification(

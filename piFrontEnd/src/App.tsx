@@ -36,7 +36,7 @@ function App() {
   };
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("user");
+    const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
@@ -44,12 +44,14 @@ function App() {
       } catch (error) {
         console.error("Error parsing user data:", error);
         localStorage.removeItem("user");
+        sessionStorage.removeItem("user");
       }
     }
   }, []);
 
   const handleLogout = () => {
     localStorage.removeItem("user");
+    sessionStorage.removeItem("user");
     setUser(null);
     navigate("/login");
   };
@@ -129,13 +131,16 @@ function App() {
                   <button className="p-2 text-blue-100 hover:bg-white/10 rounded-lg transition-all duration-300">
                     <Bell className="h-5 w-5" />
                   </button>
-                  <Link 
-                    to="/profile1" 
-                    className="flex items-center space-x-2 px-4 py-2 rounded-lg text-blue-100 font-medium transition-all duration-300 hover:bg-white/10"
-                  >
-                    <User className="h-5 w-5" />
-                    <span>{user.firstName} {user.lastName}</span>
+                  <Link to={user?.role === 'admin' ? '/admindashboard' : '/profile1'} className="flex items-center space-x-2 px-4 py-2 rounded-lg text-blue-100 font-medium transition-all duration-300 hover:bg-white/10">
+                  <User className="h-5 w-5" />
+                  <span>{user.firstName} {user.lastName}</span>
                   </Link>
+                  {/* Admin Role Label */}
+      {user?.role === 'admin' && (
+        <span className="absolute right-0 text-sm text-red-500 font-semibold">
+          Admin
+        </span>
+      )}
                   <button
                     onClick={handleLogout}
                     className="px-4 py-2 rounded-lg bg-red-500/80 text-white font-medium transition-all duration-300 hover:bg-red-600"
@@ -214,7 +219,7 @@ function App() {
               {user ? (
                 <>
                   <Link
-                    to="/profile1"
+                    to={user?.role === 'admin' ? '/admindashboard' : '/profile1'} 
                     className="block px-3 py-2 rounded-lg text-blue-100 font-medium hover:bg-white/10 transition-all duration-300"
                   >
                     Profile
@@ -249,13 +254,13 @@ function App() {
 
       <Routes>
         <Route path="/" element={<Home />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/login" element={<Login setUser={setUser} />} />
         <Route path="/signup" element={<SignUp />} />
         <Route path="/profile1" element={<Profile />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/marketplace" element={<SkillMarketplace />} />
         <Route path="/postskill" element={<PostSkill />} />
-        <Route path="/interests" element={<Interests />} />
+        <Route path="/interests/:id" element={<Interests />} />
         <Route path="/skills/:id" element={<SkillDetails />} />
         <Route path="/admindashboard" element={<AdminDashboard />} />
         <Route path='/learningsession' element={<LearningSession />} />
@@ -270,6 +275,8 @@ function App() {
         <Route path="/matchesPage" element={<MatchesPage />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
+        <Route path="/verify-email/invalid" element={<p>Token invalide ou expiré</p>} />
+<Route path="/verify-email/error" element={<p>Une erreur est survenue</p>} />
       </Routes>
     </div>
   );
