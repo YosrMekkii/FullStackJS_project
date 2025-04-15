@@ -40,7 +40,7 @@ pipeline {
         dir('piFrontEnd') {
             script {
                 def scannerHome = tool 'scanner'
-                withSonarQubeEnv('scanner') {  // Remplacez 'SonarQube' par le nom de votre installation SonarQube
+                withSonarQubeEnv('SonarQube') {  // Remplacez 'SonarQube' par le nom de votre installation SonarQube
                     sh "${scannerHome}/bin/sonar-scanner"
                 }
             }
@@ -53,7 +53,7 @@ stage('SonarQube Analysis (Backend)') {
         dir('piBackEnd') {
             script {
                 def scannerHome = tool 'scanner'
-                withSonarQubeEnv('scanner') {  // Remplacez 'SonarQube' par le nom de votre installation SonarQube
+                withSonarQubeEnv('SonarQube') {  // Remplacez 'SonarQube' par le nom de votre installation SonarQube
                     sh "${scannerHome}/bin/sonar-scanner"
                 }
             }
