@@ -34,7 +34,7 @@ const About = () => {
       image: yosrImg,
       bio: "Creative developer with a keen eye for design. Focused on creating beautiful and intuitive user experiences.",
       social: {
-        github: "https://github.com/yosrmekki",
+        github: "https://github.com/YosrMekkii",
         linkedin: "https://linkedin.com/in/yosrmekki",
       }
     },
@@ -44,8 +44,8 @@ const About = () => {
       image: khalilMtallahImg,
       bio: "Dedicated to building secure and efficient applications. Expert in implementing robust security measures.",
       social: {
-        github: "https://github.com/khalilmtallah",
-        linkedin: "https://linkedin.com/in/khalilmtallah",
+        github: "https://github.com/khalil27",
+        linkedin: "https://www.linkedin.com/in/khalil-mtaallah-571b72221/",
       }
     }
   ];
