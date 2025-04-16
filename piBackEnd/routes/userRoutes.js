@@ -82,6 +82,10 @@ router.post("/batch", userController.getUsersByIds);
 router.get("/:id", userController.getUserById);
 router.put("/:id", userController.updateUser);
 router.put("/interests/:id", userController.updateUser);
+router.put("/skills/:id", userController.updateSkills);
+router.put("/achievements/:id", userController.updateBioAndAchievements);
+
+
 router.delete("/:id", userController.deleteUser);
 //router.post("/signup", userController.signupUser);
 router.post('/signup', upload.single('profileImage'), userController.signupUser);
