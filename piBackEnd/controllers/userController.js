@@ -57,15 +57,21 @@ const getUsersByIds = async (req, res) => {
 
     console.log("Attempting to fetch users with IDs:", ids);
 
-    // IMPORTANT FIX: Query against BOTH _id and id fields
+    // Convert string IDs to ObjectId if they're not already
+    const objectIds = ids.map(id => {
+      try {
+        return typeof id === 'string' ? new ObjectId(id) : id;
+      } catch (err) {
+        console.warn(`Invalid ObjectId format for: ${id}`);
+        return id; // Keep original if conversion fails
+      }
+    });
+
+    // Query only against _id field since that's all we have now
     const users = await User.find(
-      { $or: [
-        { _id: { $in: ids } },
-        { id: { $in: ids } }  // Add this line to check the 'id' field too
-      ]},
+      { _id: { $in: objectIds } },
       {
         _id: 1,
-        id: 1,
         firstName: 1,
         lastName: 1,
         location: 1,
@@ -79,16 +85,13 @@ const getUsersByIds = async (req, res) => {
 
     // Format the response to match what the frontend expects
     const formattedResults = ids.map(id => {
-      // Look for a user that matches either _id or id field
-      const user = users.find(u => 
-        (u._id && u._id.toString() === id) || 
-        (u.id && u.id.toString() === id)
-      );
+      // Convert both to string for comparison
+      const user = users.find(u => u._id.toString() === id.toString());
       
       return {
         id,
         user: user ? {
-          id: user.id?.toString() || user._id.toString(), // Prefer id field if exists
+          id: user._id.toString(), // Use _id as the id in the response
           firstName: user.firstName,
           lastName: user.lastName,
           location: user.location || "",
@@ -309,6 +312,78 @@ export const getMatches = async (req, res) => {
     return res.json(matches);
   } catch (error) {
     console.error(`Error fetching matches for user ${userId}:`, error);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
+export const getMatchesFor = async (req, res) => {
+  const userId = req.params.userId;
+  
+  try {
+    console.log(`Fetching formatted matches for user ID: ${userId}`);
+    
+    // Find all matches where the current user is either the user or the matched user
+    const matches = await Match.find({
+      $or: [
+        { userId: userId },
+        { matchedUserId: userId }
+      ]
+    });
+    
+    if (matches.length === 0) {
+      return res.json([]);  // Return empty array instead of 404 error
+    }
+    
+    // Collect all the user IDs we need to fetch
+    const userIds = matches.map(match => 
+      match.userId === userId ? match.matchedUserId : match.userId
+    );
+    
+    // Fetch all users at once
+    const users = await User.find(
+      { _id: { $in: userIds } },
+      {
+        _id: 1,
+        firstName: 1,
+        lastName: 1,
+        location: 1,
+        skills: 1,
+        profileImagePath: 1
+      }
+    );
+    
+    // Map users to a dictionary for quick lookup
+    const userMap = {};
+    users.forEach(user => {
+      userMap[user._id.toString()] = user;
+    });
+    
+    // Build the final response with matched user details
+    const formattedMatches = matches.map(match => {
+      const matchedUserId = match.userId === userId ? match.matchedUserId : match.userId;
+      const matchedUser = userMap[matchedUserId];
+      
+      return {
+        _id: match._id,
+        matchId: match._id,
+        userId: match.userId,
+        matchedUserId: match.matchedUserId,
+        createdAt: match.createdAt,
+        // Include matched user details
+        matchedUser: matchedUser ? {
+          _id: matchedUser._id,
+          firstName: matchedUser.firstName,
+          lastName: matchedUser.lastName,
+          location: matchedUser.location,
+          skills: matchedUser.skills,
+          profileImagePath: matchedUser.profileImagePath
+        } : null
+      };
+    });
+    
+    return res.json(formattedMatches);
+  } catch (error) {
+    console.error(`Error fetching formatted matches for user ${userId}:`, error);
     return res.status(500).json({ error: "Server error" });
   }
 };

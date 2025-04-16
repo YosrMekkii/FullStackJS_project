@@ -153,6 +153,8 @@ const SkillMatching = () => {
   
   const saveMatch = async (matchedUserId: string) => {
     if (!user || !user.id) return null;
+    console.log("userId:", user.id, "matchedUserId:", matchedUserId);
+
     
     try {
       const matchData = {
