@@ -15,7 +15,7 @@ import {
   AlertCircle
 } from 'lucide-react';
 import axios from 'axios';
-import Sidebar from '../components/sidebar';
+import Sidebar from '../components/Sidebar';
 
 interface SkillUser {
   id: string;

@@ -4,7 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Editor from "@monaco-editor/react";
 import Peer from 'peerjs';
 import { io } from 'socket.io-client';
-import Sidebar from '../components/sidebar'; // Import the Sidebar component
+import Sidebar from '../components/Sidebar'; // Import the Sidebar component
 import { 
   Video,
   VideoOff,
