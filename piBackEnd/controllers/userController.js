@@ -418,6 +418,21 @@ const updateInterests = async (req, res) => {
   }
 };
 
+// ✅ Update bio and achievements
+const updateBioAndAchievements = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { bio, achievements } = req.body;
+
+    const user = await userService.updateUser(id, { bio, achievements });
+    if (!user) return res.status(404).json({ message: "Utilisateur non trouvé" });
+
+    res.status(200).json({ message: "Bio et réalisations mises à jour avec succès", user });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
 
 const getTotalUsers = async (req, res) => {
   try {
@@ -638,4 +653,6 @@ export {
   updateSkills,
   updateInterests,
   logoutUser,
-  getUsersByIds};
+  getUsersByIds,
+  updateBioAndAchievements
+};
