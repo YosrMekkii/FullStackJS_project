@@ -93,100 +93,181 @@ const SkillMatching = () => {
   }, []);
 
   // Fetch users and matches once we have the current user
-  useEffect(() => {
-    if (!user || !user.id) return;
-    
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        
-        // Fetch users
-        const usersResponse = await axios.get("http://localhost:3000/api/users");
-        
-        // Log all users to see what we're working with
-        console.log("All users:", usersResponse.data);
-        console.log("Current user ID:", user.id);
-        
-        // Filter out the current user by ID
-        const filteredUsers = usersResponse.data.filter((u: SkillUser) => u.id !== user.id);
-        console.log("Filtered users:", filteredUsers);
-        
-        // Fetch existing matches to potentially filter out users that are already matched
-        const matchesResponse = await axios.get(`http://localhost:3000/api/matches/${user.id}`);
-        const userMatches = matchesResponse.data;
-        console.log("User matches:", userMatches);
-        
-        // Set the matches state
-        setMatches(userMatches);
-        
-        // For now, just set all filtered users
-        setUsers(filteredUsers);
-      } catch (error) {
-        console.error("Error fetching data:", error);
-        setError("Failed to load potential matches");
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    fetchData();
-  }, [user]);
-
-  const handleReport = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+ // Use _id consistently throughout your application
+ useEffect(() => {
+  // Check if we have a user and any valid ID
+  const userId = user?._id || user?.id;
+  if (!user || !userId) {
+    console.error("User or user ID is missing, cannot fetch data");
+    return;
+  }
+  
+  const fetchData = async () => {
     try {
-      const response = await axios.post('http://localhost:3000/api/reports', {
-        ...reportFormData,
-        reportedUser: users[currentIndex]._id,
-        reporter: user?.id,
-        date: new Date().toISOString()
+      setLoading(true);
+      console.log("Fetching data for user ID:", userId);
+      
+      // Fetch users
+      const usersResponse = await axios.get("http://localhost:3000/api/users");
+      console.log("All users:", usersResponse.data);
+      
+      // Filter out the current user by checking both _id and id fields
+      const filteredUsers = usersResponse.data.filter((u: SkillUser) => {
+        const currentUserId = userId.toString();
+        const compareId = u._id ? u._id.toString() : '';
+        const compareAltId = u.id ? u.id.toString() : '';
+        return compareId !== currentUserId && compareAltId !== currentUserId;
       });
       
-      alert('Report submitted successfully');
-      setShowReportModal(false);
+      console.log("Filtered users:", filteredUsers);
+      
+      // Fetch existing matches
+      const matchesResponse = await axios.get(`http://localhost:3000/api/matches/${userId}`);
+      const userMatches = matchesResponse.data;
+      console.log("User matches:", userMatches);
+      
+      setMatches(userMatches);
+      setUsers(filteredUsers);
     } catch (error) {
-      console.error('Error submitting report:', error);
-      alert('Failed to submit report. Please try again.');
+      console.error("Error fetching data:", error);
+      setError("Failed to load potential matches");
+    } finally {
+      setLoading(false);
     }
   };
   
-  const saveMatch = async (matchedUserId: string) => {
-    if (!user || !user.id) return null;
-    console.log("userId:", user.id, "matchedUserId:", matchedUserId);
+  fetchData();
+}, [user]);
 
-    
+useEffect(() => {
+  // Get user from localStorage or sessionStorage
+  const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
+  console.log("Raw stored user string:", storedUser);
+  
+  if (storedUser) {
     try {
-      const matchData = {
-        userId: user.id,
-        matchedUserId,
-        createdAt: new Date().toISOString()
-      };
+      const parsedUser = JSON.parse(storedUser);
+      console.log("Parsed user object:", parsedUser);
       
-      console.log("Saving match to database:", matchData);
+      // Check what ID fields are available
+      console.log("ID check:", {
+        hasId: !!parsedUser.id,
+        has_id: !!parsedUser._id,
+        idType: typeof parsedUser.id,
+        _idType: typeof parsedUser._id
+      });
       
-      // Save match to database
-      const response = await axios.post('http://localhost:3000/api/matches', matchData);
-      console.log("Match saved to database:", response.data);
+      // Set the user with complete data
+      setUser(parsedUser);
       
-      // Check if it's a mutual match
-      const mutualResponse = await axios.get(
-        `http://localhost:3000/api/matches/mutual/${user.id}/${matchedUserId}`
-      );
-      
-      const isMutual = mutualResponse.data.isMutual;
-      console.log("Is mutual match:", isMutual);
-      
-      // Add to local matches state
-      const savedMatch = response.data;
-      setMatches(prev => [...prev, savedMatch]);
-      
-      return { ...savedMatch, isMutual };
+      // Check which ID to use for the report form
+      const formReporterId = parsedUser._id || parsedUser.id;
+      if (formReporterId) {
+        setReportFormData(prev => ({
+          ...prev,
+          reporter: typeof formReporterId === 'object' ? 
+            formReporterId.toString() : String(formReporterId)
+        }));
+      }
     } catch (error) {
-      console.error("Error saving match:", error);
-      return null;
+      console.error("Error parsing user data:", error);
     }
-  };
+  } else {
+    console.warn("No user found in storage");
+    // Maybe redirect to login
+  }
+}, []);
+
+// And in handleReport:
+const handleReport = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  // Use appropriate IDs
+  const userId = user?._id || user?.id;
+  const reportedUserId = users[currentIndex]?._id || users[currentIndex]?.id;
+  
+  if (!userId || !reportedUserId) {
+    alert('Error: User IDs not found');
+    return;
+  }
+  
+  try {
+    const response = await axios.post('http://localhost:3000/api/reports', {
+      ...reportFormData,
+      reportedUser: reportedUserId,
+      reporter: userId,
+      date: new Date().toISOString()
+    });
+    
+    alert('Report submitted successfully');
+    setShowReportModal(false);
+  } catch (error) {
+    console.error('Error submitting report:', error);
+    alert('Failed to submit report. Please try again.');
+  }
+};
+  
+const saveMatch = async (matchedUserId: string) => {
+  // Check if current user exists and has an ID
+  if (!user) {
+    console.error("Current user is null or undefined");
+    return null;
+  }
+  
+  // Safely extract the user ID, with fallbacks
+  const userId = user._id || user.id;
+  
+  if (!userId) {
+    console.error("No valid ID found in user object:", user);
+    return null;
+  }
+  
+  // Check if matchedUserId is valid
+  if (!matchedUserId) {
+    console.error("matchedUserId is null or undefined");
+    return null;
+  }
+  
+  // Safe toString conversion with fallbacks
+  const userIdString = typeof userId === 'object' && userId !== null ? 
+    userId.toString() : String(userId);
+  const matchedUserIdString = String(matchedUserId);
+  
+  console.log("Using IDs for match:", {
+    userIdString,
+    matchedUserIdString
+  });
+  
+  try {
+    const matchData = {
+      userId: userIdString,
+      matchedUserId: matchedUserIdString,
+      createdAt: new Date().toISOString()
+    };
+    
+    console.log("Sending match data to server:", matchData);
+    
+    const response = await axios.post('http://localhost:3000/api/matches', matchData);
+    console.log("Match saved to database:", response.data);
+    
+    // Check if it's a mutual match
+    const mutualResponse = await axios.get(
+      `http://localhost:3000/api/matches/mutual/${userIdString}/${matchedUserIdString}`
+    );
+    
+    const isMutual = mutualResponse.data.isMutual;
+    console.log("Is mutual match:", isMutual);
+    
+    // Add to local matches state
+    const savedMatch = response.data;
+    setMatches(prev => [...prev, savedMatch]);
+    
+    return { ...savedMatch, isMutual };
+  } catch (error) {
+    console.error("Error saving match:", error);
+    return null;
+  }
+};
 
   const handleSwipeLeft = async () => {
     if (currentIndex >= users.length) return;
@@ -213,10 +294,19 @@ const SkillMatching = () => {
     
     try {
       const matchedUser = users[currentIndex];
-      console.log(`Swiped right on ${matchedUser.firstName}`);
+      console.log(`Swiped right on:`, matchedUser);
+      
+      if (!matchedUser || (!matchedUser._id && !matchedUser.id)) {
+        console.error("Invalid matched user or missing ID:", matchedUser);
+        return;
+      }
+      
+      // Use the appropriate ID field with fallback
+      const matchedUserId = matchedUser._id || matchedUser.id;
+      console.log("Using matched user ID:", matchedUserId);
       
       // Save match to database
-      const savedMatch = await saveMatch(matchedUser.id);
+      const savedMatch = await saveMatch(matchedUserId);
       
       // Check if it's a mutual match
       const isMatch = savedMatch?.isMutual || false; 
@@ -231,7 +321,7 @@ const SkillMatching = () => {
         setOffsetX(0);
       }, 300);
     } catch (err) {
-      console.error('Error recording swipe:', err);
+      console.error('Error handling swipe:', err);
     }
   };
 
