@@ -10,7 +10,9 @@ import {
   ChevronLeft, 
   ChevronRight,
   Loader2,
-  Image
+  Image,
+  Flag,
+  AlertCircle
 } from 'lucide-react';
 import axios from 'axios';
 import Sidebar from '../components/sidebar';
@@ -41,8 +43,16 @@ interface User {
   // other user properties
 }
 
+interface ReportFormData {
+  reporter: string;
+  reportedUser: string;
+  reason: string;
+  details: string;
+  date: string;
+}
+
 const SkillMatching = () => {
-  const [users, setUsers] = useState<SkillUser[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -53,29 +63,34 @@ const SkillMatching = () => {
   const [offsetX, setOffsetX] = useState(0);
   const [matches, setMatches] = useState<Match[]>([]);
   const [user, setUser] = useState<User | null>(null);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportFormData, setReportFormData] = useState<ReportFormData>({
+    reporter: '',
+    reportedUser: '',
+    reason: '',
+    details: '',
+    date: new Date().toISOString()
+  });
   const cardRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
   // Get user from localStorage
   useEffect(() => {
-    console.log("🔍 Checking localStorage for user...");
-  
-    const storedUser = localStorage.getItem("user");
-    console.log("📦 Raw stored user from localStorage:", storedUser);
-  
+    const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
-        console.log("✅ Parsed user object:", parsedUser);
         setUser(parsedUser);
+        setReportFormData(prev => ({
+          ...prev,
+          reporter: parsedUser._id
+        }));
+        console.log("Logged in user:", parsedUser);
       } catch (error) {
-        console.error("❌ Error parsing user data:", error);
+        console.error("Error parsing user data:", error);
       }
-    } else {
-      console.warn("⚠️ No user found in localStorage.");
     }
   }, []);
-  
 
   // Fetch users and matches once we have the current user
   useEffect(() => {
@@ -84,18 +99,13 @@ const SkillMatching = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        console.log("Fetching users for current user ID:", user.id);
-
         
         // Fetch users
         const usersResponse = await axios.get("http://localhost:3000/api/users");
-        const allUsers = usersResponse.data;
-        console.log("Fetched users:", allUsers);
         
         // Log all users to see what we're working with
         console.log("All users:", usersResponse.data);
         console.log("Current user ID:", user.id);
-        
         
         // Filter out the current user by ID
         const filteredUsers = usersResponse.data.filter((u: SkillUser) => u.id !== user.id);
@@ -109,12 +119,6 @@ const SkillMatching = () => {
         // Set the matches state
         setMatches(userMatches);
         
-        
-        const matchedUserIds = userMatches.map((match: Match) => match.matchedUserId);
-        const unMatchedUsers = filteredUsers.filter((u: SkillUser) => !matchedUserIds.includes(u.id));
-        setUsers(unMatchedUsers);
-        
-        
         // For now, just set all filtered users
         setUsers(filteredUsers);
       } catch (error) {
@@ -127,6 +131,25 @@ const SkillMatching = () => {
     
     fetchData();
   }, [user]);
+
+  const handleReport = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    try {
+      const response = await axios.post('http://localhost:3000/api/reports', {
+        ...reportFormData,
+        reportedUser: users[currentIndex]._id,
+        reporter: user?.id,
+        date: new Date().toISOString()
+      });
+      
+      alert('Report submitted successfully');
+      setShowReportModal(false);
+    } catch (error) {
+      console.error('Error submitting report:', error);
+      alert('Failed to submit report. Please try again.');
+    }
+  };
   
   const saveMatch = async (matchedUserId: string) => {
     if (!user || !user.id) return null;
@@ -419,8 +442,7 @@ const SkillMatching = () => {
             ref={cardRef}
             className={`absolute inset-0 bg-white rounded-2xl shadow-lg overflow-hidden transition-transform duration-300 ${
               swipeDirection === 'left' ? 'translate-x-[-150%] rotate-[-30deg]' : 
-              swipeDirection === 'right' ? 'translate-x-[150%] rotate-[30deg]' : 
-              ''
+              swipeDirection === 'right' ? 'translate-x-[150%] rotate-[30deg]' : ''
             }`}
             style={{ 
               transform: isDragging ? `translateX(${offsetX}px) rotate(${offsetX * 0.1}deg)` : undefined,
@@ -434,6 +456,17 @@ const SkillMatching = () => {
             onTouchMove={handleTouchMove}
             onTouchEnd={handleTouchEnd}
           >
+            {/* Report Button */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowReportModal(true);
+              }}
+              className="absolute top-4 right-4 p-2 bg-white/80 rounded-full shadow-md text-red-500 hover:bg-red-50 transition-colors z-50"
+            >
+              <Flag className="h-5 w-5" />
+            </button>
+
             {/* Card Content */}
             <div className="h-full flex flex-col">
               {/* User Image */}
@@ -441,7 +474,7 @@ const SkillMatching = () => {
                 className="relative h-[60%] bg-cover bg-center"
                 style={{ 
                   backgroundImage: imagePath 
-                    ? `url(http://localhost:3000/${imagePath})` 
+                    ? `url(http://localhost:3000${imagePath})` 
                     : 'none',
                   backgroundColor: !imagePath ? '#f3f4f6' : undefined
                 }}
@@ -603,6 +636,85 @@ const SkillMatching = () => {
             <ChevronRight className="h-5 w-5 ml-1" />
           </Link>
         </div>
+
+        {/* Report Modal */}
+        {showReportModal && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+            <div className="bg-white rounded-lg shadow-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-xl font-semibold text-gray-900 flex items-center">
+                    <AlertCircle className="h-5 w-5 text-red-500 mr-2" />
+                    Report User
+                  </h3>
+                  <button
+                    onClick={() => setShowReportModal(false)}
+                    className="text-gray-400 hover:text-gray-500"
+                  >
+                    <X className="h-5 w-5" />
+                  </button>
+                </div>
+
+                <form onSubmit={handleReport} className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Reason for Report
+                    </label>
+                    <select
+                      required
+                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                      value={reportFormData.reason}
+                      onChange={(e) => setReportFormData({
+                        ...reportFormData,
+                        reason: e.target.value
+                      })}
+                    >
+                      <option value="">Select a reason</option>
+                      <option value="inappropriate_behavior">Inappropriate Behavior</option>
+                      <option value="fake_profile">Fake Profile</option>
+                      <option value="spam">Spam</option>
+                      <option value="harassment">Harassment</option>
+                      <option value="other">Other</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Details
+                    </label>
+                    <textarea
+                      required
+                      className="w-full rounded-lg border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500"
+                      rows={4}
+                      placeholder="Please provide specific details about the issue..."
+                      value={reportFormData.details}
+                      onChange={(e) => setReportFormData({
+                        ...reportFormData,
+                        details: e.target.value
+                      })}
+                    ></textarea>
+                  </div>
+
+                  <div className="flex justify-end space-x-3 pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowReportModal(false)}
+                      className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700"
+                    >
+                      Submit Report
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
