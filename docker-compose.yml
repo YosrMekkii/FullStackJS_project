@@ -2,21 +2,21 @@ version: '3'
 services:
   frontend:
     build:
-      context: ./piFrontEnd  # Répertoire contenant le Dockerfile pour le frontend
-      dockerfile: Dockerfile  # Utiliser le Dockerfile du frontend
+      context: ./piFrontEnd
+      dockerfile: Dockerfile
     ports:
-      - "5000:5000"  # Mapper le port 3000 du container sur 3001 de la machine hôte
+      - "5000:5173"  # Le frontend sera accessible sur localhost:5000
     networks:
       - fullstack_network
     depends_on:
-      - backend  # Attendre que le backend soit prêt avant de démarrer le frontend
+      - backend
 
   backend:
     build:
-      context: ./piBackEnd  # Répertoire contenant le Dockerfile pour le backend
-      dockerfile: Dockerfile  # Utiliser le Dockerfile du backend
+      context: ./piBackEnd
+      dockerfile: Dockerfile
     ports:
-      - "3001:3001"  # Mapper le port 3000 du container sur 3000 de la machine hôte
+      - "3001:3000"  # Le backend sera accessible sur localhost:3001
     networks:
       - fullstack_network
 
