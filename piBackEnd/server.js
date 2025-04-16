@@ -5,6 +5,9 @@ import path from 'path';
 import url from 'url'; 
 import fs from 'fs';
 
+import dotenv from 'dotenv';
+
+
 
 import userRoutes from './routes/userRoutes.js';
 import skillRoutes from './routes/skillRoutes.js';
@@ -82,6 +85,17 @@ const storage = multer.diskStorage({
   filename: function (req, file, cb) {
     cb(null, Date.now() + path.extname(file.originalname)); // Nom unique
   }
+});
+
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  if (req.method === 'POST' || req.method === 'PUT') {
+    console.log('Request body:', req.body);
+    if (req.file) {
+      console.log('Uploaded file:', req.file);
+    }
+  }
+  next();
 });
 
 // Vérifier l'extension du fichier

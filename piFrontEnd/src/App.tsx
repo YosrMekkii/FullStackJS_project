@@ -259,6 +259,7 @@ function App() {
         <Route path="/profile1" element={<Profile />} />
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/marketplace" element={<SkillMarketplace />} />
+        <Route path="/skills" element={<SkillMarketplace />} />
         <Route path="/postskill" element={<PostSkill />} />
         <Route path="/interests/:id" element={<Interests />} />
         <Route path="/skills/:id" element={<SkillDetails />} />
