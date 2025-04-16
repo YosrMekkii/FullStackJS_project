@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { UserPlus, PlusCircle, Flag, Search, Star } from "lucide-react";
-import Sidebar from "../components/sidebar";
+import Sidebar from "../components/Sidebar";
 
 interface Skill {
   _id: string;

@@ -1,24 +1,25 @@
-version: '3.8'
+version: '3'
 services:
-  db:
-    image: mongo:4.2
-    container_name: db
-    restart: always
-    environment:
-      MONGO_INITDB_ROOT_USERNAME: root
-      MONGO_INITDB_ROOT_PASSWORD: example
+  frontend:
+    build:
+      context: ./piFrontEnd  # Répertoire contenant le Dockerfile pour le frontend
+      dockerfile: Dockerfile  # Utiliser le Dockerfile du frontend
     ports:
-      - 27017:27017
-    volumes:
-      - ./data/dump:/dump
-  app:
-    build: .
-    image: 192.168.33.10:8083/nodemongoapp:6.0
-    restart: always
-    container_name: back
-    ports:
-      - '5000:5000'
+      - "5000:5000"  # Mapper le port 3000 du container sur 3001 de la machine hôte
+    networks:
+      - fullstack_network
     depends_on:
-      - db
-volumes:
-  mongo-data:
+      - backend  # Attendre que le backend soit prêt avant de démarrer le frontend
+
+  backend:
+    build:
+      context: ./piBackEnd  # Répertoire contenant le Dockerfile pour le backend
+      dockerfile: Dockerfile  # Utiliser le Dockerfile du backend
+    ports:
+      - "3001:3001"  # Mapper le port 3000 du container sur 3000 de la machine hôte
+    networks:
+      - fullstack_network
+
+networks:
+  fullstack_network:
+    driver: bridge

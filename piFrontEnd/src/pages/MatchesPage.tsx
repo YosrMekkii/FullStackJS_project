@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronLeft, User, MessageCircle, Loader2, X, AlertTriangle } from 'lucide-react';
+import { ChevronLeft, User, MessageCircle, Loader2, X, AlertTriangle, BookOpen } from 'lucide-react';
 import axios from 'axios';
-import Sidebar from '../components/sidebar';
+import Sidebar from '../components/Sidebar';
 
 interface Match {
   id: string;
@@ -375,14 +375,14 @@ const MatchesPage = () => {
               return (
                 <div 
                   key={user.id} 
-                  className="bg-white rounded-xl shadow-md overflow-hidden transition-transform hover:scale-105"
+                  className="bg-white rounded-xl shadow-md overflow-hidden transition-transform hover:scale-105 relative"
                 >
-                  {/* Make the entire card clickable except for the remove button */}
+                  {/* Make the entire card clickable except for the buttons */}
                   <Link to={`/profile1/${user.id}`} className="block">
                     {/* Image section */}
                     <div 
                       className="h-48 bg-cover bg-center bg-gray-200"
-                      style={{ backgroundImage: imagePath ? `url(${`http://localhost:3000/${imagePath}`})` : 'none' }}
+                      style={{ backgroundImage: imagePath ? `url(${`http://localhost:3000${imagePath}`})` : 'none' }}
                     >
                       {!imagePath && (
                         <div className="h-full flex items-center justify-center">
@@ -399,7 +399,6 @@ const MatchesPage = () => {
                           <h3 className="text-xl font-bold text-gray-900">{user.firstName} {user.lastName}</h3>
                           <p className="text-gray-600 text-sm">{user.location || "No location"}</p>
                         </div>
-                        {/* Move the remove button outside of the Link to prevent navigation when clicking it */}
                       </div>
                       {/* Bio */}
                       <div className="mt-3">
@@ -428,8 +427,16 @@ const MatchesPage = () => {
                           )}
                         </div>
                       </div>
-                      {/* Message button */}
-                      <div className="mt-6 flex justify-end">
+                      {/* Action buttons */}
+                      <div className="mt-6 flex justify-between">
+                        <Link
+                          to={`/studentInterface`} ///${user.id}
+                          className="flex items-center text-green-600 hover:text-green-800"
+                          onClick={(e) => e.stopPropagation()} // Prevent triggering the parent Link
+                        >
+                          <BookOpen className="h-4 w-4 mr-1" />
+                          <span className="text-sm">Student Interface</span>
+                        </Link>
                         <Link
                           to={`/messages/${user.id}`}
                           className="flex items-center text-indigo-600 hover:text-indigo-800"
