@@ -85,6 +85,17 @@ const storage = multer.diskStorage({
   }
 });
 
+app.use((req, res, next) => {
+  console.log(`[${new Date().toISOString()}] ${req.method} ${req.path}`);
+  if (req.method === 'POST' || req.method === 'PUT') {
+    console.log('Request body:', req.body);
+    if (req.file) {
+      console.log('Uploaded file:', req.file);
+    }
+  }
+  next();
+});
+
 // Vérifier l'extension du fichier
 const fileFilter = (req, file, cb) => {
   if (file.mimetype.startsWith('image/')) {

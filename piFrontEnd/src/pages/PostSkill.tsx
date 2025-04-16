@@ -80,7 +80,7 @@ const userId = storedUser ? JSON.parse(storedUser).id : null;
       setImagePreview(null);
       
       // Rediriger vers la page des compétences
-      navigate("/skills");
+      navigate("/marketplace");
     } catch (error) {
       console.error("Erreur lors de l'ajout de la compétence:", error);
       

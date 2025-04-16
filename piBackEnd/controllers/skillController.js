@@ -15,6 +15,7 @@ const storage = multer.diskStorage({
     filename: function(req, file, cb) {
         cb(null, `skill-${Date.now()}${path.extname(file.originalname)}`);
     }
+    
 });
 
 // File filter to ensure only images are uploaded
