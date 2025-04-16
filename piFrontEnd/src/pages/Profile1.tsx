@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import AIChat from './components/AIChat';
 import { useNavigate } from 'react-router-dom';
-import Sidebar from '../components/sidebar'; // Import the Sidebar component
+import Sidebar from '../components/Sidebar'; // Import the Sidebar component
 import { 
   Mail, 
   MapPin, 
