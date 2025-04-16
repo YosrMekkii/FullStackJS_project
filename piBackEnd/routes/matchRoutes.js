@@ -71,6 +71,45 @@ router.get('/:userId', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+router.get('/getmatchesfor/:userId', async (req, res) => {
+  try {
+    const { userId } = req.params;
+
+    const matches = await Match.find({
+      $or: [
+        { userId, status: 'accepted' },
+        { matchedUserId: userId, status: 'accepted' }
+      ]
+    });
+
+    const detailedMatches = await Promise.all(matches.map(async (match) => {
+      const isInitiator = match.userId === userId;
+      const partnerId = isInitiator ? match.matchedUserId : match.userId;
+
+      const partner = await User.findById(partnerId).select(
+        'firstName lastName profileImagePath'
+      );
+
+      return {
+        id: match._id,
+        startDate: match.createdAt.toDateString(),
+        status: 'Active',
+        partner: {
+          name: `${partner?.firstName || 'Unknown'} ${partner?.lastName || ''}`,
+          avatar: partner?.profileImagePath || '/default-avatar.png'
+        },
+        skillShared: isInitiator ? 'Your Skill' : 'Their Skill',
+        skillLearned: isInitiator ? 'Their Skill' : 'Your Skill'
+      };
+    }));
+
+    res.status(200).json(detailedMatches);
+  } catch (error) {
+    console.error('Error fetching matches:', error);
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
 
 // Delete a match
 router.delete('/:matchId', async (req, res) => {
