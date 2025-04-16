@@ -61,12 +61,13 @@ stage('SonarQube Analysis (Backend)') {
     }
 }
 
-stage('Docker Compose Build & Up') {
+ // Étape de build et up avec docker-compose
+        stage('Docker Compose Build & Up') {
             steps {
                 dir('FULLSTACKJS_PROJECT') {  // Se placer dans le répertoire contenant docker-compose.yml
-                    sh 'docker-compose down || true'  // Arrête les containers existants s'ils sont déjà en cours
-                    sh 'docker-compose build'  // Construit les images Docker à partir des Dockerfiles
-                    sh 'docker-compose up -d'  // Lance les containers en mode détaché (en arrière-plan)
+                    sh 'docker-compose down || true'  // Arrêter les containers existants si déjà en cours
+                    sh 'docker-compose build'  // Construire les images Docker pour le frontend et le backend
+                    sh 'docker-compose up -d'  // Lancer les containers en mode détaché (background)
                 }
             }
         }

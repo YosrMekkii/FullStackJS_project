@@ -1,11 +1,21 @@
+# Utilisation de l'image officielle Node.js
 FROM node:22-alpine
 
+# Définir le répertoire de travail
 WORKDIR /app
 
-COPY . .
+# Copier les fichiers package.json et package-lock.json
+COPY package*.json ./
 
+# Installer les dépendances du backend
 RUN npm install
 
-EXPOSE 3000
+# Copier tout le code source du backend
+COPY . .
 
+# Exposer le port utilisé par l'application
+EXPOSE 3000  
+# Le port que le backend utilise, souvent 3000
+
+# Démarrer l'application backend
 CMD ["npm", "start"]
