@@ -58,17 +58,24 @@ const SkillMatching = () => {
 
   // Get user from localStorage
   useEffect(() => {
+    console.log("🔍 Checking localStorage for user...");
+  
     const storedUser = localStorage.getItem("user");
+    console.log("📦 Raw stored user from localStorage:", storedUser);
+  
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
+        console.log("✅ Parsed user object:", parsedUser);
         setUser(parsedUser);
-        console.log("Logged in user:", parsedUser);
       } catch (error) {
-        console.error("Error parsing user data:", error);
+        console.error("❌ Error parsing user data:", error);
       }
+    } else {
+      console.warn("⚠️ No user found in localStorage.");
     }
   }, []);
+  
 
   // Fetch users and matches once we have the current user
   useEffect(() => {
@@ -77,13 +84,18 @@ const SkillMatching = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
+        console.log("Fetching users for current user ID:", user.id);
+
         
         // Fetch users
         const usersResponse = await axios.get("http://localhost:3000/api/users");
+        const allUsers = usersResponse.data;
+        console.log("Fetched users:", allUsers);
         
         // Log all users to see what we're working with
         console.log("All users:", usersResponse.data);
         console.log("Current user ID:", user.id);
+        
         
         // Filter out the current user by ID
         const filteredUsers = usersResponse.data.filter((u: SkillUser) => u.id !== user.id);
@@ -97,13 +109,11 @@ const SkillMatching = () => {
         // Set the matches state
         setMatches(userMatches);
         
-        // Filter out users that are already matched if needed
-        // Uncomment the following code if you want to hide users that are already matched
-        /*
+        
         const matchedUserIds = userMatches.map((match: Match) => match.matchedUserId);
         const unMatchedUsers = filteredUsers.filter((u: SkillUser) => !matchedUserIds.includes(u.id));
         setUsers(unMatchedUsers);
-        */
+        
         
         // For now, just set all filtered users
         setUsers(filteredUsers);

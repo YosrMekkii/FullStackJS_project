@@ -289,6 +289,33 @@ const getRecommendations = async (req, res) => {
   }
 };
 
+export const getMatches = async (req, res) => {
+  const userId = req.params.id;
+  
+  try {
+    console.log(`Fetching matches for user ID: ${userId}`);
+    
+    // Fetch all matches where the current user is either the user or the matched user
+    const matches = await Match.find({
+      $or: [
+        { userId: userId },
+        { matchedUserId: userId }
+      ]
+    });
+    
+    console.log(`Found ${matches.length} matches for user ${userId}`);
+    
+    if (matches.length === 0) {
+      return res.json([]);  // Return empty array instead of 404 error
+    }
+    
+    return res.json(matches);
+  } catch (error) {
+    console.error(`Error fetching matches for user ${userId}:`, error);
+    return res.status(500).json({ error: "Server error" });
+  }
+};
+
 export const getMatchesFor = async (req, res) => {
   const userId = req.params.userId;
   
