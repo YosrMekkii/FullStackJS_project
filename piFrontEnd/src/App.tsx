@@ -76,12 +76,7 @@ function App() {
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-1">
-              <Link
-                to="/marketplace"
-                className="px-4 py-2 rounded-lg text-blue-100 font-medium transition-all duration-300 hover:bg-white/10 hover:text-white"
-              >
-                Marketplace
-              </Link>
+              
 
               <div className="relative">
                 <button

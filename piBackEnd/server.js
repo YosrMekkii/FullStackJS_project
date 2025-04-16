@@ -4,7 +4,8 @@ import multer from 'multer';
 import path from 'path';
 import url from 'url'; 
 import fs from 'fs';
-
+import './models/user.js'; // juste pour enregistrer le modèle
+import './models/report.js';
 
 import userRoutes from './routes/userRoutes.js';
 import skillRoutes from './routes/skillRoutes.js';

@@ -382,7 +382,7 @@ const MatchesPage = () => {
                     {/* Image section */}
                     <div 
                       className="h-48 bg-cover bg-center bg-gray-200"
-                      style={{ backgroundImage: imagePath ? `url(${`http://localhost:3000/${imagePath}`})` : 'none' }}
+                      style={{ backgroundImage: imagePath ? `url(${`http://localhost:3000${imagePath}`})` : 'none' }}
                     >
                       {!imagePath && (
                         <div className="h-full flex items-center justify-center">
