@@ -61,23 +61,12 @@ stage('SonarQube Analysis (Backend)') {
     }
 }
 
-// 🚀 Stage Docker Compose Build & Up pour frontend et backend
-        stage('Docker Compose Build & Up') {
+stage('Docker Compose Build & Up') {
             steps {
-                script {
-                    // Pour le frontend
-                    dir('piFrontEnd') {
-                        sh 'docker-compose down || true'  // Arrête et supprime les conteneurs existants
-                        sh 'docker-compose build'         // Build les images du frontend
-                        sh 'docker-compose up -d'         // Lancer les conteneurs en mode détaché
-                    }
-
-                    // Pour le backend
-                    dir('piBackEnd') {
-                        sh 'docker-compose down || true'  // Arrête et supprime les conteneurs existants
-                        sh 'docker-compose build'         // Build les images du backend
-                        sh 'docker-compose up -d'         // Lancer les conteneurs en mode détaché
-                    }
+                dir('FULLSTACKJS_PROJECT') {  // Se placer dans le répertoire contenant docker-compose.yml
+                    sh 'docker-compose down || true'  // Arrête les containers existants s'ils sont déjà en cours
+                    sh 'docker-compose build'  // Construit les images Docker à partir des Dockerfiles
+                    sh 'docker-compose up -d'  // Lance les containers en mode détaché (en arrière-plan)
                 }
             }
         }
