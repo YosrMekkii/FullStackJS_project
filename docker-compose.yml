@@ -1,13 +1,25 @@
 version: '3.8'
-services:
 
-  app:
-    build: .
+services:
+  backend:
+    build:
+      context: ./piBackend
     image: 192.168.33.10:8083/nodemongoapp:6.0
-    restart: always
-    container_name: back
+    container_name: backend
     ports:
       - '5000:5000'
+    environment:
+      - MONGO_URI=mongodb+srv://ayari2014khalil:skillexchangedb@skillexchangedb.jyc2i.mongodb.net/skillexchangedb?retryWrites=true&w=majority
 
-volumes:
-  mongo-data:
+    restart: always
+
+  frontend:
+    build:
+      context: ./piFrontEnd
+    image: 192.168.33.10:8083/pireactapp:6.0
+    container_name: frontend
+    ports:
+      - '3000:3000'
+    restart: always
+
+# Pas besoin de volume pour Mongo Atlas, donc on l'enlève
