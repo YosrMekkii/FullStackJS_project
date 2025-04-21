@@ -18,6 +18,8 @@ interface Skill {
 const categories = ["All", "Tech", "Design", "Marketing", "Language"];
 
 const SkillMarketplace = () => {
+  const navigate = useNavigate();
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const isAuthenticated = !!localStorage.getItem("user") || sessionStorage.getItem("user");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
@@ -26,6 +28,16 @@ const SkillMarketplace = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
+        // Get current user ID from localStorage or sessionStorage
+        const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
+        if (storedUser) {
+          try {
+            const parsedUser = JSON.parse(storedUser);
+            setCurrentUserId(parsedUser.id);
+          } catch (err) {
+            console.error("Error parsing user data:", err);
+          }
+        }
     fetchSkills();
   }, []);
 
@@ -53,6 +65,34 @@ const SkillMarketplace = () => {
      skill.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
+    // Handle edit skill
+    const handleEditSkill = (skillId: string) => {
+      navigate(`/edit-skill/${skillId}`);
+    };
+    // Handle delete skill
+  const handleDeleteSkill = async (skillId: string) => {
+    if (window.confirm("Are you sure you want to delete this skill?")) {
+      try {
+        const response = await fetch(`http://localhost:3000/skill/skills/${skillId}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (response.ok) {
+          // Update the skills state to remove the deleted skill
+          setSkills(skills.filter(skill => skill._id !== skillId));
+        } else {
+          throw new Error('Failed to delete skill');
+        }
+      } catch (err) {
+        console.error('Error deleting skill:', err);
+        alert('Failed to delete skill. Please try again.');
+      }
+    }
+  };
+  
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -186,25 +226,50 @@ const SkillMarketplace = () => {
                     </p>
                   </div>
                   
+                  {/* Conditional buttons based on ownership */}
                   <div className="flex gap-2">
-                    <Link
-                      to={`/skills/${skill._id}`}
-                      className="flex-1 text-center py-2 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 font-medium transition-colors"
-                    >
-                      View Details
-                    </Link>
-                    <Link
-                      to={isAuthenticated ? `/connect/${skill._id}` : "/login"}
-                      className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-medium transition-colors flex items-center justify-center gap-2"
-                    >
-                      <UserPlus className="h-4 w-4" />
-                      <span>Connect</span>
-                    </Link>
+                    {currentUserId && skill.user && currentUserId === skill.user._id ? (
+                      // User owns this skill - show Edit and Delete buttons
+                      <>
+                        <button
+                          onClick={() => handleEditSkill(skill._id)}
+                          className="flex-1 border border-blue-600 text-blue-600 py-2 rounded-lg hover:bg-blue-50 font-medium transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Edit className="h-4 w-4" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          onClick={() => handleDeleteSkill(skill._id)}
+                          className="flex-1 border border-red-600 text-red-600 py-2 rounded-lg hover:bg-red-50 font-medium transition-colors flex items-center justify-center gap-2"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                          <span>Delete</span>
+                        </button>
+                      </>
+                    ) : (
+                      // User doesn't own this skill - show Details and Connect buttons
+                      <>
+                        <Link
+                          to={`/skills/${skill._id}`}
+                          className="flex-1 text-center py-2 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 font-medium transition-colors"
+                        >
+                          View Details
+                        </Link>
+                        <Link
+                          to={isAuthenticated ? `/user/${skill.user?._id}` : "/login"}
+                          className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-medium transition-colors flex items-center justify-center gap-2"
+                        >
+                          <UserPlus className="h-4 w-4" />
+                          <span>Connect</span>
+                        </Link>
+                      </>
+                    )}
                   </div>
                 </div>
               </div>
             ))}
           </div>
+                  
         ) : (
           <div className="text-center py-16">
             <h3 className="text-xl font-medium text-gray-600 mb-2">No skills found</h3>
