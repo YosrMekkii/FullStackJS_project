@@ -1,204 +1,225 @@
-import React, { useState, useEffect } from 'react';
-import { Clock, CheckCircle, X, AlertTriangle } from 'lucide-react';
+// Active Challenge Component
+import React, { useState, useEffect, useRef } from 'react';
+import { CheckCircle, X, AlertTriangle, Clock } from 'lucide-react';
 
 interface ActiveChallengeProps {
-  challenge: {
-    id: string;
-    title: string;
-    description: string;
-    type: 'coding' | 'quiz' | 'interactive';
-    difficulty: 'beginner' | 'intermediate' | 'advanced';
-    xp: number;
-    timeLimit: number;
-    content?: {
-      question?: string;
-      options?: string[];
-      code?: string;
-      correctAnswer?: string | string[];
-    };
-  };
+  challenge: Challenge;
   onComplete: (success: boolean) => void;
   onClose: () => void;
 }
 
 const ActiveChallenge: React.FC<ActiveChallengeProps> = ({ challenge, onComplete, onClose }) => {
-  const [timeLeft, setTimeLeft] = useState(challenge.timeLimit * 60); // Convert minutes to seconds
-  const [answer, setAnswer] = useState('');
-  const [submitted, setSubmitted] = useState(false);
-  const [isCorrect, setIsCorrect] = useState(false);
+  const [timeLeft, setTimeLeft] = useState<number>(challenge.timeLimit * 60);
+  const [answer, setAnswer] = useState<string>('');
+  const [selectedOptions, setSelectedOptions] = useState<string[]>([]);
+  const [codeValue, setCodeValue] = useState<string>(challenge.content?.code || '');
+  const [submitting, setSubmitting] = useState<boolean>(false);
+  const [error, setError] = useState<string | null>(null);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
+  // Format time as mm:ss
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  // Set up timer
   useEffect(() => {
-    const timer = setInterval(() => {
+    timerRef.current = setInterval(() => {
       setTimeLeft((prev) => {
         if (prev <= 1) {
-          clearInterval(timer);
-          if (!submitted) {
-            handleSubmit();
-          }
+          clearInterval(timerRef.current!);
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
 
-    return () => clearInterval(timer);
+    return () => {
+      if (timerRef.current) {
+        clearInterval(timerRef.current);
+      }
+    };
   }, []);
 
-  const formatTime = (seconds: number) => {
-    const minutes = Math.floor(seconds / 60);
-    const remainingSeconds = seconds % 60;
-    return `${minutes}:${remainingSeconds.toString().padStart(2, '0')}`;
-  };
-
-  const handleSubmit = () => {
-    setSubmitted(true);
-    const success = checkAnswer();
-    setIsCorrect(success);
-    onComplete(success);
-  };
-
-  const checkAnswer = () => {
-    if (!challenge.content?.correctAnswer) return false;
-    
-    if (Array.isArray(challenge.content.correctAnswer)) {
-      return challenge.content.correctAnswer.includes(answer);
+  // Watch for timer completion
+  useEffect(() => {
+    if (timeLeft === 0) {
+      handleSubmit();
     }
+  }, [timeLeft]);
+
+  const handleOptionToggle = (option: string) => {
+    if (selectedOptions.includes(option)) {
+      setSelectedOptions(selectedOptions.filter(item => item !== option));
+    } else {
+      setSelectedOptions([...selectedOptions, option]);
+    }
+  };
+
+  const handleSubmit = async () => {
+    setSubmitting(true);
+    setError(null);
     
-    return answer.toLowerCase() === challenge.content.correctAnswer.toLowerCase();
+    try {
+      // We'll simulate checking the answer here
+      // In a real app, you would validate with your API
+      let isCorrect = false;
+      
+      if (challenge.type === 'quiz') {
+        // For multiple choice questions
+        if (Array.isArray(challenge.content?.correctAnswer)) {
+          // Multi-select quiz
+          isCorrect = JSON.stringify(selectedOptions.sort()) === 
+                     JSON.stringify((challenge.content?.correctAnswer as string[]).sort());
+        } else {
+          // Single answer quiz
+          isCorrect = answer === challenge.content?.correctAnswer;
+        }
+      } else if (challenge.type === 'coding') {
+        // This would typically involve sending the code to an API for evaluation
+        // For now, we'll just simulate success
+        isCorrect = codeValue.length > 0;
+      } else if (challenge.type === 'interactive') {
+        // Custom validation for interactive challenges
+        isCorrect = true; // Placeholder
+      }
+      
+      // Complete the challenge
+      onComplete(isCorrect);
+      
+    } catch (err) {
+      setError('There was a problem submitting your answer. Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-xl max-w-3xl w-full mx-4 max-h-[90vh] overflow-y-auto">
-        {/* Challenge Header */}
-        <div className="p-6 border-b border-gray-200">
-          <div className="flex items-center justify-between">
-            <h2 className="text-2xl font-bold text-gray-900">{challenge.title}</h2>
-            <div className="flex items-center space-x-4">
-              <div className={`flex items-center space-x-2 ${
-                timeLeft < 60 ? 'text-red-600' : 'text-gray-600'
-              }`}>
-                <Clock className="h-5 w-5" />
-                <span className="font-mono font-medium">{formatTime(timeLeft)}</span>
-              </div>
-              {!submitted && (
-                <button
-                  onClick={onClose}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              )}
+    <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
+      <div className="bg-white rounded-xl shadow-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
+        {/* Header */}
+        <div className="border-b border-gray-200 p-4 flex justify-between items-center sticky top-0 bg-white z-10">
+          <div className="flex items-center space-x-2">
+            <h2 className="text-xl font-semibold">{challenge.title}</h2>
+            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+              challenge.difficulty === 'beginner' ? 'text-green-500 bg-green-100' :
+              challenge.difficulty === 'intermediate' ? 'text-yellow-500 bg-yellow-100' :
+              'text-red-500 bg-red-100'
+            }`}>
+              {challenge.difficulty}
+            </span>
+          </div>
+          
+          <div className="flex items-center space-x-4">
+            <div className={`flex items-center space-x-2 px-3 py-1 rounded-full ${
+              timeLeft < 60 ? 'bg-red-100 text-red-600' : 'bg-gray-100 text-gray-600'
+            }`}>
+              <Clock className="h-4 w-4" />
+              <span className="text-sm font-medium">{formatTime(timeLeft)}</span>
             </div>
+            <button
+              onClick={onClose}
+              className="text-gray-500 hover:text-gray-700"
+            >
+              <X className="h-6 w-6" />
+            </button>
           </div>
         </div>
-
-        {/* Challenge Content */}
+        
+        {/* Content */}
         <div className="p-6">
-          {!submitted ? (
-            <div className="space-y-6">
-              <div className="prose max-w-none">
-                <p className="text-gray-600">{challenge.description}</p>
+          <p className="text-gray-700 mb-6">{challenge.description}</p>
+          
+          {/* Challenge type specific content */}
+          {challenge.type === 'quiz' && (
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <p className="font-medium">{challenge.content?.question}</p>
               </div>
-
-              {challenge.type === 'quiz' && challenge.content?.options && (
-                <div className="space-y-3">
-                  {challenge.content.options.map((option, index) => (
-                    <button
-                      key={index}
-                      onClick={() => setAnswer(option)}
-                      className={`w-full p-4 text-left rounded-lg border ${
-                        answer === option
-                          ? 'border-indigo-500 bg-indigo-50'
-                          : 'border-gray-200 hover:bg-gray-50'
-                      }`}
-                    >
-                      {option}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {challenge.type === 'coding' && (
-                <div className="space-y-4">
-                  <div className="bg-gray-900 text-gray-100 p-4 rounded-lg">
-                    <pre className="whitespace-pre-wrap">{challenge.content?.code}</pre>
+              
+              {/* Quiz options */}
+              <div className="space-y-2">
+                {challenge.content?.options?.map((option, index) => (
+                  <div 
+                    key={index}
+                    onClick={() => handleOptionToggle(option)}
+                    className={`p-3 border rounded-lg cursor-pointer ${
+                      selectedOptions.includes(option) 
+                        ? 'border-indigo-500 bg-indigo-50' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}
+                  >
+                    <div className="flex items-center space-x-3">
+                      <div className={`h-5 w-5 rounded-full flex items-center justify-center ${
+                        selectedOptions.includes(option)
+                          ? 'bg-indigo-500 text-white'
+                          : 'border border-gray-400'
+                      }`}>
+                        {selectedOptions.includes(option) && (
+                          <CheckCircle className="h-4 w-4" />
+                        )}
+                      </div>
+                      <span>{option}</span>
+                    </div>
                   </div>
-                  <textarea
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
-                    placeholder="Write your solution here..."
-                    className="w-full h-48 p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-              )}
-
-              {challenge.type === 'interactive' && (
-                <div className="space-y-4">
-                  <input
-                    type="text"
-                    value={answer}
-                    onChange={(e) => setAnswer(e.target.value)}
-                    placeholder="Type your answer..."
-                    className="w-full p-4 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
-                  />
-                </div>
-              )}
+                ))}
+              </div>
             </div>
-          ) : (
-            <div className="text-center py-8">
-              {isCorrect ? (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-center">
-                    <div className="bg-green-100 rounded-full p-3">
-                      <CheckCircle className="h-12 w-12 text-green-600" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">Challenge Completed!</h3>
-                  <p className="text-gray-600">You've earned {challenge.xp} XP</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  <div className="flex items-center justify-center">
-                    <div className="bg-red-100 rounded-full p-3">
-                      <AlertTriangle className="h-12 w-12 text-red-600" />
-                    </div>
-                  </div>
-                  <h3 className="text-xl font-bold text-gray-900">Time's Up!</h3>
-                  <p className="text-gray-600">Don't worry, you can try again later</p>
-                </div>
-              )}
+          )}
+          
+          {challenge.type === 'coding' && (
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-800 text-white rounded-lg font-mono whitespace-pre-wrap overflow-x-auto">
+                <p>{challenge.content?.question || 'Write your solution below:'}</p>
+              </div>
+              
+              {/* Code editor */}
+              <textarea
+                value={codeValue}
+                onChange={(e) => setCodeValue(e.target.value)}
+                className="w-full h-64 p-4 font-mono text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                placeholder="// Write your code here"
+              />
+            </div>
+          )}
+          
+          {challenge.type === 'interactive' && (
+            <div className="space-y-4">
+              <div className="p-4 bg-gray-50 rounded-lg">
+                <p>{challenge.content?.question || 'Complete the interactive challenge:'}</p>
+              </div>
+              
+              {/* This would be replaced with an actual interactive component */}
+              <div className="bg-gray-100 rounded-lg p-12 text-center">
+                <p className="text-gray-500">Interactive challenge content would appear here</p>
+              </div>
+            </div>
+          )}
+          
+          {/* Error message */}
+          {error && (
+            <div className="mt-4 p-3 bg-red-50 text-red-700 rounded-lg flex items-center space-x-2">
+              <AlertTriangle className="h-5 w-5" />
+              <p>{error}</p>
             </div>
           )}
         </div>
-
-        {/* Challenge Footer */}
-        <div className="p-6 border-t border-gray-200">
-          <div className="flex justify-end space-x-4">
-            {submitted ? (
-              <button
-                onClick={onClose}
-                className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-              >
-                Close
-              </button>
-            ) : (
-              <>
-                <button
-                  onClick={onClose}
-                  className="px-6 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50"
-                >
-                  Give Up
-                </button>
-                <button
-                  onClick={handleSubmit}
-                  className="px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                >
-                  Submit
-                </button>
-              </>
-            )}
-          </div>
+        
+        {/* Footer */}
+        <div className="border-t border-gray-200 p-4 flex justify-end sticky bottom-0 bg-white">
+          <button
+            onClick={handleSubmit}
+            disabled={submitting || timeLeft === 0}
+            className={`px-6 py-2 rounded-lg font-medium ${
+              submitting || timeLeft === 0
+                ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                : 'bg-indigo-600 text-white hover:bg-indigo-700'
+            }`}
+          >
+            {submitting ? 'Submitting...' : 'Submit Answer'}
+          </button>
         </div>
       </div>
     </div>

@@ -126,7 +126,7 @@ app.use("/questions", questionRoutes);
 app.use("/api/matches", matchRoutes);
 app.use('/uploads', express.static('uploads'));
 app.use("/api/openai", openaiRoutes); // Add this before 404 handler
-
+app.use('/api/challenges', require('./routes/challengesRoutes.js'));
 
 
 app.use((req, res) => {

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import {
   Trophy,
@@ -12,29 +12,27 @@ import {
   Languages,
   Flame,
   Crown,
- 
-  
 } from 'lucide-react';
 import ActiveChallenge from '../components/ActiveChallenge';
+import api from '../services/api';
 
 interface Challenge {
-  id: string;
+  _id: string;
   title: string;
   description: string;
   type: 'coding' | 'quiz' | 'interactive';
   difficulty: 'beginner' | 'intermediate' | 'advanced';
   xp: number;
   timeLimit: number;
-  completed: boolean;
   category: string;
-  content?: ChallengeContent;
-}
-
-interface ChallengeContent {
-  question?: string;
-  options?: string[];
-  code?: string;
-  correctAnswer?: string | string[];
+  tags: string[];
+  content?: {
+    question?: string;
+    options?: string[];
+    code?: string;
+    correctAnswer?: string | string[];
+  };
+  dailyChallenge?: boolean;
 }
 
 interface Badge {
@@ -45,137 +43,152 @@ interface Badge {
   achieved: boolean;
 }
 
+interface UserProgress {
+  xp: number;
+  level: number;
+  currentLevelXP: number;
+  nextLevelXP: number;
+  streak: number;
+  completedToday: number;
+  dailyGoal: number;
+}
+
 const Challenges = () => {
-  const [activeTab, setActiveTab] = useState<'daily' | 'completed'>('daily');
+  const [activeTab, setActiveTab] = useState<'daily' | 'all' | 'completed'>('daily');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const [userLevel, setUserLevel] = useState(5);
-  const [userXP, setUserXP] = useState(2750);
-  const [streak, setStreak] = useState(7);
-  const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
-
-  const xpToNextLevel = 5000;
-  const progress = (userXP / xpToNextLevel) * 100;
-
-  const challenges: Challenge[] = [
-    {
-      id: '1',
-      title: 'Debug the React Component',
-      description: 'Find and fix bugs in a React component with TypeScript integration.',
-      type: 'coding',
-      difficulty: 'intermediate',
-      xp: 150,
-      timeLimit: 30,
-      completed: false,
-      category: 'programming',
-      content: {
-        code: `
-interface Props {
-  name: string;
-  age: number;
-}
-
-const UserProfile: React.FC<Props> = (props) => {
-  const [isActive, setIsActive] = useState();
-  
-  useEffect(() => {
-    setIsActive(true);
+  const [userProgress, setUserProgress] = useState<UserProgress>({
+    xp: 0,
+    level: 1,
+    currentLevelXP: 0,
+    nextLevelXP: 1000,
+    streak: 0,
+    completedToday: 0,
+    dailyGoal: 5
   });
+  const [challenges, setChallenges] = useState<Challenge[]>([]);
+  const [dailyChallenges, setDailyChallenges] = useState<Challenge[]>([]);
+  const [completedChallenges, setCompletedChallenges] = useState<Challenge[]>([]);
+  const [activeChallenge, setActiveChallenge] = useState<Challenge | null>(null);
+  const [loading, setLoading] = useState(true);
 
-  return (
-    <div>
-      <h1>{props.name}</h1>
-      <p>Age: {props.ages}</p>
-      <button onClick={setIsActive(!isActive)}>
-        {isActive ? 'Active' : 'Inactive'}
-      </button>
-    </div>
-  );
-};`,
-        correctAnswer: `
-interface Props {
-  name: string;
-  age: number;
-}
+  // Calculate progress percentage for XP bar
+  const xpProgress = () => {
+    const { xp, currentLevelXP, nextLevelXP } = userProgress;
+    const levelXP = xp - currentLevelXP;
+    const levelRange = nextLevelXP - currentLevelXP;
+    return (levelXP / levelRange) * 100;
+  };
 
-const UserProfile: React.FC<Props> = (props) => {
-  const [isActive, setIsActive] = useState(false);
-  
+  // Fetch user progress
   useEffect(() => {
-    setIsActive(true);
+    const fetchProgress = async () => {
+      try {
+        // Load token from localStorage
+        const token = localStorage.getItem('token');
+        if (token) {
+          api.setAuthToken(token);
+          const progress = await api.fetchUserProgress();
+          setUserProgress(progress);
+        }
+      } catch (error) {
+        console.error('Error fetching user progress:', error);
+      }
+    };
+
+    fetchProgress();
   }, []);
 
-  return (
-    <div>
-      <h1>{props.name}</h1>
-      <p>Age: {props.age}</p>
-      <button onClick={() => setIsActive(!isActive)}>
-        {isActive ? 'Active' : 'Inactive'}
-      </button>
-    </div>
-  );
-};`
+  // Fetch challenges based on active tab
+  useEffect(() => {
+    const loadChallenges = async () => {
+      setLoading(true);
+      try {
+        const token = localStorage.getItem('token');
+        if (token) {
+          api.setAuthToken(token);
+          
+          // Fetch challenges based on tab
+          if (activeTab === 'daily') {
+            const dailyChallenges = await api.fetchDailyChallenges();
+            setDailyChallenges(dailyChallenges);
+          } else {
+            const allChallenges = await api.fetchChallenges(selectedCategory);
+            setChallenges(allChallenges);
+            
+            // Filter completed challenges if on completed tab
+            if (activeTab === 'completed') {
+              // This would require a separate endpoint or filtering on the client
+              // For now, we'll just show all challenges on this tab
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching challenges:', error);
+      } finally {
+        setLoading(false);
       }
-    },
-    {
-      id: '2',
-      title: 'JavaScript Array Methods Quiz',
-      description: 'Test your knowledge of JavaScript array methods and their use cases.',
-      type: 'quiz',
-      difficulty: 'beginner',
-      xp: 100,
-      timeLimit: 15,
-      completed: false,
-      category: 'programming',
-      content: {
-        question: 'Which array method would you use to transform each element of an array into a new value?',
-        options: [
-          'Array.prototype.map()',
-          'Array.prototype.filter()',
-          'Array.prototype.reduce()',
-          'Array.prototype.forEach()'
-        ],
-        correctAnswer: 'Array.prototype.map()'
-      }
-    },
-    {
-      id: '3',
-      title: 'Spanish Sentence Formation',
-      description: 'Arrange words to form grammatically correct Spanish sentences.',
-      type: 'interactive',
-      difficulty: 'intermediate',
-      xp: 120,
-      timeLimit: 20,
-      completed: false,
-      category: 'language',
-      content: {
-        question: 'Translate: "I want to learn Spanish"',
-        correctAnswer: 'Quiero aprender español'
-      }
-    },
-    {
-      id: '4',
-      title: 'Python Algorithm Challenge',
-      description: 'Implement a sorting algorithm in Python with optimal time complexity.',
-      type: 'coding',
-      difficulty: 'advanced',
-      xp: 200,
-      timeLimit: 45,
-      completed: false,
-      category: 'programming'
-    },
-    {
-      id: '5',
-      title: 'French Vocabulary Match',
-      description: 'Match French words with their English translations.',
-      type: 'interactive',
-      difficulty: 'beginner',
-      xp: 80,
-      timeLimit: 10,
-      completed: false,
-      category: 'language'
-    }
-  ];
+    };
 
+    loadChallenges();
+  }, [activeTab, selectedCategory]);
+
+  const handleStartChallenge = (challenge: Challenge) => {
+    setActiveChallenge(challenge);
+  };
+
+  const handleChallengeComplete = async (challengeId: string, success: boolean) => {
+    if (success) {
+      try {
+        // Call API to record completion
+        const updatedProgress = await api.completeChallenge(challengeId);
+        setUserProgress(prev => ({
+          ...prev,
+          xp: updatedProgress.xp,
+          level: updatedProgress.level,
+          streak: updatedProgress.streak
+        }));
+        
+        // Refresh challenges
+        if (activeChallenge?.dailyChallenge) {
+          const updatedDailyChallenges = await api.fetchDailyChallenges();
+          setDailyChallenges(updatedDailyChallenges);
+        }
+        
+        // Close challenge modal
+        setActiveChallenge(null);
+        
+      } catch (error) {
+        console.error('Error completing challenge:', error);
+      }
+    } else {
+      // Just close the modal if challenge failed
+      setActiveChallenge(null);
+    }
+  };
+
+  const getDifficultyColor = (difficulty: Challenge['difficulty']) => {
+    switch (difficulty) {
+      case 'beginner':
+        return 'text-green-500 bg-green-100';
+      case 'intermediate':
+        return 'text-yellow-500 bg-yellow-100';
+      case 'advanced':
+        return 'text-red-500 bg-red-100';
+    }
+  };
+
+  const getTypeIcon = (type: Challenge['type']) => {
+    switch (type) {
+      case 'coding':
+        return <Code className="h-5 w-5" />;
+      case 'quiz':
+        return <Target className="h-5 w-5" />;
+      case 'interactive':
+        return <Zap className="h-5 w-5" />;
+    }
+  };
+
+  // Fixed badges for now - could be fetched from API
   const badges: Badge[] = [
     {
       id: '1',
@@ -207,43 +220,19 @@ const UserProfile: React.FC<Props> = (props) => {
     }
   ];
 
+  // Fixed leaderboard for now - could be fetched from API
   const leaderboard = [
     { name: 'Sarah Chen', xp: 12500, level: 15, avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop' },
     { name: 'Michael Smith', xp: 11200, level: 14, avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop' },
     { name: 'Emma Garcia', xp: 10800, level: 13, avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=150&h=150&fit=crop' }
   ];
 
-  const getDifficultyColor = (difficulty: Challenge['difficulty']) => {
-    switch (difficulty) {
-      case 'beginner':
-        return 'text-green-500 bg-green-100';
-      case 'intermediate':
-        return 'text-yellow-500 bg-yellow-100';
-      case 'advanced':
-        return 'text-red-500 bg-red-100';
-    }
-  };
-
-  const getTypeIcon = (type: Challenge['type']) => {
-    switch (type) {
-      case 'coding':
-        return <Code className="h-5 w-5" />;
-      case 'quiz':
-        return <Target className="h-5 w-5" />;
-      case 'interactive':
-        return <Zap className="h-5 w-5" />;
-    }
-  };
-
-  const handleStartChallenge = (challenge: Challenge) => {
-    setActiveChallenge(challenge);
-  };
-
-  const handleChallengeComplete = (success: boolean) => {
-    if (success) {
-      setUserXP(prev => prev + (activeChallenge?.xp || 0));
-    }
-  };
+  // Determine which challenges to display based on active tab
+  const displayChallenges = activeTab === 'daily' 
+    ? dailyChallenges 
+    : activeTab === 'completed' 
+      ? completedChallenges 
+      : challenges;
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
@@ -260,18 +249,21 @@ const UserProfile: React.FC<Props> = (props) => {
                     <Trophy className="h-10 w-10 text-indigo-600" />
                   </div>
                   <div className="absolute -bottom-2 -right-2 bg-indigo-600 text-white rounded-full h-8 w-8 flex items-center justify-center text-sm font-bold">
-                    {userLevel}
+                    {userProgress.level}
                   </div>
                 </div>
                 <div className="flex-1">
                   <div className="flex items-center justify-between mb-2">
                     <span className="text-sm font-medium text-gray-500">Level Progress</span>
-                    <span className="text-sm font-medium text-indigo-600">{userXP}/{xpToNextLevel} XP</span>
+                    <span className="text-sm font-medium text-indigo-600">
+                      {userProgress.xp - userProgress.currentLevelXP}/
+                      {userProgress.nextLevelXP - userProgress.currentLevelXP} XP
+                    </span>
                   </div>
                   <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
                     <div 
                       className="h-full bg-indigo-600 rounded-full transition-all duration-300"
-                      style={{ width: `${progress}%` }}
+                      style={{ width: `${xpProgress()}%` }}
                     />
                   </div>
                 </div>
@@ -283,7 +275,7 @@ const UserProfile: React.FC<Props> = (props) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium opacity-90">Current Streak</p>
-                  <p className="text-3xl font-bold">{streak} Days</p>
+                  <p className="text-3xl font-bold">{userProgress.streak} Days</p>
                 </div>
                 <Flame className="h-12 w-12 opacity-90" />
               </div>
@@ -294,7 +286,7 @@ const UserProfile: React.FC<Props> = (props) => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium opacity-90">Daily Goal</p>
-                  <p className="text-3xl font-bold">3/5</p>
+                  <p className="text-3xl font-bold">{userProgress.completedToday}/{userProgress.dailyGoal}</p>
                 </div>
                 <Target className="h-12 w-12 opacity-90" />
               </div>
@@ -319,6 +311,17 @@ const UserProfile: React.FC<Props> = (props) => {
                   >
                     <Calendar className="h-5 w-5 inline mr-2" />
                     Daily Challenges
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('all')}
+                    className={`px-4 py-2 rounded-lg font-medium ${
+                      activeTab === 'all'
+                        ? 'bg-indigo-100 text-indigo-700'
+                        : 'text-gray-600 hover:bg-gray-100'
+                    }`}
+                  >
+                    <Zap className="h-5 w-5 inline mr-2" />
+                    All Challenges
                   </button>
                   <button
                     onClick={() => setActiveTab('completed')}
@@ -346,13 +349,19 @@ const UserProfile: React.FC<Props> = (props) => {
 
             {/* Challenge Cards */}
             <div className="space-y-4">
-              {challenges
-                .filter(challenge => 
-                  selectedCategory === 'all' || challenge.category === selectedCategory
-                )
-                .map((challenge) => (
+              {loading ? (
+                <div className="text-center py-10">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-500 border-t-transparent"></div>
+                  <p className="mt-2 text-gray-500">Loading challenges...</p>
+                </div>
+              ) : displayChallenges.length === 0 ? (
+                <div className="text-center py-10 bg-white rounded-xl shadow-sm border border-gray-200">
+                  <p className="text-gray-500">No challenges found.</p>
+                </div>
+              ) : (
+                displayChallenges.map((challenge) => (
                   <div
-                    key={challenge.id}
+                    key={challenge._id}
                     className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-indigo-200 transition-colors"
                   >
                     <div className="flex items-start justify-between">
@@ -369,8 +378,25 @@ const UserProfile: React.FC<Props> = (props) => {
                           <span className={`px-3 py-1 rounded-full text-xs font-medium ${getDifficultyColor(challenge.difficulty)}`}>
                             {challenge.difficulty}
                           </span>
+                          {challenge.dailyChallenge && (
+                            <span className="px-3 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-600">
+                              Daily
+                            </span>
+                          )}
                         </div>
                         <p className="mt-2 text-gray-600">{challenge.description}</p>
+                        {challenge.tags && challenge.tags.length > 0 && (
+                          <div className="mt-2 flex flex-wrap gap-2">
+                            {challenge.tags.map((tag, index) => (
+                              <span 
+                                key={index} 
+                                className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center space-x-4">
                         <div className="text-center">
@@ -392,7 +418,8 @@ const UserProfile: React.FC<Props> = (props) => {
                       </button>
                     </div>
                   </div>
-                ))}
+                ))
+              )}
             </div>
           </div>
 
@@ -456,17 +483,20 @@ const UserProfile: React.FC<Props> = (props) => {
           </div>
         </div>
       </div>
-
-      {/* Active Challenge Modal */}
-      {activeChallenge && (
+{/* Active Challenge Modal */}
+{activeChallenge && (
         <ActiveChallenge
           challenge={activeChallenge}
-          onComplete={handleChallengeComplete}
+          onComplete={(success) => handleChallengeComplete(activeChallenge._id, success)}
           onClose={() => setActiveChallenge(null)}
         />
       )}
+      
+      {/* Toast for challenge completion */}
+      {/* Add toast notification component here */}
     </div>
   );
 };
 
 export default Challenges;
+
