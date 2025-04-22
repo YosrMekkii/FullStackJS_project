@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
-import { UserPlus, PlusCircle, Flag, Search, Star } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { UserPlus, PlusCircle, Flag, Search, Star, Edit, Trash2 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 
 interface Skill {
@@ -20,7 +20,7 @@ const categories = ["All", "Tech", "Design", "Marketing", "Language"];
 const SkillMarketplace = () => {
   const navigate = useNavigate();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
-  const isAuthenticated = !!localStorage.getItem("user") || sessionStorage.getItem("user");
+  const isAuthenticated = !!localStorage.getItem("user") || !!sessionStorage.getItem("user");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
   const [skills, setSkills] = useState<Skill[]>([]);
@@ -28,16 +28,16 @@ const SkillMarketplace = () => {
   const [error, setError] = useState("");
 
   useEffect(() => {
-        // Get current user ID from localStorage or sessionStorage
-        const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
-        if (storedUser) {
-          try {
-            const parsedUser = JSON.parse(storedUser);
-            setCurrentUserId(parsedUser.id);
-          } catch (err) {
-            console.error("Error parsing user data:", err);
-          }
-        }
+    // Get current user ID from localStorage or sessionStorage
+    const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setCurrentUserId(parsedUser.id);
+      } catch (err) {
+        console.error("Error parsing user data:", err);
+      }
+    }
     fetchSkills();
   }, []);
 
@@ -65,11 +65,12 @@ const SkillMarketplace = () => {
      skill.description.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-    // Handle edit skill
-    const handleEditSkill = (skillId: string) => {
-      navigate(`/edit-skill/${skillId}`);
-    };
-    // Handle delete skill
+  // Handle edit skill
+  const handleEditSkill = (skillId: string) => {
+    navigate(`/edit-skill/${skillId}`);
+  };
+
+  // Handle delete skill
   const handleDeleteSkill = async (skillId: string) => {
     if (window.confirm("Are you sure you want to delete this skill?")) {
       try {
