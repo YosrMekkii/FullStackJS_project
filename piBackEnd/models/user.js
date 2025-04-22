@@ -41,6 +41,22 @@ const userSchema = new mongoose.Schema({
   notifications: [{ message: String, date: Date }],
   
   isVerified: { type: Boolean, default: false },
+
+  //challenges related data
+  xp: { type: Number, default: 0 },
+  level: { type: Number, default: 1 },
+  completedChallenges: [{
+    challengeId: { type: mongoose.Schema.Types.ObjectId, ref: 'Challenge' },
+    completedAt: { type: Date, default: Date.now }
+  }],
+  dailyStreak: { type: Number, default: 0 },
+  lastDailyChallenge: { type: Date },
+  badges: [{
+    name: String,
+    description: String,
+    icon: String,
+    achievedAt: Date
+  }]
 });
 
 //module.exports = mongoose.model("user", userSchema);
