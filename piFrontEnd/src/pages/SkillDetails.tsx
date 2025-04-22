@@ -1,288 +1,246 @@
-import React, { useState } from 'react';
-import { useParams } from 'react-router-dom';
-import { 
-  Star, 
-  Clock, 
-  Globe, 
-  Award, 
-  Users, 
-  Flag,
-  X,
-  MessageSquare,
-  UserPlus,
-  ChevronRight
-} from 'lucide-react';
+import React, { useState, useEffect } from "react";
+import { useParams, Link, useNavigate } from "react-router-dom";
+import { ArrowLeft, UserPlus, Calendar, Tag, Clock, Edit, Trash2 } from "lucide-react";
+import Sidebar from "../components/Sidebar";
 
-// Import the skills data (you should move this to a separate file in a real app)
-import WebDev from "../assets/webdev.jpeg";
-import GraphicDesign from "../assets/6718fbb85d1152665bfafec4_Untitled design (14).jpg";
-import DigitalMarketing from "../assets/Capa-do-Blog-Marketing-Digital.png";
-import AI from "../assets/real-ai.jpg";
-import French from "../assets/image.png";
-import Marketing from "../assets/What-is-marketing.webp";
-
-const allSkills = [
-  { 
-    id: 1, 
-    name: "Web Development", 
-    provider: "Alice Johnson", 
-    category: "Tech", 
-    description: "Learn how to build full-stack web applications.",
-    image: WebDev,
-    rating: 4.8,
-    reviews: 124,
-    students: 1250,
-    expertise: "Expert",
-    languages: ["English", "Spanish"],
-    topics: ["HTML/CSS", "JavaScript", "React", "Node.js", "Database Design"],
-    schedule: "Flexible",
-    price: "50/hour",
-    longDescription: `Master the art of web development with a comprehensive curriculum covering both front-end and back-end technologies. This course is designed for beginners and intermediate developers looking to enhance their skills.
-
-What you'll learn:
-• Modern HTML5 and CSS3 techniques
-• JavaScript ES6+ and advanced concepts
-• React.js and state management
-• Node.js and Express.js
-• Database design and implementation
-• REST API development
-• Authentication and security
-• Deployment and hosting
-
-The course includes hands-on projects, code reviews, and personalized feedback to ensure you're building real-world skills.`,
-    providerBio: "Alice Johnson is a senior full-stack developer with 10 years of experience in web development. She has worked with major tech companies and has helped hundreds of students launch their development careers.",
-    requirements: [
-      "Basic understanding of HTML and CSS",
-      "Familiarity with programming concepts",
-      "A computer with internet access",
-      "Dedication to practice and learn"
-    ]
-  },
-  // ... other skills
-];
-
-interface ReportModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  onSubmit: (reason: string, details: string) => void;
+interface User {
+  _id: string;
+  name: string;
+  email?: string;
+  profileImage?: string;
 }
 
-const ReportModal: React.FC<ReportModalProps> = ({ isOpen, onClose, onSubmit }) => {
-  const [reason, setReason] = useState('');
-  const [details, setDetails] = useState('');
-
-  if (!isOpen) return null;
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSubmit(reason, details);
-    setReason('');
-    setDetails('');
-  };
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 max-w-md w-full">
-        <div className="flex justify-between items-center mb-4">
-          <h3 className="text-lg font-semibold text-gray-900">Report Skill</h3>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-500">
-            <X className="h-5 w-5" />
-          </button>
-        </div>
-        <form onSubmit={handleSubmit}>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Reason for reporting
-            </label>
-            <select
-              value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              required
-            >
-              <option value="">Select a reason</option>
-              <option value="inappropriate">Inappropriate content</option>
-              <option value="spam">Spam or misleading</option>
-              <option value="fake">Fake profile/credentials</option>
-              <option value="quality">Poor quality service</option>
-              <option value="other">Other</option>
-            </select>
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Additional details
-            </label>
-            <textarea
-              value={details}
-              onChange={(e) => setDetails(e.target.value)}
-              className="w-full border border-gray-300 rounded-lg px-3 py-2 h-32 resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              placeholder="Please provide more details about your report..."
-              required
-            />
-          </div>
-          <div className="flex justify-end space-x-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-            >
-              Submit Report
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-};
+interface Skill {
+  _id: string;
+  title: string;
+  description: string;
+  category: string;
+  image: string;
+  user: User;
+  createdAt: string;
+  updatedAt: string;
+}
 
 const SkillDetails = () => {
   const { id } = useParams<{ id: string }>();
-  const [showReportModal, setShowReportModal] = useState(false);
-  
-  const skill = allSkills.find(s => s.id === Number(id));
+  const navigate = useNavigate();
+  const [skill, setSkill] = useState<Skill | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
 
-  if (!skill) {
+  useEffect(() => {
+    // Obtenir l'ID de l'utilisateur actuel
+    const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
+    if (storedUser) {
+      try {
+        const parsedUser = JSON.parse(storedUser);
+        setCurrentUserId(parsedUser.id);
+      } catch (err) {
+        console.error("Error parsing user data:", err);
+      }
+    }
+
+    // Charger les détails de la compétence
+    fetchSkillDetails();
+  }, [id]);
+
+  const fetchSkillDetails = async () => {
+    try {
+      const response = await fetch(`http://localhost:3000/skill/skills/${id}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch skill details");
+      }
+      const data = await response.json();
+      setSkill(data);
+    } catch (err) {
+      setError("Failed to load skill details. Please try again later.");
+      console.error("Error fetching skill:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteSkill = async () => {
+    if (window.confirm("Are you sure you want to delete this skill?")) {
+      try {
+        const response = await fetch(`http://localhost:3000/skill/skills/${id}`, {
+          method: 'DELETE',
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`
+          }
+        });
+
+        if (response.ok) {
+          navigate('/marketplace');
+        } else {
+          throw new Error('Failed to delete skill');
+        }
+      } catch (err) {
+        console.error('Error deleting skill:', err);
+        alert('Failed to delete skill. Please try again.');
+      }
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString(undefined, {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  };
+
+  if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <h2 className="text-2xl font-semibold text-gray-900">Skill not found</h2>
-          <p className="mt-2 text-gray-600">The skill you're looking for doesn't exist.</p>
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading skill details...</p>
         </div>
       </div>
     );
   }
 
-  const handleReport = (reason: string, details: string) => {
-    // Here you would typically send the report to your backend
-    console.log('Report submitted:', { skillId: id, reason, details });
-    setShowReportModal(false);
-    // Show success message to user
-    alert('Thank you for your report. We will review it shortly.');
-  };
+  if (error || !skill) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center text-red-600">
+          <p>{error || "Skill not found"}</p>
+          <button 
+            onClick={() => navigate('/marketplace')}
+            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+          >
+            Back to Marketplace
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const isOwner = currentUserId === skill.user?._id;
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-blue-700 to-indigo-800 text-white">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-          <div className="flex justify-between items-start">
-            <div>
-              <h1 className="text-4xl font-bold mb-4">{skill.name}</h1>
-              <p className="text-xl text-indigo-200 mb-6">{skill.description}</p>
-              <div className="flex items-center space-x-6">
-                <div className="flex items-center">
-                  <Star className="h-5 w-5 text-yellow-400" />
-                  <span className="ml-1 font-medium">{skill.rating}</span>
-                  <span className="ml-1 text-indigo-200">({skill.reviews} reviews)</span>
-                </div>
-                <div className="flex items-center">
-                  <Users className="h-5 w-5 text-indigo-200" />
-                  <span className="ml-1">{skill.students} students</span>
-                </div>
-              </div>
+    <div className="min-h-screen bg-gray-50 text-gray-800">
+      <Sidebar />
+      
+      <div className="max-w-5xl mx-auto px-6 py-8">
+        {/* Navigation */}
+        <Link 
+          to="/marketplace" 
+          className="flex items-center text-indigo-600 mb-6 font-medium hover:text-indigo-800 transition-colors"
+        >
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back to Marketplace
+        </Link>
+        
+        {/* Header with Image */}
+        <div className="relative h-64 md:h-80 rounded-xl overflow-hidden mb-8">
+          <img 
+            src={skill.image || 'https://via.placeholder.com/1200x400?text=No+Image'} 
+            alt={skill.title} 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
+            <div className="p-6 md:p-8 w-full">
+              <span className="inline-block bg-indigo-600 text-white px-4 py-1 rounded-full text-sm font-medium mb-3">
+                {skill.category}
+              </span>
+              <h1 className="text-3xl md:text-4xl font-bold text-white">{skill.title}</h1>
             </div>
-            <button
-              onClick={() => setShowReportModal(true)}
-              className="flex items-center space-x-2 px-4 py-2 border border-white/20 rounded-lg hover:bg-white/10 transition-colors"
-            >
-              <Flag className="h-5 w-5" />
-              <span>Report</span>
-            </button>
           </div>
         </div>
-      </div>
-
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-3 gap-8">
-          {/* Main Content */}
-          <div className="col-span-2 space-y-8">
-            {/* About Section */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-2xl font-semibold mb-4">About This Skill</h2>
-              <p className="text-gray-600 whitespace-pre-line">{skill.longDescription}</p>
-            </div>
-
-            {/* Requirements */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-2xl font-semibold mb-4">Requirements</h2>
-              <ul className="space-y-2">
-                {skill.requirements.map((req, index) => (
-                  <li key={index} className="flex items-center text-gray-600">
-                    <ChevronRight className="h-5 w-5 text-indigo-600 mr-2" />
-                    {req}
-                  </li>
+        
+        {/* Main Content */}
+        <div className="flex flex-col md:flex-row gap-8">
+          {/* Left Column - Skill Description */}
+          <div className="flex-1">
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+              <h2 className="text-2xl font-bold mb-4">Description</h2>
+              <div className="prose max-w-none">
+                {/* We display the description with proper formatting, preserving line breaks */}
+                {skill.description.split('\n').map((paragraph, idx) => (
+                  <p key={idx} className="mb-4 text-gray-700 leading-relaxed">
+                    {paragraph}
+                  </p>
                 ))}
+              </div>
+            </div>
+            
+            {/* Action Buttons */}
+            {isOwner ? (
+              <div className="flex gap-4 mb-6">
+                <button
+                  onClick={() => navigate(`/edit-skill/${skill._id}`)}
+                  className="flex-1 border-2 border-blue-600 text-blue-600 py-3 rounded-lg hover:bg-blue-50 font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Edit className="h-5 w-5" />
+                  <span>Edit Skill</span>
+                </button>
+                <button
+                  onClick={handleDeleteSkill}
+                  className="flex-1 border-2 border-red-600 text-red-600 py-3 rounded-lg hover:bg-red-50 font-medium transition-colors flex items-center justify-center gap-2"
+                >
+                  <Trash2 className="h-5 w-5" />
+                  <span>Delete Skill</span>
+                </button>
+              </div>
+            ) : (
+              <Link
+                to={`/user/${skill.user?._id}`}
+                className="flex items-center justify-center gap-2 bg-indigo-600 text-white py-3 px-6 rounded-lg hover:bg-indigo-700 font-medium transition-colors w-full mb-6"
+              >
+                <UserPlus className="h-5 w-5" />
+                <span>Connect with Instructor</span>
+              </Link>
+            )}
+          </div>
+          
+          {/* Right Column - Information */}
+          <div className="md:w-72">
+            <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
+              <h3 className="text-lg font-semibold mb-4">Instructor</h3>
+              <Link to={`/user/${skill.user?._id}`} className="flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold text-xl mr-3">
+                  {skill.user?.name?.charAt(0) || '?'}
+                </div>
+                <div>
+                  <p className="font-medium">{skill.user?.name || 'Unknown User'}</p>
+                  <p className="text-sm text-gray-500">View Profile</p>
+                </div>
+              </Link>
+            </div>
+            
+            <div className="bg-white rounded-xl shadow-sm p-6">
+              <h3 className="text-lg font-semibold mb-4">Information</h3>
+              <ul className="space-y-4">
+                <li className="flex items-center text-gray-600">
+                  <Calendar className="h-5 w-5 mr-3 text-indigo-600" />
+                  <div>
+                    <p className="text-sm text-gray-500">Posted on</p>
+                    <p>{formatDate(skill.createdAt)}</p>
+                  </div>
+                </li>
+                <li className="flex items-center text-gray-600">
+                  <Clock className="h-5 w-5 mr-3 text-indigo-600" />
+                  <div>
+                    <p className="text-sm text-gray-500">Last updated</p>
+                    <p>{formatDate(skill.updatedAt)}</p>
+                  </div>
+                </li>
+                <li className="flex items-center text-gray-600">
+                  <Tag className="h-5 w-5 mr-3 text-indigo-600" />
+                  <div>
+                    <p className="text-sm text-gray-500">Category</p>
+                    <p>{skill.category}</p>
+                  </div>
+                </li>
               </ul>
             </div>
-
-            {/* Instructor */}
-            <div className="bg-white rounded-xl shadow-sm p-6">
-              <h2 className="text-2xl font-semibold mb-4">About the Instructor</h2>
-              <div className="flex items-start space-x-4">
-                <img
-                  src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop"
-                  alt={skill.provider}
-                  className="w-16 h-16 rounded-full"
-                />
-                <div>
-                  <h3 className="text-lg font-medium">{skill.provider}</h3>
-                  <p className="text-gray-600 mt-2">{skill.providerBio}</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Sidebar */}
-          <div className="space-y-6">
-            {/* Quick Info Card */}
-            <div className="bg-white rounded-xl shadow-sm p-6 sticky top-6">
-              <div className="text-3xl font-bold text-gray-900 mb-6">
-                ${skill.price}
-                <span className="text-gray-500 text-lg font-normal">/hour</span>
-              </div>
-
-              <div className="space-y-4 mb-6">
-                <div className="flex items-center text-gray-600">
-                  <Clock className="h-5 w-5 mr-3" />
-                  <span>{skill.schedule}</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <Globe className="h-5 w-5 mr-3" />
-                  <span>{skill.languages.join(", ")}</span>
-                </div>
-                <div className="flex items-center text-gray-600">
-                  <Award className="h-5 w-5 mr-3" />
-                  <span>{skill.expertise} Level</span>
-                </div>
-              </div>
-
-              <div className="space-y-3">
-                <button className="w-full bg-indigo-600 text-white px-6 py-3 rounded-xl hover:bg-indigo-700 flex items-center justify-center space-x-2">
-                  <UserPlus className="h-5 w-5" />
-                  <span>Connect & Learn</span>
-                </button>
-                <button className="w-full border border-gray-300 text-gray-700 px-6 py-3 rounded-xl hover:bg-gray-50 flex items-center justify-center space-x-2">
-                  <MessageSquare className="h-5 w-5" />
-                  <span>Message Instructor</span>
-                </button>
-              </div>
-            </div>
           </div>
         </div>
       </div>
-
-      {/* Report Modal */}
-      <ReportModal
-        isOpen={showReportModal}
-        onClose={() => setShowReportModal(false)}
-        onSubmit={handleReport}
-      />
     </div>
   );
 };
