@@ -4,7 +4,6 @@ import {
   Trophy,
   Star,
   Zap,
-  Award,
   Target,
   Calendar,
   Clock,
@@ -13,8 +12,7 @@ import {
   Languages,
   Flame,
   Crown,
-  Medal,
-  TrendingUp,
+ 
   
 } from 'lucide-react';
 import ActiveChallenge from '../components/ActiveChallenge';
