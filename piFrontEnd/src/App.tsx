@@ -24,7 +24,7 @@ import AskQuestion from './pages/askquestion';
 import MatchesPage from './pages/MatchesPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-
+import AdminChallenges from './pages/ChallengeManagement';
 function App() {
   const [user, setUser] = useState<any | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -272,7 +272,8 @@ function App() {
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/verify-email/invalid" element={<p>Token invalide ou expiré</p>} />
 <Route path="/verify-email/error" element={<p>Une erreur est survenue</p>} />
-      </Routes>
+<Route path="/manage-challenges" element={<AdminChallenges />} />
+</Routes>
     </div>
   );
 }

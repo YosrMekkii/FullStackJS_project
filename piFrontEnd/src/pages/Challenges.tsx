@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
+import ActiveChallenge from '../components/ActiveChallenge';
+import api from '../services/api';
 import {
   Trophy,
   Star,
@@ -13,8 +15,7 @@ import {
   Flame,
   Crown,
 } from 'lucide-react';
-import ActiveChallenge from '../components/ActiveChallenge';
-import api from '../services/api';
+
 
 interface Challenge {
   _id: string;
