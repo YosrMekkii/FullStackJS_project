@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import path from "path";
+
 
 const userSchema = new mongoose.Schema({
   // 🔹 Identifiant unique
@@ -40,9 +40,8 @@ const userSchema = new mongoose.Schema({
   // 🔹 Notifications
   notifications: [{ message: String, date: Date }],
   
-  isVerified: { type: Boolean, default: false },
 });
 
-//module.exports = mongoose.model("user", userSchema);
+
 const User = mongoose.model("User", userSchema);
 export default User;

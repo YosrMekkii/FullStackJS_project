@@ -87,7 +87,6 @@ router.put("/achievements/:id", userController.updateBioAndAchievements);
 
 
 router.delete("/:id", userController.deleteUser);
-//router.post("/signup", userController.signupUser);
 router.post('/signup', upload.single('profileImage'), userController.signupUser);
 router.post("/login", userController.loginUser);
 router.get("/recommend", userController.getRecommendations);

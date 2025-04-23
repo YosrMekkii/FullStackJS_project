@@ -472,7 +472,7 @@ const uploadProfileImage = async (req, res) => {
 
 
 
-const blacklist = new Set(); // Liste noire pour stocker les tokens invalidés
+
 
 const logoutUser = async (req, res) => {
   try {

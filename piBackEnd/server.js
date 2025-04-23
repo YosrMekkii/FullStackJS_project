@@ -3,7 +3,6 @@ import mongoose from 'mongoose';
 import multer from 'multer';
 import path from 'path';
 import url from 'url'; 
-import fs from 'fs';
 import './models/user.js'; // juste pour enregistrer le modèle
 import './models/report.js';
 
@@ -49,7 +48,6 @@ app.post("/api/login", async (req, res) => {
   }
 
   // Vérifier le token reCAPTCHA avec Google
-  const recaptchaSecret = "6LcGAOAqAAAAAKAW6BF13HT6FCGSM_xJ5ks2Ss0D"; // Remplace par ta clé secrète reCAPTCHA
   const recaptchaSecret1 = "6LcGAOAqAAAAABnRcsfkKtY9aOaFyCwODtQ2J-UC"; // Remplace par ta clé secrète reCAPTCHA
   const recaptchaVerifyURL = `https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecret1}&response=${recaptchaToken}`;
 
