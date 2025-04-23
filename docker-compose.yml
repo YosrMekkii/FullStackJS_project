@@ -1,11 +1,11 @@
-version: '3'
+version: '3.8'
 services:
   frontend:
     build:
       context: ./piFrontEnd  # Répertoire contenant le Dockerfile pour le frontend
       dockerfile: Dockerfile  # Utiliser le Dockerfile du frontend
     ports:
-      - "5000:5000"  # Mapper le port 3000 du container sur 3001 de la machine hôte
+      - "5173:5173"  # Mapper le port 3000 du container sur 3001 de la machine hôte
     networks:
       - fullstack_network
     depends_on:
