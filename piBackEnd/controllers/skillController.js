@@ -1,5 +1,5 @@
 import skillService from '../services/skillService.js';
-
+import * as userService from '../services/userService.js';
 const createSkill = async (req, res) => {
     try {
         const newSkill = await skillService.createSkill(req.body);
@@ -11,12 +11,28 @@ const createSkill = async (req, res) => {
 
 const getAllSkills = async (req, res) => {
     try {
-        const skills = await skillService.getAllSkills();
-        res.status(200).json(skills);
+      const skills = await skillService.getAllSkills();
+      
+      const skillsWithUser = await Promise.all(skills.map(async (skill) => {
+        try {
+          const user = await userService.getUserById(skill.user);
+          skill.user = {
+            name: `${user.firstName} ${user.lastName}`
+          };
+        } catch (err) {
+          console.error(`Erreur lors de la récupération de l'utilisateur pour la compétence ${skill._id}`, err);
+          skill.user = { name: 'Utilisateur inconnu' };
+        }
+        return skill;
+      }));
+      
+      res.status(200).json(skillsWithUser);
     } catch (error) {
-        res.status(500).json({ error: error.message });
+      console.error("Erreur dans getAllSkills:", error);
+      res.status(500).json({ error: error.message });
     }
 };
+
 
 const getSkillById = async (req, res) => {
     try {

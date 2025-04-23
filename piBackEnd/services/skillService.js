@@ -1,8 +1,19 @@
 import Skill from '../models/skill.js'
 
+import mongoose from 'mongoose';
+
+
 const createSkill = async (skillData) => {
-    return await Skill.create(skillData);
+  const skill = new Skill({
+    ...skillData,
+    user: new mongoose.Types.ObjectId(skillData.user), // 👈 Caster ici
+  });
+
+  return await skill.save();
 };
+
+
+
 
 const getAllSkills = async () => {
     return await Skill.find().populate('user'); // Récupère les skills avec les infos de l'utilisateur

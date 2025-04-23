@@ -20,6 +20,7 @@ const categories = ["All", "Tech", "Design", "Marketing", "Language"];
 const SkillMarketplace = () => {
   const navigate = useNavigate();
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  //const [currentUserName, setCurrentUserName] = useState<string>("Anonymous");
   const isAuthenticated = !!localStorage.getItem("user") || !!sessionStorage.getItem("user");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
@@ -34,6 +35,7 @@ const SkillMarketplace = () => {
       try {
         const parsedUser = JSON.parse(storedUser);
         setCurrentUserId(parsedUser.id);
+       // setCurrentUserName(`${parsedUser.firstName} ${parsedUser.lastName}`);
       } catch (err) {
         console.error("Error parsing user data:", err);
       }
