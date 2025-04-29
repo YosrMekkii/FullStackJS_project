@@ -1,8 +1,8 @@
 import React, { useState,useEffect } from 'react';
 import axios from 'axios';
-import { 
-  Layout, 
-  Home, 
+import UserModal from './UserModel'; // Assure-toi que le chemin est correct
+
+import {
   Users, 
   AlertTriangle,
   Shield,
@@ -146,37 +146,37 @@ const AdminDashboard = () => {
   const [selectedReport, setSelectedReport] = useState<any>(null);
   const [totalUsers, setTotalUsers] = useState(0);
   const [totalReports, setTotalReports] = useState(0);
-
-  useEffect(() => {
-    const fetchTotalReports = async () => {
-      try {
-        const response = await axios.get("http://localhost:3000/api/reports/total/count");
-        setTotalReports(response.data.totalReports);
-      } catch (error) {
-        console.error("Error fetching total reports:", error);
-      }
-    };
-    fetchTotalReports();
-  }, []);
-
   const [users, setUsers] = useState<any[]>([]);
+  const [reports, setReports] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
+  const [showUserModal, setShowUserModal] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
+
+  // Ouvre la modale avec l'utilisateur sélectionné
+const handleOpenModal = (user: any) => {
+  setSelectedUser(user);
+  setIsModalOpen(true);
+};
+
+// Ferme la modale
+const handleCloseModal = () => {
+  setIsModalOpen(false);
+  setSelectedUser(null);
+};
+  
+  const fetchUsers = async () => {
+    try {
+      const response = await axios.get("http://localhost:3000/api/users");
+      console.log("All Users Data:", response.data);
+      setUsers(response.data);
+    } catch (error) {
+      console.error("Error fetching users:", error);
+    }
+  };
   useEffect(() => {
-    const fetchUsers = async () => {
-      try {
-        const response = await axios.get("http://localhost:3000/api/users");
-        console.log("All Users Data:", response.data); // Vérifie les données reçues
-        setUsers(response.data); // Stocke la liste des utilisateurs
-      } catch (error) {
-        console.error("Error fetching users:", error);
-      }
-    };
     
-    fetchUsers();
-  }, []);
-
-
-  useEffect(() => {
+  
     const fetchTotalUsers = async () => {
       try {
         const response = await axios.get("http://localhost:3000/api/users/total/count");
@@ -185,58 +185,35 @@ const AdminDashboard = () => {
         console.error("Error fetching total users:", error);
       }
     };
-    fetchTotalUsers();
-  }, []);
-  const [reports, setReports] = useState<any[]>([]);
-
-  useEffect(() => {
-    const fetchUsers = async () => {
+  
+    const fetchReports = async () => {
       try {
         const response = await axios.get("http://localhost:3000/api/reports");
-        console.log("All Reports Data:", response.data); // Vérifie les données reçues
-        setReports(response.data); // Stocke la liste des utilisateurs
+        console.log("All Reports Data:", response.data);
+        setReports(response.data);
       } catch (error) {
         console.error("Error fetching reports:", error);
       }
     };
+  
+    const fetchTotalReports = async () => {
+      try {
+        const response = await axios.get("http://localhost:3000/api/reports/total/count");
+        setTotalReports(response.data.totalReports);
+      } catch (error) {
+        console.error("Error fetching total reports:", error);
+      }
+    };
     
+  
+    // Appelle toutes les fonctions en parallèle
     fetchUsers();
-    console.log(reports);
+    fetchTotalUsers();
+    fetchReports();
+    fetchTotalReports();
   }, []);
+  
 
-
-  // const reports = [
-  //   {
-  //     id: 1,
-  //     reporter: {
-  //       name: "John Cooper",
-  //       avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop"
-  //     },
-  //     reported: {
-  //       name: "Alex Thompson",
-  //       avatar: "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop"
-  //     },
-  //     reason: "Inappropriate behavior during session",
-  //     details: "User was consistently late and unprofessional",
-  //     date: "2024-03-01",
-  //     status: "pending"
-  //   },
-  //   {
-  //     id: 2,
-  //     reporter: {
-  //       name: "Maria Garcia",
-  //       avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop"
-  //     },
-  //     reported: {
-  //       name: "Sarah Miller",
-  //       avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop"
-  //     },
-  //     reason: "Misrepresented skill level",
-  //     details: "Claimed to be expert but showed beginner level knowledge",
-  //     date: "2024-02-28",
-  //     status: "resolved"
-  //   }
-  // ];
 
   const stats = {
     totalUsers: totalUsers,
@@ -261,6 +238,8 @@ const AdminDashboard = () => {
     console.log(`Report ${reportId} ${action}d`);
     // Here you would typically make an API call to update the report status
   };
+
+  
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -299,10 +278,6 @@ const AdminDashboard = () => {
         {/* Sidebar */}
         <div className="w-64 min-h-[calc(100vh-4rem)] bg-white border-r border-gray-200">
           <nav className="mt-8 space-y-1 px-4">
-            <a href="#" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
-              <Home className="h-5 w-5 mr-3" />
-              Overview
-            </a>
             <button
               onClick={() => setActiveTab('users')}
               className={`flex items-center px-4 py-2 w-full rounded-lg ${
@@ -388,9 +363,16 @@ const AdminDashboard = () => {
                         {user.status}
                       </span>
                       <p className="text-sm text-gray-500">Joined: {user.dateInscription}</p>
-                      <button className="text-indigo-600 hover:text-indigo-900">
-                        <Eye className="h-5 w-5" />
-                      </button>
+                      <button
+  className="text-indigo-600 hover:text-indigo-900"
+  onClick={() => {
+    handleOpenModal(user)
+    setShowUserModal(true);
+  }}
+>
+  <Eye className="h-5 w-5" />
+</button>
+
                     </div>
                   </div>
                 ))}
@@ -428,7 +410,7 @@ const AdminDashboard = () => {
                       <div className="mb-4">
                         <h4 className="text-sm font-medium text-gray-700">Skills</h4>
                         <div className="mt-1 flex flex-wrap gap-2">
-                          {user.expertApplication?.skills.map((skill, index) => (
+                          {user.expertApplication?.skills.map((skill: string, index: number) => (
                             <span
                               key={index}
                               className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
@@ -543,6 +525,17 @@ const AdminDashboard = () => {
         </div>
       </div>
 
+      {showUserModal && selectedUser && (
+  <UserModal
+  isOpen={isModalOpen}
+  onClose={handleCloseModal}
+  user={selectedUser}
+  onUserUpdated={fetchUsers}
+  />
+)}
+
+
+
       {/* Action Modal */}
       {showActionModal && selectedReport && (
         <ActionModal
@@ -556,6 +549,7 @@ const AdminDashboard = () => {
         />
       )}
     </div>
+    
   );
 };
 
