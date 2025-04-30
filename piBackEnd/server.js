@@ -127,6 +127,13 @@ app.use("/api/matches", matchRoutes);
 app.use('/uploads', express.static('uploads'));
 app.use("/api/openai", openaiRoutes); // Add this before 404 handler
 
+import aiRoutes from './routes/aiRoutes.js';
+app.use('/api/ai', aiRoutes);
+
+import proposalRoutes  from './routes/proposalRoutes.js';
+app.use('/api/proposal', proposalRoutes);
+
+
 
 
 app.use((req, res) => {
