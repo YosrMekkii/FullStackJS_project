@@ -84,8 +84,11 @@ router.put("/:id", userController.updateUser);
 router.put("/interests/:id", userController.updateUser);
 router.put("/skills/:id", userController.updateSkills);
 router.put("/achievements/:id", userController.updateBioAndAchievements);
-
-
+//router.get('/progress', getUserProgress);
+//router.get('/completed-challenges', getCompletedChallenges);
+//router.post('/complete-challenge/:challengeId', completeChallenge);
+//router.put('/:userId/interests', updateUserInterests);
+router.put("/:id/interests", userController.updateInterests);
 router.delete("/:id", userController.deleteUser);
 //router.post("/signup", userController.signupUser);
 router.post('/signup', upload.single('profileImage'), userController.signupUser);

@@ -1,23 +1,54 @@
-// models/Challenge.js
-const mongoose = require('mongoose');
+import mongoose from 'mongoose';
 
-const ChallengeSchema = new mongoose.Schema({
-  title: { type: String, required: true },
-  description: { type: String, required: true },
-  type: { type: String, enum: ['coding', 'quiz', 'interactive'], required: true },
-  difficulty: { type: String, enum: ['beginner', 'intermediate', 'advanced'], required: true },
-  xp: { type: Number, required: true },
-  timeLimit: { type: Number, required: true }, // minutes
-  category: { type: String, required: true },
-  tags: [String], // For matching with user interests
+const challengeSchema = new mongoose.Schema({
+  title: {
+    type: String,
+    required: true
+  },
+  description: {
+    type: String,
+    required: true
+  },
+  type: {
+    type: String,
+    enum: ['coding', 'quiz', 'interactive'],
+    required: true
+  },
+  difficulty: {
+    type: String,
+    enum: ['beginner', 'intermediate', 'advanced'],
+    required: true
+  },
+  xp: {
+    type: Number,
+    required: true
+  },
+  timeLimit: {
+    type: Number,
+    required: true
+  },
+  category: {
+    type: String,
+    required: true
+  },
+  tags: {
+    type: [String],
+    default: []
+  },
   content: {
     question: String,
     options: [String],
     code: String,
-    correctAnswer: mongoose.Schema.Types.Mixed // String or Array
+    correctAnswer: mongoose.Schema.Types.Mixed // Can be string or array of strings
   },
-  dailyChallenge: { type: Boolean, default: false },
-  createdAt: { type: Date, default: Date.now }
+  dailyChallenge: {
+    type: Boolean,
+    default: false
+  }
+}, {
+  timestamps: true
 });
 
-module.exports = mongoose.model('Challenge', ChallengeSchema);
+const Challenge = mongoose.model('Challenge', challengeSchema);
+
+export default Challenge;

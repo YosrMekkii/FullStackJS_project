@@ -58,7 +58,7 @@ const userSchema = new mongoose.Schema({
     achievedAt: Date
   }]
 });
-UserSchema.methods.calculateLevel = function() {
+userSchema.methods.calculateLevel = function() {
   // Simple level calculation: level = 1 + floor(xp / 1000)
   return Math.floor(1 + (this.xp / 1000));
 };

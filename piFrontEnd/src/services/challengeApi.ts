@@ -1,103 +1,73 @@
-import axios, { AxiosInstance } from 'axios';
+import axios from 'axios';
 
-const BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 
-// Define types to match your Challenge interface
-export interface ChallengeContent {
-  question?: string;
-  options?: string[];
-  code?: string;
-  correctAnswer?: string | string[];
-}
+const api = {
+  // Set auth token for all requests
+  setAuthToken: (token: string) => {
+    axios.defaults.headers.common['x-auth-token'] = token;
+  },
 
-export interface Challenge {
-  _id: string;
-  title: string;
-  description: string;
-  type: 'coding' | 'quiz' | 'interactive';
-  difficulty: 'beginner' | 'intermediate' | 'advanced';
-  xp: number;
-  timeLimit: number;
-  category: string;
-  tags: string[];
-  content?: ChallengeContent;
-  dailyChallenge?: boolean;
-}
+  // Auth endpoints
+  login: async (email: string, password: string) => {
+    const res = await axios.post(`${API_URL}/auth/login`, { email, password });
+    return res.data;
+  },
 
-// Type for creating/updating challenges
-export type ChallengeInput = Omit<Challenge, '_id'>;
+  register: async (username: string, email: string, password: string) => {
+    const res = await axios.post(`${API_URL}/auth/register`, { username, email, password });
+    return res.data;
+  },
 
-class ChallengeApi {
-  private axios: AxiosInstance;
-  private token: string | null;
+  // User endpoints
+  fetchUserProgress: async () => {
+    const res = await axios.get(`${API_URL}/users/progress`);
+    return res.data;
+  },
 
-  constructor() {
-    this.axios = axios.create({
-      baseURL: `${BASE_URL}/challenges`,
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
-    this.token = null;
-  }
-
-  setAuthToken(token: string): void {
-    this.token = token;
-    this.axios.defaults.headers.common['Authorization'] = `Bearer ${token}`;
-  }
-
-  async fetchChallenges(filter: string = 'all'): Promise<Challenge[]> {
+  updateUserInterests: async (userId: string, interests: string[]) => {
     try {
-      const response = await this.axios.get(`/?filter=${filter}`);
-      return response.data;
+      const res = await axios.put(`${API_URL}/users/${userId}/interests`, { interests });
+      return res.data;
     } catch (error) {
-      console.error('Error fetching challenges:', error);
+      console.error('Error updating user interests:', error);
       throw error;
     }
+  },
+
+  fetchCompletedChallenges: async () => {
+    const res = await axios.get(`${API_URL}/users/completed-challenges`);
+    return res.data;
+  },
+
+  completeChallenge: async (challengeId: string) => {
+    const res = await axios.post(`${API_URL}/users/complete-challenge/${challengeId}`);
+    return res.data;
+  },
+
+  // Challenge endpoints
+  fetchChallenges: async (category?: string) => {
+    const params = category && category !== 'all' ? { category } : {};
+    const res = await axios.get(`${API_URL}/challenges`, { params });
+    return res.data;
+  },
+
+  fetchDailyChallenges: async () => {
+    const res = await axios.get(`${API_URL}/challenges/daily`);
+    return Array.isArray(res.data) ? res.data : [res.data]; // Ensure we always return an array
+  },
+
+  fetchChallenge: async (id: string) => {
+    const res = await axios.get(`${API_URL}/challenges/${id}`);
+    return res.data;
+  },
+
+  // Add createChallenge function
+  createChallenge: async (challengeData: { title: string; description: string; category: string }) => {
+    const res = await axios.post(`${API_URL}/challenges`, challengeData);
+    return res.data;
   }
+};
 
-  async getChallengeById(id: string): Promise<Challenge> {
-    try {
-      const response = await this.axios.get(`/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error fetching challenge ${id}:`, error);
-      throw error;
-    }
-  }
 
-  async createChallenge(challengeData: Partial<ChallengeInput>): Promise<Challenge> {
-    try {
-      const response = await this.axios.post('/', challengeData);
-      return response.data;
-    } catch (error) {
-      console.error('Error creating challenge:', error);
-      throw error;
-    }
-  }
-
-  async updateChallenge(id: string, challengeData: Partial<ChallengeInput>): Promise<Challenge> {
-    try {
-      const response = await this.axios.put(`/${id}`, challengeData);
-      return response.data;
-    } catch (error) {
-      console.error(`Error updating challenge ${id}:`, error);
-      throw error;
-    }
-  }
-
-  async deleteChallenge(id: string): Promise<{ success: boolean; message: string }> {
-    try {
-      const response = await this.axios.delete(`/${id}`);
-      return response.data;
-    } catch (error) {
-      console.error(`Error deleting challenge ${id}:`, error);
-      throw error;
-    }
-  }
-}
-
-// Create a singleton instance
-const challengeApi = new ChallengeApi();
-
-export default challengeApi;
+export default api;

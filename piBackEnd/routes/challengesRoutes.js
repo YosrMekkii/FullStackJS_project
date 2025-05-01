@@ -1,9 +1,10 @@
-// routes/challenges.js
-const express = require('express');
-const router = express.Router();
-const Challenge = require('../models/models/Challenge');
-const User = require('../models/models/User');
-const auth = require('../middleware/auth'); // Authentication middleware
+import express from 'express';
+import Challenge from '../models/challenge.js';
+import User from '../models/user.js';
+import auth from '../middleware/auth.js';
+
+const router = express.Router(); // <-- You were missing this!
+
 
 // Get challenges based on user interests
 router.get('/', auth, async (req, res) => {
@@ -25,6 +26,7 @@ router.get('/', auth, async (req, res) => {
     res.status(500).send('Server Error');
   }
 });
+
 
 // Get daily challenges
 router.get('/daily', auth, async (req, res) => {
@@ -144,4 +146,4 @@ router.get('/progress', auth, async (req, res) => {
   }
 });
 
-module.exports = router;
+export default router;

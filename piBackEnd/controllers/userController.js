@@ -5,7 +5,7 @@ import User from"../models/user.js";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import { ObjectId } from 'mongodb'
-
+import mongoose from 'mongoose';
 
 import dotenv from 'dotenv';
 dotenv.config();
@@ -289,6 +289,24 @@ const getRecommendations = async (req, res) => {
   }
 };
 
+// export const updateUserInterests = async (req, res) => {
+//   try {
+//     const user = await User.findById(req.user.id);
+    
+//     if (!user) {
+//       return res.status(404).json({ msg: 'User not found' });
+//     }
+//     // Update interests
+//     user.interests = req.body.interests;
+//     await user.save();
+    
+//     // Send back success response with updated user data
+//     res.json({ user: user });
+//   } catch (err) {
+//     console.error(err.message);
+//     res.status(500).send('Server Error');
+//   }
+// };
 export const getMatches = async (req, res) => {
   const userId = req.params.id;
   

@@ -13,7 +13,8 @@ import reportRoutes from "./routes/reportRoutes.js";
 import questionRoutes from "./routes/questionRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
 import openaiRoutes from './routes/openaiRoutes.js'; // Add this line near other route imports
-
+import challengesRoutes from './routes/challengesRoutes.js';
+import challenge from './routes/challenges.js';
 
 import cors from 'cors'; // ✅ Import CORS
 //import imageModel from './models/image.model.js';
@@ -126,7 +127,9 @@ app.use("/questions", questionRoutes);
 app.use("/api/matches", matchRoutes);
 app.use('/uploads', express.static('uploads'));
 app.use("/api/openai", openaiRoutes); // Add this before 404 handler
-app.use('/api/challenges', require('./routes/challengesRoutes.js'));
+app.use('/api/challenges', challenge);
+app.use('/api/userchallenges', challengesRoutes);
+
 
 
 app.use((req, res) => {
