@@ -6,6 +6,7 @@ import {
   Trophy,
   Star,
   Zap,
+  XCircle,
   Award,
   Target,
   Calendar,
@@ -100,6 +101,7 @@ const Challenges = () => {
   const [showXpAnimation, setShowXpAnimation] = useState(false);
   const [earnedXp, setEarnedXp] = useState(0);
   const [streakAnimation, setStreakAnimation] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Progress calculations
   const progress = (userProgress.xp - userProgress.currentLevelXP) / 
@@ -107,158 +109,193 @@ const Challenges = () => {
 
   // Load user data
   useEffect(() => {
-    const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
-    if (storedUser) {
+    const loadUserData = async () => {
       try {
+        // Get user from storage
+        const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
+        
+        if (!storedUser) {
+          setError("No user found in storage. Please login again.");
+          setLoading(false);
+          return;
+        }
+        
+        // Parse user data
         const parsedUser = JSON.parse(storedUser);
+        console.log("Loaded user data:", parsedUser);
         setUser(parsedUser);
-      } catch (error) {
-        console.error("Error parsing user data:", error);
-        localStorage.removeItem("user");
-        sessionStorage.removeItem("user");
-      }
-    }
-  }, []);
-
-  // Fetch user progress and interests
-  useEffect(() => {
-    const fetchProgress = async () => {
-      try {
+        
+        // Set auth token if exists
         const token = localStorage.getItem('token');
         if (token) {
           api.setAuthToken(token);
-          const progress = await api.fetchUserProgress();
-          setUserProgress(progress);
-          
-          if (progress.interests && progress.interests.length > 0) {
-            setSelectedInterests(progress.interests);
-          } else {
-            setShowInterestsModal(true);
-          }
+        } else {
+          setError("Authentication token not found. Please login again.");
+          setLoading(false);
+          return;
         }
-      } catch (error) {
-        console.error('Error fetching user progress:', error);
-      }
-    };
-
-    fetchProgress();
-  }, []);
-
-  // Fetch challenges based on active tab
-  useEffect(() => {
-    const loadChallenges = async () => {
-      setLoading(true);
-      try {
-        const token = localStorage.getItem('token');
-        if (token) {
-          api.setAuthToken(token);
-          
-          if (activeTab === 'daily') {
-            const dailyChallenges = await api.fetchDailyChallenges();
-            setDailyChallenges(dailyChallenges);
-          } else if (activeTab === 'recommended') {
-            const recommendedChallenges = await api.fetchRecommendedChallenges();
-            setRecommendedChallenges(recommendedChallenges);
-          } else if (activeTab === 'completed') {
-            const completedChallenges = await api.fetchCompletedChallenges();
-            setCompletedChallenges(completedChallenges);
-          } else {
-            // 'all' tab
-            const allChallenges = await api.fetchChallenges(selectedCategory);
-            setChallenges(allChallenges);
-          }
+        
+        // Fetch user progress
+        const progress = await api.fetchUserProgress(parsedUser.id || parsedUser._id);
+        console.log("Fetched user progress:", progress);
+        setUserProgress(progress);
+        
+        // Set selected interests or show modal
+        if (progress.interests && progress.interests.length > 0) {
+          setSelectedInterests(progress.interests);
+        } else {
+          setShowInterestsModal(true);
         }
+        
+        // Load challenges for the default tab
+        await loadChallenges('recommended', parsedUser.id || parsedUser._id);
+        
       } catch (error) {
-        console.error('Error fetching challenges:', error);
+        console.error('Error initializing challenges page:', error);
+        setError("Failed to load user data. Please try refreshing the page.");
       } finally {
         setLoading(false);
       }
     };
+    
+    loadUserData();
+  }, []);
 
+  // Load challenges based on active tab
+  const loadChallenges = async (tab: 'recommended' | 'daily' | 'all' | 'completed', userId?: string) => {
+    setLoading(true);
+    try {
+      if (!userId && user) {
+        userId = user.id || user._id;
+      }
+      
+      if (!userId) {
+        throw new Error("Cannot load challenges: No user ID available");
+      }
+      
+      console.log(`Loading ${tab} challenges for user ID: ${userId}`);
+      
+      switch (tab) {
+        case 'daily':
+          const dailyResults = await api.fetchDailyChallenges(userId);
+          console.log("Fetched daily challenges:", dailyResults);
+          setDailyChallenges(dailyResults);
+          break;
+        case 'recommended':
+          const recResults = await api.fetchRecommendedChallenges(userId);
+          console.log("Fetched recommended challenges:", recResults);
+          setRecommendedChallenges(recResults);
+          break;
+        case 'completed':
+          const compResults = await api.fetchCompletedChallenges(userId);
+          console.log("Fetched completed challenges:", compResults);
+          setCompletedChallenges(compResults);
+          break;
+        case 'all':
+          const allResults = await api.fetchChallenges(selectedCategory);
+          console.log(`Fetched all challenges with category ${selectedCategory}:`, allResults);
+          setChallenges(allResults);
+          break;
+      }
+    } catch (error) {
+      console.error(`Error fetching ${tab} challenges:`, error);
+      setError(`Failed to load ${tab} challenges. Please try again later.`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle tab change
+  useEffect(() => {
     if (user) {
-      loadChallenges();
+      const userId = user.id || user._id;
+      loadChallenges(activeTab, userId as string);
     }
   }, [activeTab, selectedCategory, user]);
 
   const handleStartChallenge = (challenge: Challenge) => {
+    console.log("Starting challenge:", challenge);
     setActiveChallenge(challenge);
   };
 
   const handleChallengeComplete = async (challengeId: string, success: boolean) => {
-    if (success) {
-      try {
-        // Call API to record completion
-        const result = await api.completeChallenge(challengeId);
-        
-        // Get challenge XP for animation
-        const challenge = [...recommendedChallenges, ...dailyChallenges, ...challenges, ...completedChallenges]
-          .find(c => c._id === challengeId);
-        
-        if (challenge) {
-          setEarnedXp(challenge.xp);
-          setShowXpAnimation(true);
-          
-          // Hide XP animation after 3 seconds
-          setTimeout(() => {
-            setShowXpAnimation(false);
-          }, 3000);
-        }
-        
-        // Check if streak increased
-        if (result.streak > userProgress.streak) {
-          setStreakAnimation(true);
-          
-          // Hide streak animation after 4 seconds
-          setTimeout(() => {
-            setStreakAnimation(false);
-          }, 4000);
-        }
-        
-        // Update user progress
-        setUserProgress(prev => ({
-          ...prev,
-          xp: result.xp,
-          level: result.level,
-          currentLevelXP: result.currentLevelXP,
-          nextLevelXP: result.nextLevelXP,
-          streak: result.streak,
-          completedToday: result.completedToday
-        }));
-        
-        // Check if there are new badges
-        if (result.newBadges && result.newBadges.length > 0) {
-          setNewBadges(result.newBadges);
-          setShowBadgeToast(true);
-          
-          // Hide toast after 5 seconds
-          setTimeout(() => {
-            setShowBadgeToast(false);
-          }, 5000);
-        }
-        
-        // Refresh challenges based on active tab
-        if (activeTab === 'daily') {
-          const updatedDailyChallenges = await api.fetchDailyChallenges();
-          setDailyChallenges(updatedDailyChallenges);
-        } else if (activeTab === 'recommended') {
-          const updatedRecommendedChallenges = await api.fetchRecommendedChallenges();
-          setRecommendedChallenges(updatedRecommendedChallenges);
-        } else if (activeTab === 'completed') {
-          const updatedCompletedChallenges = await api.fetchCompletedChallenges();
-          setCompletedChallenges(updatedCompletedChallenges);
-        } else {
-          const updatedChallenges = await api.fetchChallenges(selectedCategory);
-          setChallenges(updatedChallenges);
-        }
-        
-        // Close challenge modal
-        setActiveChallenge(null);
-        
-      } catch (error) {
-        console.error('Error completing challenge:', error);
+    if (!success) {
+      console.log("Challenge failed, just closing modal");
+      setActiveChallenge(null);
+      return;
+    }
+    
+    try {
+      console.log(`Challenge ${challengeId} completed successfully, recording completion`);
+      
+      // Get user ID
+      const userId = user?.id || user?._id;
+      if (!userId) {
+        throw new Error("User ID not available");
       }
-    } else {
-      // Just close the modal if challenge failed
+      
+      // Call API to record completion
+      const result = await api.completeChallenge(challengeId, userId as string);
+      console.log("Challenge completion result:", result);
+      
+      // Get challenge XP for animation
+      const challenge = [...recommendedChallenges, ...dailyChallenges, ...challenges, ...completedChallenges]
+        .find(c => c._id === challengeId);
+      
+      if (challenge) {
+        // Show XP animation
+        setEarnedXp(challenge.xp);
+        setShowXpAnimation(true);
+        
+        // Hide XP animation after 3 seconds
+        setTimeout(() => {
+          setShowXpAnimation(false);
+        }, 3000);
+      }
+      
+      // Check if streak increased
+      if (result.streak > userProgress.streak) {
+        console.log("Streak increased! Showing animation");
+        setStreakAnimation(true);
+        
+        // Hide streak animation after 4 seconds
+        setTimeout(() => {
+          setStreakAnimation(false);
+        }, 4000);
+      }
+      
+      // Update user progress with new data
+      setUserProgress(prev => ({
+        ...prev,
+        xp: result.xp,
+        level: result.level,
+        currentLevelXP: result.currentLevelXP,
+        nextLevelXP: result.nextLevelXP,
+        streak: result.streak,
+        completedToday: result.completedToday
+      }));
+      
+      // Check for new badges
+      if (result.newBadges && result.newBadges.length > 0) {
+        console.log("New badges earned:", result.newBadges);
+        setNewBadges(result.newBadges);
+        setShowBadgeToast(true);
+        
+        // Hide toast after 5 seconds
+        setTimeout(() => {
+          setShowBadgeToast(false);
+        }, 5000);
+      }
+      
+      // Refresh challenges based on active tab
+      await loadChallenges(activeTab, userId as string);
+      
+      // Close challenge modal
+      setActiveChallenge(null);
+      
+    } catch (error) {
+      console.error('Error completing challenge:', error);
+      setError("Failed to record challenge completion. Please try again.");
       setActiveChallenge(null);
     }
   };
@@ -274,23 +311,28 @@ const Challenges = () => {
       if (!userId) {
         throw new Error("User ID not found in user object.");
       }
+      
+      console.log(`Saving interests for user ${userId}:`, selectedInterests);
+      
+      // Update interests via API
+      const result = await api.updateUserInterests(userId as string, selectedInterests);
+      console.log("Interests update result:", result);
   
-      await api.updateUserInterests(userId, selectedInterests);
-  
+      // Update local state
       setUserProgress(prev => ({
         ...prev,
         interests: selectedInterests
       }));
   
+      // If we're on recommended tab, refresh recommendations
       if (activeTab === 'recommended') {
-        const updatedRecommendedChallenges = await api.fetchRecommendedChallenges(userId);
-        setRecommendedChallenges(updatedRecommendedChallenges);
+        await loadChallenges('recommended', userId as string);
       }
   
       setShowInterestsModal(false);
     } catch (error) {
       console.error('Error saving interests:', error);
-      alert('Failed to save interests. Please try again later.');
+      setError("Failed to save interests. Please try again later.");
     }
   };
   
@@ -384,12 +426,41 @@ const Challenges = () => {
     { name: 'Emma Garcia', xp: 10800, level: 13, avatar: '/api/placeholder/150/150' }
   ];
 
+  // Error display component
+  const ErrorBanner = () => {
+    if (!error) return null;
+    
+    return (
+      <div className="bg-red-100 border-l-4 border-red-500 text-red-700 p-4 mb-6 rounded-md">
+        <div className="flex items-center">
+          <div className="flex-shrink-0">
+            <XCircle className="h-5 w-5 text-red-500" />
+          </div>
+          <div className="ml-3">
+            <p className="text-sm">{error}</p>
+          </div>
+          <div className="ml-auto">
+            <button 
+              onClick={() => setError(null)}
+              className="text-red-500 hover:text-red-700"
+            >
+              <XCircle className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex">
         <Sidebar />
         <div className="flex-1">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+            {/* Error Display */}
+            <ErrorBanner />
+            
             {/* Header with User Progress */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
@@ -663,36 +734,32 @@ const Challenges = () => {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-md">
             <h2 className="text-xl font-semibold mb-4">Your Coding Interests</h2>
-            <p className="text-gray-600 mb-4">
-              Select topics you're interested in to get personalized challenge recommendations.
-            </p>
-            
-            <div className="grid grid-cols-2 gap-2 mb-6">
-              {availableInterests.map(interest => (
+            <p className="text-gray-600 mb-4">Select topics you're interested in to get personalized challenges.</p>
+            <div className="grid grid-cols-3 gap-2 mb-6">
+              {availableInterests.map((interest) => (
                 <button
                   key={interest}
                   onClick={() => toggleInterest(interest)}
-                  className={`p-2 rounded-md text-sm ${
+                  className={`p-2 text-sm rounded-lg transition-colors ${
                     selectedInterests.includes(interest)
-                      ? 'bg-blue-100 text-blue-700 border border-blue-300'
-                      : 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200'
+                      ? 'bg-indigo-100 text-indigo-700 border-2 border-indigo-300'
+                      : 'bg-gray-100 text-gray-700 border border-gray-200'
                   }`}
                 >
                   {interest}
                 </button>
               ))}
             </div>
-            
-            <div className="flex justify-end gap-3">
+            <div className="flex justify-end space-x-4">
               <button
                 onClick={() => setShowInterestsModal(false)}
-                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-md hover:bg-gray-100"
+                className="px-4 py-2 text-gray-700 hover:text-gray-900"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSaveInterests}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
                 disabled={selectedInterests.length === 0}
               >
                 Save Interests
@@ -701,44 +768,91 @@ const Challenges = () => {
           </div>
         </div>
       )}
-      
-      {/* XP gained animation */}
-      {showXpAnimation && (
-        <div className="fixed top-1/4 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
-          <div className="bg-gradient-to-r from-yellow-400 to-yellow-600 text-white px-6 py-3 rounded-full text-xl font-bold shadow-lg animate-bounce-up">
-            +{earnedXp} XP
+
+      {/* Active Challenge Modal */}
+      {activeChallenge && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">{activeChallenge.title}</h2>
+              <button
+                onClick={() => setActiveChallenge(null)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <XCircle className="h-6 w-6" />
+              </button>
+            </div>
+            <ActiveChallenge 
+              challenge={activeChallenge} 
+              onComplete={handleChallengeComplete}
+            />
           </div>
         </div>
       )}
 
-      {/* New badge toast notification */}
-      {showBadgeToast && newBadges.length > 0 && (
-        <div className="fixed bottom-4 right-4 z-50 animate-slide-up">
-          <div className="bg-white rounded-lg shadow-xl p-4 border-l-4 border-indigo-500 max-w-md">
-            <div className="flex">
-              <div className="flex-shrink-0">
-                <Award className="h-8 w-8 text-indigo-500" />
-              </div>
-              <div className="ml-4">
-                <h3 className="text-lg font-medium text-gray-900">New Badge Earned!</h3>
-                <p className="mt-1 text-sm text-gray-600">
-                  Congratulations! You've earned the "{newBadges[0].name}" badge.
-                </p>
+      {/* XP Animation */}
+      {showXpAnimation && (
+        <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-50">
+          <div className="text-center animate-bounce">
+            <div className="text-5xl font-bold text-indigo-600 drop-shadow-lg">
+              +{earnedXp} XP
+            </div>
+            <div className="text-2xl font-semibold text-yellow-500 mt-2">
+              Great job!
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Streak Animation */}
+      {streakAnimation && (
+        <div className="fixed inset-0 pointer-events-none flex items-center justify-center z-50">
+          <div className="text-center animate-pulse">
+            <div className="flex items-center justify-center space-x-3">
+              <Flame className="h-16 w-16 text-orange-500" />
+              <div>
+                <div className="text-3xl font-bold text-orange-500 drop-shadow-lg">
+                  {userProgress.streak} Day Streak!
+                </div>
+                <div className="text-xl font-semibold text-yellow-500 mt-1">
+                  Keep it going!
+                </div>
               </div>
             </div>
           </div>
         </div>
       )}
 
-      {/* Active challenge modal */}
-      {activeChallenge && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
-            <ActiveChallenge 
-              challenge={activeChallenge} 
-              onComplete={handleChallengeComplete} 
-              onClose={() => setActiveChallenge(null)}
-            />
+      {/* Badge Toast */}
+      {showBadgeToast && newBadges.length > 0 && (
+        <div className="fixed bottom-6 right-6 z-50">
+          <div className="bg-white rounded-lg shadow-xl border border-indigo-200 p-4 max-w-md animate-slideIn">
+            <div className="flex items-center space-x-4">
+              <div className="bg-indigo-100 p-3 rounded-full">
+                <Medal className="h-8 w-8 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-900">New Badge Unlocked!</h3>
+                <p className="text-gray-600">{newBadges[0].name} - {newBadges[0].description}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Level Up Toast */}
+      {userProgress.level > 1 && (
+        <div className="fixed bottom-6 left-6 z-50">
+          <div className="bg-white rounded-lg shadow-xl border border-indigo-200 p-4 max-w-md animate-slideIn">
+            <div className="flex items-center space-x-4">
+              <div className="bg-indigo-100 p-3 rounded-full">
+                <TrendingUp className="h-8 w-8 text-indigo-600" />
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-900">Level Up!</h3>
+                <p className="text-gray-600">You're now level {userProgress.level}!</p>
+              </div>
+            </div>
           </div>
         </div>
       )}
