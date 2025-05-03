@@ -31,6 +31,7 @@ const ActiveChallenge: React.FC<ChallengeProps> = ({ challenge, onComplete }) =>
   });
   const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
   const [hasSubmitted, setHasSubmitted] = useState<boolean>(false);
+  const [popupVisible, setPopupVisible] = useState<boolean>(false); // For incorrect answer popup
 
   // Timer effect
   useEffect(() => {
@@ -114,6 +115,8 @@ const ActiveChallenge: React.FC<ChallengeProps> = ({ challenge, onComplete }) =>
           type: 'error',
           message: 'Not quite right. Try again or review the solution.',
         });
+        // Show popup for incorrect answer
+        setPopupVisible(true);
         // Notify parent component
         onComplete(challenge._id, false);
       }
@@ -142,11 +145,9 @@ const ActiveChallenge: React.FC<ChallengeProps> = ({ challenge, onComplete }) =>
                     type={Array.isArray(challenge.content?.correctAnswer) ? "checkbox" : "radio"}
                     name="quizOption"
                     value={option}
-                    checked={
-                      Array.isArray(challenge.content?.correctAnswer)
-                        ? selectedOptions.includes(option)
-                        : answer === option
-                    }
+                    checked={Array.isArray(challenge.content?.correctAnswer)
+                      ? selectedOptions.includes(option)
+                      : answer === option}
                     onChange={() => {
                       if (Array.isArray(challenge.content?.correctAnswer)) {
                         toggleOption(option);
@@ -244,6 +245,22 @@ const ActiveChallenge: React.FC<ChallengeProps> = ({ challenge, onComplete }) =>
             <AlertTriangle className="h-5 w-5 flex-shrink-0" />
           )}
           <p>{feedback.message}</p>
+        </div>
+      )}
+
+      {/* Incorrect answer popup */}
+      {popupVisible && (
+        <div className="fixed inset-0 flex items-center justify-center bg-gray-500 bg-opacity-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg">
+            <h3 className="text-xl font-medium mb-4">Incorrect Answer</h3>
+            <p className="mb-4">Please review your answer and try again.</p>
+            <button
+              onClick={() => setPopupVisible(false)}
+              className="px-6 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+            >
+              Close
+            </button>
+          </div>
         </div>
       )}
 
