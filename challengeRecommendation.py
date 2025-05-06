@@ -1,49 +1,90 @@
 from flask import Flask, request, jsonify
 from pymongo import MongoClient
+from bson import ObjectId
 import pandas as pd
 import joblib
 import numpy as np
+from sklearn.metrics.pairwise import cosine_similarity
 
 app = Flask(__name__)
 
-# Load model & pivot matrix
-model = joblib.load('recommender_model.pkl')
-pivot = pd.read_pickle('pivot.pkl')
+# Load model data
+model_data = joblib.load('recommender_model.pkl')
+similarity_matrix = model_data["similarity_matrix"]
+users_df = model_data["users"]
+challenges_df = model_data["challenges"] 
+vectorizer = model_data["vectorizer"]
 
 # MongoDB Atlas Connection
 client = MongoClient("mongodb+srv://ayari2014khalil:skillexchangedb@skillexchangedb.jyc2i.mongodb.net/")
-db = client['skillexchangedb']
-challenges = db['challenges']
-users = db['users']
+db = client['test']  # Make sure this matches your database name from the first script
+challenges_collection = db['challenges']
+users_collection = db['users']
 
-@app.route("/recommend", methods=["GET"])
+@app.route("/recommend", methods=["POST"])
 def recommend_challenges():
-    user_id = request.args.get("userId")
+    data = request.get_json()
+    user_id = data.get("user_id")
+    num_recommendations = data.get("num_recommendations", 5)  # Default to 5 recommendations
+
     if not user_id:
-        return jsonify({"error": "Missing userId"}), 400
+        return jsonify({"error": "Missing user_id"}), 400
+
+    # Find user in our users DataFrame
+    user_index = users_df[users_df['user_id'] == user_id].index
     
-    if user_id not in pivot.index:
-        return jsonify({"error": "User not found in pivot table"}), 404
-
-    # Find similar users
-    user_vector = pivot.loc[user_id].values.reshape(1, -1)
-    distances, indices = model.kneighbors(user_vector, n_neighbors=5)
-
-    # Aggregate recommended challenge IDs
-    similar_users = pivot.index[indices.flatten()].tolist()
-    recommended_challenges = set()
+    if len(user_index) == 0:
+        # User not in training data, get interests from MongoDB and compute similarity on-the-fly
+        user_doc = users_collection.find_one({"_id": ObjectId(user_id)})
+        
+        if not user_doc:
+            return jsonify({"error": "User not found"}), 404
+            
+        # Get user interests
+        interests = user_doc.get("interests", [])
+        if not interests:
+            return jsonify({"error": "User has no interests to base recommendations on"}), 400
+            
+        interest_text = " ".join(interests).lower()
+        
+        # Transform using the same vectorizer used during training
+        user_vec = vectorizer.transform([interest_text])
+        
+        # Compute similarity with all challenges
+        challenge_vecs = vectorizer.transform(challenges_df['tags_category'].tolist())
+        user_challenge_similarity = cosine_similarity(user_vec, challenge_vecs)[0]
+        
+        # Get top N challenge indices
+        top_indices = np.argsort(user_challenge_similarity)[::-1][:num_recommendations]
+        
+    else:
+        # User exists in our training data
+        user_idx = user_index[0]
+        user_similarities = similarity_matrix[user_idx]
+        
+        # Get top N challenge indices
+        top_indices = np.argsort(user_similarities)[::-1][:num_recommendations]
     
-    for sim_user in similar_users:
-        sim_user_challenges = pivot.loc[sim_user]
-        unseen = sim_user_challenges[sim_user_challenges > 0].index.difference(pivot.loc[user_id][pivot.loc[user_id] > 0].index)
-        recommended_challenges.update(unseen)
-
-    # Fetch challenge details from DB
-    challenge_list = list(challenges.find({
-        "_id": {"$in": [ObjectId(cid) for cid in recommended_challenges]}
-    }, {"title": 1, "category": 1, "tags": 1}))
-
-    return jsonify(challenge_list)
+    # Get challenge IDs
+    recommended_challenge_ids = [challenges_df.iloc[idx]['challenge_id'] for idx in top_indices]
+    
+    # Fetch challenge details from MongoDB
+    challenge_list = []
+    for challenge_id in recommended_challenge_ids:
+        challenge_doc = challenges_collection.find_one({"_id": ObjectId(challenge_id)})
+        if challenge_doc:
+            # Convert ObjectId to string for JSON serialization
+            challenge_doc["_id"] = str(challenge_doc["_id"])
+            # Add similarity score if available
+            if len(user_index) > 0:
+                idx = np.where(challenges_df['challenge_id'] == challenge_id)[0][0]
+                challenge_doc["similarity_score"] = float(user_similarities[idx])
+            challenge_list.append(challenge_doc)
+    
+    return jsonify({
+        "recommendations": challenge_list,
+        "user_id": user_id
+    })
 
 if __name__ == "__main__":
     app.run(debug=True)
