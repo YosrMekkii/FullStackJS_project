@@ -94,10 +94,10 @@ const AdminChallenges = () => {
         const token = localStorage.getItem('token');
         if (token) {
           api.setAuthToken(token);
-          // This would typically be a different endpoint for admin
-          const allChallenges = await api.fetchChallenges('all');
-          setChallenges(allChallenges);
         }
+        // Use the correct endpoint for admin - no filter needed
+        const allChallenges = await api.getAllChallenges();
+        setChallenges(allChallenges);
       } catch (error) {
         console.error('Error fetching challenges:', error);
         showNotification('Failed to load challenges', 'error');
@@ -105,9 +105,10 @@ const AdminChallenges = () => {
         setLoading(false);
       }
     };
-
+  
     fetchAllChallenges();
-  }, []);
+  }, []); // 
+  
 
   // Filter challenges based on search term and filters
   const filteredChallenges = challenges.filter(challenge => {

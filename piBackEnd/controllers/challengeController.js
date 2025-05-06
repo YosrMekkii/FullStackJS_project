@@ -35,15 +35,14 @@ const addCompletedFlag = (challenges, completedChallengeIds) =>
 // Get all challenges (optionally filtered)
 export const getAllChallenges = async (req, res) => {
   try {
-    const { category } = req.query;
     const userId = req.query.userId; // Get userId from query params
     if (!userId) return res.status(400).json({ message: 'Missing userId' });
 
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
 
-    const query = category && category !== 'all' ? { category } : {};
-    const challenges = await Challenge.find(query);
+    // Remove the category filter logic and fetch all challenges
+    const challenges = await Challenge.find(); // No category filter
     const result = addCompletedFlag(challenges, user.completedChallenges ?? []);
 
     res.status(200).json(result);
@@ -52,6 +51,7 @@ export const getAllChallenges = async (req, res) => {
     res.status(500).json({ message: 'Error fetching challenges', error: error.message });
   }
 };
+
 
 // Get challenges matching user interests
 export const getPersonalizedChallenges = async (req, res) => {
