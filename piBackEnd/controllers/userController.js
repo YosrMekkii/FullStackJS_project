@@ -250,6 +250,7 @@ const loginUser = async (req, res) => {
         email: user.email,
         role: user.role,  // Ajouter le rôle
         skills: user.skills,  // Ajouter les compétences
+        interests: user.interests, 
         city: user.city,  // Ajouter la ville
         country: user.country,  // Ajouter le pays
         bio: user.bio,  // Ajouter la biographie

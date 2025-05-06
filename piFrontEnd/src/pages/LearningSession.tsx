@@ -82,6 +82,8 @@ function App() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
 
+
+
   // Initialize WebRTC and other effects
   useEffect(() => {
     const initializeWebRTC = async () => {
@@ -194,22 +196,53 @@ function App() {
     }
   };
 
-  const handleSendMessage = () => {
-    if (newMessage.trim()) {
-      const message: Message = {
-        id: uuidv4(),
-        sender: 'You',
-        content: newMessage,
-        timestamp: new Date(),
+
+const socket = io('http://192.168.1.13:3000');  // 🔁 Remplace par ton IP locale
+
+
+
+
+
+    useEffect(() => {
+      socket.on('receiveMessage', (data) => {
+        setMessages(prev => [
+          ...prev,
+          {
+            id: uuidv4(),
+            sender: 'Friend',
+            content: data.content,
+            timestamp: new Date(),
+          },
+        ]);
+      });
+  
+      return () => {
+        socket.off('receiveMessage');
       };
-      setMessages(prev => [...prev, message]);
-      setNewMessage('');
-      
-      if (chatContainerRef.current) {
-        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }, []);
+  
+    const handleSendMessage = () => {
+      if (newMessage.trim()) {
+        const message: Message = {
+          id: uuidv4(),
+          sender: 'You',
+          content: newMessage,
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, message]);
+  
+        socket.emit('sendMessage', { content: newMessage });
+  
+        setNewMessage('');
+        setTimeout(() => {
+          if (chatContainerRef.current) {
+            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+          }
+        }, 100);
       }
-    }
-  };
+    };
+  
+  
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -757,6 +790,7 @@ function App() {
       </div>
     </div>
   );
+
 }
 
 export default App;

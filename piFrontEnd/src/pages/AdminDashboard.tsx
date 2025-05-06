@@ -299,7 +299,7 @@ const AdminDashboard = () => {
         {/* Sidebar */}
         <div className="w-64 min-h-[calc(100vh-4rem)] bg-white border-r border-gray-200">
           <nav className="mt-8 space-y-1 px-4">
-            <a href="#" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
+            <a href="/overview" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
               <Home className="h-5 w-5 mr-3" />
               Overview
             </a>

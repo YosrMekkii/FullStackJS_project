@@ -1,96 +1,133 @@
 import React, { useState, useEffect } from 'react';
-import Sidebar from '../components/Sidebar'; // Import the Sidebar component
+import axios from 'axios';
+import Sidebar from '../components/Sidebar';
+import { useNavigate } from 'react-router-dom';
+
+
+interface Recommendation {
+  user_id: string;
+  offering: string;
+  looking_for: string;
+  userDetails?: {
+    firstName: string;
+    country: string;
+    profileImagePath: string;
+  };
+}
+
 
 const Dashboard = () => {
   const [sidebarState, setSidebarState] = useState(false);
   const [mainContentMargin, setMainContentMargin] = useState('ml-64');
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
+  const [user, setUser] = useState(null);
 
-  // Listen for sidebar state changes through a custom event
+  useEffect(() => {
+      const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
+      if (storedUser) {
+        try {
+          const parsedUser = JSON.parse(storedUser);
+          setUser(parsedUser);
+          console.log(parsedUser)
+        } catch (error) {
+          console.error("Erreur lors du parsing des données utilisateur :", error);
+          localStorage.removeItem("user"); // Supprime les données corrompues
+          sessionStorage.removeItem("user");
+        }
+      }
+    }, []);
+
+    const navigate = useNavigate();
+
+  // Fetch recommendations on component load
+  // Fetch recommendations and user details on component load
+  useEffect(() => {
+    const fetchRecommendations = async () => {
+      try {
+        if (!user) return; // attend que le user soit chargé
+
+        const userSkills = user.skills || [];      // tableau de skills
+        const userInterests = user.interests || []; // tableau d'intérêts
+
+        if (userSkills.length === 0 || userInterests.length === 0) {
+          console.warn("Skills ou Interests sont vides.");
+          return;
+        }
+
+        // Pour simplifier, on prend les premiers éléments de chaque tableau (ou adapte selon logique)
+        const offering = userSkills[0];
+        const lookingFor = userInterests[0];
+        const userInput = `${offering},${lookingFor}`;
+
+        const encodedInput = encodeURIComponent(userInput);
+        const response = await axios.get(`http://localhost:5000/recommendations/${encodedInput}`);
+        console.log("Requête envoyée à Flask:", `http://localhost:5000/recommendations/${userInput}`);
+
+        // Récupérer les informations de chaque utilisateur dans les recommandations
+        const updatedRecommendations = await Promise.all(response.data.map(async (rec: Recommendation) => {
+          const userDetailsResponse = await axios.get(`http://localhost:3000/api/users/${rec.user_id}`);
+          const userDetails = userDetailsResponse.data;
+
+          // Ajouter les détails de l'utilisateur à chaque recommandation
+          return {
+            ...rec,
+            userDetails: {
+              firstName: userDetails.firstName,
+              country: userDetails.country,
+              profileImagePath: userDetails.profileImagePath || `https://api.dicebear.com/7.x/initials/svg?seed=${rec.offering}`,
+            },
+          };
+        }));
+
+        setRecommendations(updatedRecommendations);
+      } catch (error) {
+        console.error('Erreur récupération recommandations:', error);
+      }
+    };
+
+    fetchRecommendations();
+  }, [user]);
+
   useEffect(() => {
     const handleSidebarChange = (event) => {
       setSidebarState(event.detail.isCollapsed);
     };
-
     window.addEventListener('sidebarStateChange', handleSidebarChange);
-    
-    return () => {
-      window.removeEventListener('sidebarStateChange', handleSidebarChange);
-    };
+    return () => window.removeEventListener('sidebarStateChange', handleSidebarChange);
   }, []);
 
-  // Update main content margin when sidebar state changes
   useEffect(() => {
     setMainContentMargin(sidebarState ? 'ml-16' : 'ml-64');
   }, [sidebarState]);
 
-  const skillExchanges = [
-    {
-      id: 1,
-      offering: "JavaScript Programming",
-      looking: "French Language",
-      user: "Sarah Miller",
-      location: "Paris, France",
-      avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop",
-      level: "Advanced"
-    },
-    {
-      id: 2,
-      offering: "Digital Marketing",
-      looking: "Web Design",
-      user: "John Cooper",
-      location: "London, UK",
-      avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop",
-      level: "Intermediate"
-    },
-    {
-      id: 3,
-      offering: "Spanish Language",
-      looking: "Photography",
-      user: "Maria Garcia",
-      location: "Barcelona, Spain",
-      avatar: "https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop",
-      level: "Beginner"
-    }
-  ];
-
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Include the Sidebar component */}
       <Sidebar />
 
-      {/* Main Content - with dynamic margin based on sidebar state */}
       <div className={`${mainContentMargin} p-8 transition-all duration-300 ease-in-out`}>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <h3 className="text-gray-500 text-sm font-medium">Active Exchanges</h3>
-            <p className="text-2xl font-semibold text-gray-900 mt-2">24</p>
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <h3 className="text-gray-500 text-sm font-medium">Pending Requests</h3>
-            <p className="text-2xl font-semibold text-gray-900 mt-2">12</p>
-          </div>
-          <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-            <h3 className="text-gray-500 text-sm font-medium">Skills Shared</h3>
-            <p className="text-2xl font-semibold text-gray-900 mt-2">8</p>
-          </div>
+          {/* Stat cards... */}
         </div>
 
         <div className="bg-white rounded-xl shadow-sm border border-gray-200">
           <div className="p-6 border-b border-gray-200">
-            <h2 className="text-lg font-semibold text-gray-900">Recent Skill Exchange Proposals</h2>
+            <h2 className="text-lg font-semibold text-gray-900">Recommended Skill Exchanges</h2>
           </div>
           <div className="divide-y divide-gray-200">
-            {skillExchanges.map((exchange) => (
-              <div key={exchange.id} className="p-6 flex items-center justify-between hover:bg-gray-50">
-                <div className="flex items-center space-x-4">
+          {recommendations.map((exchange, index) => (
+  <div
+                  key={index}
+                  onClick={() => navigate(`/profile/${exchange.user_id}`)}
+                  className="p-6 flex items-center justify-between hover:bg-gray-50 cursor-pointer">
+                  <div className="flex items-center space-x-4">
                   <img
-                    src={exchange.avatar}
-                    alt={exchange.user}
+                    src= {`http://localhost:3000${exchange.userDetails.profileImagePath}`} 
+                    alt={exchange.offering}
                     className="h-10 w-10 rounded-full"
                   />
                   <div>
-                    <h3 className="text-sm font-medium text-gray-900">{exchange.user}</h3>
-                    <p className="text-sm text-gray-500">{exchange.location}</p>
+                    <h3 className="text-sm font-medium text-gray-900">{exchange.userDetails?.firstName}</h3>
+                    <p className="text-sm text-gray-500">{exchange.userDetails?.country}</p>
                   </div>
                 </div>
                 <div className="flex-1 px-8">
@@ -104,13 +141,13 @@ const Dashboard = () => {
                     </svg>
                     <div className="text-center">
                       <p className="text-sm font-medium text-gray-900">Looking for</p>
-                      <p className="text-sm text-gray-500">{exchange.looking}</p>
+                      <p className="text-sm text-gray-500">{exchange.looking_for}</p>
                     </div>
                   </div>
                 </div>
                 <div>
                   <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                    {exchange.level}
+                    Recommended
                   </span>
                 </div>
                 <button className="ml-8 px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700">
