@@ -195,7 +195,10 @@ function App() {
       setIsAudioEnabled(!isAudioEnabled);
     }
   };
-  const socket = io('http://192.168.X.X:3001'); // 🔁 Remplace par ton IP locale
+
+
+const socket = io('http://192.168.1.13:3000');  // 🔁 Remplace par ton IP locale
+
 
 
 

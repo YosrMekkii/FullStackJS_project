@@ -4,7 +4,11 @@ import multer from 'multer';
 import path from 'path';
 import url from 'url'; 
 import fs from 'fs';
-import './models/user.js'; // juste pour enregistrer le modèle
+import http from 'http';
+import { Server } from 'socket.io';
+import cors from 'cors';
+
+import './models/user.js';
 import './models/report.js';
 
 import userRoutes from './routes/userRoutes.js';
@@ -12,135 +16,133 @@ import skillRoutes from './routes/skillRoutes.js';
 import reportRoutes from "./routes/reportRoutes.js";
 import questionRoutes from "./routes/questionRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
-import openaiRoutes from './routes/openaiRoutes.js'; // Add this line near other route imports
-
-
-import cors from 'cors'; // ✅ Import CORS
-//import imageModel from './models/image.model.js';
-//const userRoutes = require('./routes/userRoutes'); // Import des routes utilisateurs
+import openaiRoutes from './routes/openaiRoutes.js';
+import aiRoutes from './routes/aiRoutes.js';
+import proposalRoutes  from './routes/proposalRoutes.js';
+import Message from './models/message.js';
 
 
 const app = express();
+const server = http.createServer(app);
+const io = new Server(server, {
+  cors: {
+    origin: 'http://localhost:5173',
+    methods: ['GET', 'POST']
+  }
+});
+
 const PORT = process.env.PORT || 3000;
-// ✅ Middleware pour parser les requêtes JSON
+
 app.use(express.json());
-app.use(cors());
 app.use(cors({
-  origin: 'http://localhost:5173', // ✅ Autoriser uniquement le frontend
+  origin: 'http://localhost:5173',
   methods: 'GET,POST,PATCH,PUT,DELETE',
   allowedHeaders: 'Content-Type,Authorization',
 }));
 
-// Connexion à MongoDB
-mongoose.connect('mongodb+srv://ayari2014khalil:skillexchangedb@skillexchangedb.jyc2i.mongodb.net/')  .then(() => console.log("✅ Connected to MongoDB!"))
-  .catch(error => console.error("❌ Database connection error:", error));
+// Connexion MongoDB
+mongoose.connect('mongodb+srv://ayari2014khalil:skillexchangedb@skillexchangedb.jyc2i.mongodb.net/')
+  .then(() => console.log("✅ Connected to MongoDB!"))
+  .catch(error => console.error("❌ MongoDB connection error:", error));
 
-// Route principale (test)
-app.get('/', (req, res) => {
-  res.send('🚀 SkillExchange API is running...');
-});
-
-// Route de connexion
+// ReCaptcha login route
 app.post("/api/login", async (req, res) => {
   const { email, password, recaptchaToken } = req.body;
+  if (!recaptchaToken) return res.status(400).json({ success: false, message: "reCAPTCHA manquant." });
 
-  if (!recaptchaToken) {
-    return res.status(400).json({ success: false, message: "reCAPTCHA manquant." });
-  }
-
-  // Vérifier le token reCAPTCHA avec Google
-  const recaptchaSecret = "6LcGAOAqAAAAAKAW6BF13HT6FCGSM_xJ5ks2Ss0D"; // Remplace par ta clé secrète reCAPTCHA
-  const recaptchaSecret1 = "6LcGAOAqAAAAABnRcsfkKtY9aOaFyCwODtQ2J-UC"; // Remplace par ta clé secrète reCAPTCHA
-  const recaptchaVerifyURL = `https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecret1}&response=${recaptchaToken}`;
+  const recaptchaSecret = "6LcGAOAqAAAAABnRcsfkKtY9aOaFyCwODtQ2J-UC";
+  const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecret}&response=${recaptchaToken}`;
 
   try {
-    const response = await fetch(recaptchaVerifyURL, { method: "POST" });
+    const response = await fetch(verifyUrl, { method: "POST" });
     const data = await response.json();
+    if (!data.success) return res.status(400).json({ success: false, message: "Échec de la vérification reCAPTCHA." });
 
-    if (!data.success) {
-      return res.status(400).json({ success: false, message: "Échec de la vérification reCAPTCHA." });
-    }
-
-    // Vérification réussie, ici tu peux vérifier l'email et le mot de passe en base de données
     res.json({ success: true, message: "Connexion réussie !" });
   } catch (err) {
     res.status(500).json({ success: false, message: "Erreur serveur." });
   }
 });
 
-
-
-// ✅ Middleware pour activer CORS AVANT les routes
-
-
+// Upload image
 const __dirname = path.dirname(url.fileURLToPath(import.meta.url));
-
-// Define the upload folder path correctly
 const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'uploads/'); // Dossier où stocker les images
-  },
-  filename: function (req, file, cb) {
-    cb(null, Date.now() + path.extname(file.originalname)); // Nom unique
-  }
+  destination: (_, __, cb) => cb(null, 'uploads/'),
+  filename: (_, file, cb) => cb(null, Date.now() + path.extname(file.originalname))
+});
+const fileFilter = (req, file, cb) => file.mimetype.startsWith('image/') ? cb(null, true) : cb(new Error('Seuls les fichiers images sont acceptés !'), false);
+const upload = multer({ storage, fileFilter });
+
+app.post('/upload', upload.single('profileImage'), (req, res) => {
+  if (!req.file) return res.status(400).json({ error: 'Aucun fichier téléchargé' });
+  res.json({ message: 'Image téléchargée avec succès', filename: req.file.filename });
 });
 
-// Vérifier l'extension du fichier
-const fileFilter = (req, file, cb) => {
-  if (file.mimetype.startsWith('image/')) {
-    cb(null, true);
-  } else {
-    cb(new Error('Seuls les fichiers images sont acceptés !'), false);
-  }
-};
+// Static folder for uploads
+app.use('/uploads', express.static('uploads'));
 
-// Initialiser multer
-const upload = multer({
-  storage: storage,
-  fileFilter: fileFilter,
-});
-
-// Route pour uploader une image
-app.post('/upload', upload.single('profileImage'), async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: 'Aucun fichier téléchargé' });
-    }
-    
-    res.json({ message: 'Image téléchargée avec succès', filename: req.file.filename });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-
-
-
-
-
-// Routes
+// API routes
 app.use('/api/users', userRoutes);
 app.use('/skill', skillRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/questions", questionRoutes);
 app.use("/api/matches", matchRoutes);
-app.use('/uploads', express.static('uploads'));
-app.use("/api/openai", openaiRoutes); // Add this before 404 handler
+app.use("/api/openai", openaiRoutes);
+app.use("/api/ai", aiRoutes);
+app.use("/api/proposal", proposalRoutes);
 
-import aiRoutes from './routes/aiRoutes.js';
-app.use('/api/ai', aiRoutes);
+// WebSocket logic
+import Message from './models/message.js'; // ✅ à ajouter si pas encore fait
 
-import proposalRoutes  from './routes/proposalRoutes.js';
-app.use('/api/proposal', proposalRoutes);
+io.on('connection', (socket) => {
+  console.log('🟢 Utilisateur connecté :', socket.id);
+
+  socket.on('sendMessage', async (data) => {
+    console.log('📨 Message reçu :', data);
+
+    try {
+      const message = new Message({
+        senderId: data.senderId,
+        receiverId: data.receiverId,
+        content: data.content,
+        timestamp: data.timestamp || new Date()
+      });
+
+      await message.save(); // 💾 Enregistrement en base
+
+      // Envoie uniquement au destinataire si tu veux du 1-to-1 (optionnel)
+      io.emit('receiveMessage', message); // 🔁 Diffusion à tous les clients
+    } catch (error) {
+      console.error('❌ Erreur enregistrement message :', error);
+    }
+  });
+
+  socket.on('disconnect', () => {
+    console.log('🔴 Utilisateur déconnecté :', socket.id);
+  });
+});
 
 
-
-
+// 404 handler
 app.use((req, res) => {
   res.status(404).json({ error: "Route not found" });
 });
 
 
-app.listen(PORT, () => {
-  console.log(`🚀 Server is running on http://localhost:${PORT}`);
+
+// route pour charger les messages stockés :
+app.get('/api/messages', async (req, res) => {
+  try {
+    const messages = await Message.find().sort({ timestamp: 1 });
+    res.json(messages);
+  } catch (err) {
+    res.status(500).json({ error: 'Erreur serveur' });
+  }
+});
+
+
+
+// Start the server
+server.listen(PORT, () => {
+  console.log(`🚀 API + WebSocket running on http://localhost:${PORT}`);
 });
