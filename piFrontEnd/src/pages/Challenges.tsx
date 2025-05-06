@@ -7,7 +7,6 @@ import {
   Star,
   Zap,
   XCircle,
-  Award,
   Target,
   Calendar,
   Clock,
@@ -18,7 +17,8 @@ import {
   Crown,
   Medal,
   TrendingUp,
-  Heart
+  Heart,
+
 } from 'lucide-react';
 
 interface Challenge {
@@ -40,6 +40,7 @@ interface Challenge {
   dailyChallenge?: boolean;
   relevanceScore?: number;
   completed?: boolean;
+  completedAt?: string;
 }
 
 interface Badge {
@@ -59,6 +60,7 @@ interface UserProgress {
   completedToday: number;
   dailyGoal: number;
   interests: string[];
+  lastCompletedDate?: string;
 }
 
 interface User {
@@ -102,6 +104,8 @@ const Challenges = () => {
   const [earnedXp, setEarnedXp] = useState(0);
   const [streakAnimation, setStreakAnimation] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [showLevelUpToast, setShowLevelUpToast] = useState(false);
+  const [previousLevel, setPreviousLevel] = useState(1);
 
   // Progress calculations
   const progress = (userProgress.xp - userProgress.currentLevelXP) / 
@@ -125,20 +129,20 @@ const Challenges = () => {
         console.log("Loaded user data:", parsedUser);
         setUser(parsedUser);
         
-        // Set auth token if exists
-        const token = localStorage.getItem('token');
-        if (token) {
-          api.setAuthToken(token);
-        } else {
-          setError("Authentication token not found. Please login again.");
-          setLoading(false);
-          return;
-        }
-        
         // Fetch user progress
         const progress = await api.fetchUserProgress(parsedUser.id || parsedUser._id);
         console.log("Fetched user progress:", progress);
-        setUserProgress(progress);
+        
+        // Store previous level for level-up detection
+        setPreviousLevel(progress.level || parsedUser.level || 1);
+        
+        // Use level from progress or from user object if available
+        const userLevel = progress.level || parsedUser.level || 1;
+        
+        setUserProgress({
+          ...progress,
+          level: userLevel // Ensure level is set from either progress or user object
+        });
         
         // Set selected interests or show modal
         if (progress.interests && progress.interests.length > 0) {
@@ -157,6 +161,7 @@ const Challenges = () => {
         setLoading(false);
       }
     };
+    
     
     loadUserData();
   }, []);
@@ -192,7 +197,8 @@ const Challenges = () => {
           setCompletedChallenges(compResults);
           break;
         case 'all':
-          const allResults = await api.fetchChallenges(selectedCategory);
+          // Pass userId to filter out completed challenges
+          const allResults = await api.fetchChallenges(selectedCategory, userId);
           console.log(`Fetched all challenges with category ${selectedCategory}:`, allResults);
           setChallenges(allResults);
           break;
@@ -214,10 +220,15 @@ const Challenges = () => {
   }, [activeTab, selectedCategory, user]);
 
   const handleStartChallenge = (challenge: Challenge) => {
+    // Don't allow starting completed challenges
+    if (challenge.completed) {
+      console.log("Cannot start completed challenge");
+      return;
+    }
+    
     console.log("Starting challenge:", challenge);
     setActiveChallenge(challenge);
   };
-
   const handleChallengeComplete = async (challengeId: string, success: boolean) => {
     if (!success) {
       console.log("Challenge failed, just closing modal");
@@ -234,24 +245,48 @@ const Challenges = () => {
         throw new Error("User ID not available");
       }
       
+      // Find the challenge that was completed before making the API call
+      const completedChallenge = [...recommendedChallenges, ...dailyChallenges, ...challenges, ...completedChallenges]
+        .find(c => c._id === challengeId);
+        
+      if (!completedChallenge) {
+        throw new Error("Challenge not found");
+      }
+      
       // Call API to record completion
       const result = await api.completeChallenge(challengeId, userId as string);
       console.log("Challenge completion result:", result);
       
-      // Get challenge XP for animation
-      const challenge = [...recommendedChallenges, ...dailyChallenges, ...challenges, ...completedChallenges]
-        .find(c => c._id === challengeId);
+      // Store previous level to check for level up
+      const previousLevel = userProgress.level;
       
-      if (challenge) {
-        // Show XP animation
-        setEarnedXp(challenge.xp);
-        setShowXpAnimation(true);
-        
-        // Hide XP animation after 3 seconds
-        setTimeout(() => {
-          setShowXpAnimation(false);
-        }, 3000);
+      // Get challenge XP for animation
+      // Show XP animation
+      setEarnedXp(completedChallenge.xp);
+      setShowXpAnimation(true);
+      
+      // Hide XP animation after 3 seconds
+      setTimeout(() => {
+        setShowXpAnimation(false);
+      }, 3000);
+      
+      // Remove the completed challenge from its current list
+      // Check which list contains the challenge and update it
+      if (activeTab === 'recommended') {
+        setRecommendedChallenges(prev => prev.filter(c => c._id !== challengeId));
+      } else if (activeTab === 'daily') {
+        setDailyChallenges(prev => prev.filter(c => c._id !== challengeId));
+      } else if (activeTab === 'all') {
+        setChallenges(prev => prev.filter(c => c._id !== challengeId));
       }
+      
+      // Add challenge to completed list with completion timestamp
+      const justCompletedChallenge = {
+        ...completedChallenge,
+        completed: true,
+        completedAt: new Date().toISOString()
+      };
+      setCompletedChallenges(prev => [justCompletedChallenge, ...prev]);
       
       // Check if streak increased
       if (result.streak > userProgress.streak) {
@@ -272,8 +307,20 @@ const Challenges = () => {
         currentLevelXP: result.currentLevelXP,
         nextLevelXP: result.nextLevelXP,
         streak: result.streak,
-        completedToday: result.completedToday
+        completedToday: result.completedToday,
+        lastCompletedDate: result.lastCompletedDate
       }));
+      
+      // Check for level up
+      if (result.level > previousLevel) {
+        setShowLevelUpToast(true);
+        setPreviousLevel(result.level);
+        
+        // Hide level up toast after 5 seconds
+        setTimeout(() => {
+          setShowLevelUpToast(false);
+        }, 5000);
+      }
       
       // Check for new badges
       if (result.newBadges && result.newBadges.length > 0) {
@@ -286,9 +333,6 @@ const Challenges = () => {
           setShowBadgeToast(false);
         }, 5000);
       }
-      
-      // Refresh challenges based on active tab
-      await loadChallenges(activeTab, userId as string);
       
       // Close challenge modal
       setActiveChallenge(null);
@@ -366,6 +410,19 @@ const Challenges = () => {
     }
   };
 
+  // Format date for completed challenges
+  const formatCompletionDate = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
   // Badges
   const badges: Badge[] = [
     {
@@ -373,21 +430,21 @@ const Challenges = () => {
       name: 'Code Master',
       description: 'Complete 50 coding challenges',
       icon: <Code className="h-6 w-6 text-indigo-500" />,
-      achieved: true
+      achieved: completedChallenges.filter(c => c.type === 'coding').length >= 50
     },
     {
       id: '2',
       name: 'Polyglot',
       description: 'Learn 5 different languages',
       icon: <Languages className="h-6 w-6 text-green-500" />,
-      achieved: false
+      achieved: new Set(completedChallenges.map(c => c.category)).size >= 5
     },
     {
       id: '3',
       name: 'Speed Demon',
       description: 'Complete 10 challenges under time limit',
       icon: <Zap className="h-6 w-6 text-yellow-500" />,
-      achieved: true
+      achieved: completedChallenges.length >= 10
     },
     {
       id: '4',
@@ -452,6 +509,12 @@ const Challenges = () => {
     );
   };
 
+  // Helper for daily goal progress circle
+  const dailyGoalProgress = (completedToday: number, dailyGoal: number) => {
+    const percentage = Math.min(100, (completedToday / dailyGoal) * 100);
+    return percentage;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex">
@@ -486,6 +549,9 @@ const Challenges = () => {
                           style={{ width: `${progress}%` }}
                         />
                       </div>
+                      <div className="mt-2 text-xs text-gray-500">
+                        Total XP: {userProgress.xp}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -496,6 +562,11 @@ const Challenges = () => {
                     <div>
                       <p className="text-sm font-medium opacity-90">Current Streak</p>
                       <p className="text-3xl font-bold">{userProgress.streak} Days</p>
+                      <p className="text-xs mt-1 opacity-80">
+                        {userProgress.lastCompletedDate 
+                          ? `Last completed: ${new Date(userProgress.lastCompletedDate).toLocaleDateString()}` 
+                          : 'Complete a challenge today!'}
+                      </p>
                     </div>
                     <Flame className={`h-12 w-12 opacity-90 ${streakAnimation ? 'animate-bounce' : ''}`} />
                   </div>
@@ -507,8 +578,19 @@ const Challenges = () => {
                     <div>
                       <p className="text-sm font-medium opacity-90">Daily Goal</p>
                       <p className="text-3xl font-bold">{userProgress.completedToday}/{userProgress.dailyGoal}</p>
+                      <div className="mt-1 h-2 bg-blue-700 bg-opacity-40 rounded-full w-full">
+                        <div 
+                          className="h-full bg-white rounded-full transition-all duration-300"
+                          style={{ width: `${dailyGoalProgress(userProgress.completedToday, userProgress.dailyGoal)}%` }}
+                        />
+                      </div>
                     </div>
-                    <Target className="h-12 w-12 opacity-90" />
+                    <div className="relative">
+                      <Target className="h-12 w-12 opacity-90" />
+                      {userProgress.completedToday >= userProgress.dailyGoal && (
+                        <CheckCircle2 className="h-6 w-6 text-green-300 absolute -bottom-1 -right-1 bg-blue-600 rounded-full" />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -519,8 +601,8 @@ const Challenges = () => {
               <div className="lg:col-span-3">
                 {/* Filters */}
                 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-4 mb-6">
-                  <div className="flex items-center justify-between">
-                    <div className="flex space-x-4">
+                  <div className="flex items-center justify-between flex-wrap gap-3">
+                    <div className="flex space-x-4 flex-wrap">
                       <button
                         onClick={() => setActiveTab('recommended')}
                         className={`px-4 py-2 rounded-lg font-medium ${
@@ -573,11 +655,9 @@ const Challenges = () => {
                         className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
                       >
                         <option value="all">All Categories</option>
-                        <option value="JavaScript">JavaScript</option>
-                        <option value="Python">Python</option>
-                        <option value="React">React</option>
-                        <option value="Data Structures">Data Structures</option>
-                        <option value="Algorithms">Algorithms</option>
+                        {availableInterests.map(interest => (
+                          <option key={interest} value={interest}>{interest}</option>
+                        ))}
                       </select>
                     )}
                   </div>

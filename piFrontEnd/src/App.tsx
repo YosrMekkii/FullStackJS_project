@@ -25,6 +25,7 @@ import MatchesPage from './pages/MatchesPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import AdminChallenges from './pages/ChallengeManagement';
+import AdminOverview from './pages/AdminOverview';
 function App() {
   const [user, setUser] = useState<any | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -271,9 +272,10 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/verify-email/invalid" element={<p>Token invalide ou expiré</p>} />
-<Route path="/verify-email/error" element={<p>Une erreur est survenue</p>} />
-<Route path="/manage-challenges" element={<AdminChallenges />} />
-</Routes>
+        <Route path="/verify-email/error" element={<p>Une erreur est survenue</p>} />
+        <Route path="/manage-challenges" element={<AdminChallenges />} />
+        <Route path="/adminoverview" element={<AdminOverview />} />
+        </Routes>
     </div>
   );
 }

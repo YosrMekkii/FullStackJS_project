@@ -105,6 +105,8 @@ router.get('/email/:email', userController.getUserByEmail); // Appel de la fonct
 router.post('/forgot-password', userController.forgotPassword);
 router.post('/reset-password/:token', userController.resetPassword);
 router.get('/matches/:id', userController.getMatches);
+router.get('/:userId/progress',userController.getUserProgress);
+router.put('/:userId/progress/:challengeId',userController.updateUserProgress);
 
 
 

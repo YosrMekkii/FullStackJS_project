@@ -98,27 +98,115 @@ export const getDailyChallenges = async (req, res) => {
 // Get recommended challenges
 export const getRecommendedChallenges = async (req, res) => {
   try {
-    const userId = req.query.userId; // Get userId from query params
+    const userId = req.query.userId;
     if (!userId) return res.status(400).json({ message: 'Missing userId' });
 
+    // Get user interests from query params if provided, otherwise fetch from user
+    let userInterests = req.query.interests ? 
+      JSON.parse(req.query.interests) : 
+      [];
+
+    // Fetch user data
     const user = await User.findById(userId);
     if (!user) return res.status(404).json({ message: 'User not found' });
+    
+    // If interests weren't provided in query, use the ones from user profile
+    if (userInterests.length === 0) {
+      userInterests = user.interests || [];
+    }
 
-    const userInterests = user.interests ?? [];
+    // Fetch all challenges
     const allChallenges = await Challenge.find();
 
+    // Score challenges based on interests AND category match
     const scoredChallenges = allChallenges.map(challenge => {
       const challengeObj = challenge.toObject();
-      const interestMatch = challengeObj.tags.filter(tag => userInterests.includes(tag)).length;
-      const relevanceScore = interestMatch > 0
-        ? (interestMatch / challengeObj.tags.length) * 0.8 + Math.random() * 0.2
-        : Math.random() * 0.2;
-      return { ...challengeObj, relevanceScore };
+      
+      // 1. Calculate tag/interest match score (existing logic)
+      const interestMatchCount = challengeObj.tags.filter(tag => 
+        userInterests.includes(tag)).length;
+      
+      const interestMatchScore = interestMatchCount > 0
+        ? (interestMatchCount / challengeObj.tags.length) * 0.5
+        : 0;
+      
+      // 2. Calculate category match score (NEW)
+      const categoryMatchScore = userInterests.includes(challengeObj.category) ? 0.3 : 0;
+      
+      // 3. Add small randomization factor for diversity
+      const randomFactor = Math.random() * 0.2;
+      
+      // 4. Calculate final relevance score (50% interest match, 30% category match, 20% random)
+      const relevanceScore = interestMatchScore + categoryMatchScore + randomFactor;
+      
+      // 5. Add a bonus for daily challenges to prioritize them
+      const dailyChallengeBonus = challengeObj.dailyChallenge ? 0.15 : 0;
+      
+      // 6. Calculate final score with daily challenge bonus
+      const finalScore = relevanceScore + dailyChallengeBonus;
+      
+      // Log scoring for debugging (remove in production)
+      console.log(`Challenge ${challengeObj.title} scoring:
+        - Interest Match: ${interestMatchScore.toFixed(2)} (${interestMatchCount}/${challengeObj.tags.length} tags)
+        - Category Match: ${categoryMatchScore.toFixed(2)} (${userInterests.includes(challengeObj.category)})
+        - Random Factor: ${randomFactor.toFixed(2)}
+        - Daily Bonus: ${dailyChallengeBonus}
+        - Final Score: ${finalScore.toFixed(2)}
+      `);
+      
+      return { 
+        ...challengeObj, 
+        relevanceScore: finalScore,
+        matchDetails: {
+          interestMatchScore,
+          categoryMatchScore,
+          randomFactor,
+          dailyChallengeBonus
+        }
+      };
     });
 
-    const sorted = scoredChallenges.sort((a, b) => b.relevanceScore - a.relevanceScore);
-    const result = addCompletedFlag(sorted, user.completedChallenges ?? []);
-    res.status(200).json(result);
+    // Filter out challenges that have zero interest or category match if we have enough
+    let filteredChallenges = scoredChallenges;
+    const relevantChallenges = scoredChallenges.filter(c => 
+      c.matchDetails.interestMatchScore > 0 || c.matchDetails.categoryMatchScore > 0);
+    
+    // Only use relevant challenges if we have enough (at least 5)
+    if (relevantChallenges.length >= 5) {
+      filteredChallenges = relevantChallenges;
+    }
+
+    // Sort by relevance score (highest first)
+    const sorted = filteredChallenges.sort((a, b) => b.relevanceScore - a.relevanceScore);
+    
+    // Limit to reasonable number for display
+    const limitedResults = sorted.slice(0, 20);
+    
+    // Add completion status flags
+    const result = addCompletedFlag(limitedResults, user.completedChallenges || []);
+    
+    // Return with recommendation basis (for UI explanation)
+    const finalResults = result.map(challenge => {
+      let recommendationReason = '';
+      
+      if (challenge.dailyChallenge) {
+        recommendationReason = 'Daily Challenge';
+      } else if (userInterests.includes(challenge.category)) {
+        recommendationReason = `Based on your interest in ${challenge.category}`;
+      } else if (challenge.matchDetails.interestMatchScore > 0) {
+        const matchingTags = challenge.tags.filter(tag => userInterests.includes(tag));
+        recommendationReason = `Based on your interests: ${matchingTags.join(', ')}`;
+      } else {
+        recommendationReason = 'Explore something new';
+      }
+      
+      return {
+        ...challenge,
+        recommendationReason
+      };
+    });
+    
+    res.status(200).json(finalResults);
   } catch (error) {
     console.error('Error fetching recommended challenges:', error);
     res.status(500).json({ message: 'Error fetching recommended challenges', error: error.message });
@@ -172,59 +260,160 @@ export const getChallengeById = async (req, res) => {
   }
 };
 
+// Create a challenge
+export const createChallenge = async (req, res) => {
+  try {
+    const { title, description, category } = req.body;
+    const newChallenge = new AdminChallenge({ title, description, category });
+    const savedChallenge = await newChallenge.save();
+    res.status(201).json(savedChallenge);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to create challenge', error: err.message });
+  }
+};
+
+
+
+
+// Update a challenge
+export const updateChallenge = async (req, res) => {
+  try {
+    const updatedChallenge = await AdminChallenge.findByIdAndUpdate(
+      req.params.id,
+      req.body,
+      { new: true }
+    );
+    if (!updatedChallenge) return res.status(404).json({ message: 'Challenge not found' });
+    res.status(200).json(updatedChallenge);
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to update challenge', error: err.message });
+  }
+};
+
+// Delete a challenge
+export const deleteChallenge = async (req, res) => {
+  try {
+    const deleted = await AdminChallenge.findByIdAndDelete(req.params.id);
+    if (!deleted) return res.status(404).json({ message: 'Challenge not found' });
+    res.status(200).json({ message: 'Challenge deleted successfully' });
+  } catch (err) {
+    res.status(500).json({ message: 'Failed to delete challenge', error: err.message });
+  }
+};
+
+// Check for badges
+export const checkForNewBadges = async (userId, completedChallenges) => {
+  const newBadges = [];
+  if (completedChallenges.length >= 2) {
+    newBadges.push({
+      id: 'badge1',
+      name: 'Challenge Starter',
+      description: 'Complete at least 2 challenges'
+    });
+  }
+  return newBadges;
+};
+
 // Complete a challenge
 export const completeChallenge = async (req, res) => {
   try {
-    const { challengeId, userId } = req.body; // Get challengeId and userId from body
-    if (!mongoose.Types.ObjectId.isValid(challengeId)) {
-      return res.status(400).json({ message: 'Invalid challenge ID' });
+    const { challengeId, userId, completedAt, includeUserUpdate } = req.body;
+    
+    // Validate inputs
+    if (!challengeId || !userId) {
+      return res.status(400).json({ error: 'Challenge ID and User ID are required' });
     }
-
-    const user = await User.findById(userId);
-    if (!user) return res.status(404).json({ message: 'User not found' });
-
+    
+    // 1. Find the challenge to get XP value
     const challenge = await Challenge.findById(challengeId);
-    if (!challenge) return res.status(404).json({ message: 'Challenge not found' });
-
+    if (!challenge) {
+      return res.status(404).json({ error: 'Challenge not found' });
+    }
+    
+    // 2. Get user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // 3. Check if already completed
     if (user.completedChallenges?.some(id => id.toString() === challengeId)) {
       return res.status(200).json({
         ...user.toObject(),
         message: 'Challenge already completed'
       });
     }
-
+    
+    // 4. Record challenge completion
     user.completedChallenges ??= [];
     user.completedChallenges.push(challengeId);
-    user.xp = (user.xp ?? 0) + challenge.xp;
-
-    const { level, currentLevelXP, nextLevelXP } = calculateLevel(user.xp);
+    
+    // 5. Update user progress
+    // Calculate new XP and level
+    const newXP = (user.xp ?? 0) + challenge.xp;
+    const { level, currentLevelXP, nextLevelXP } = calculateLevel(newXP);
+    user.xp = newXP;
     user.level = level;
-    user.completedToday = (user.completedToday ?? 0) + 1;
-    if (user.completedToday >= (user.dailyGoal ?? 5)) {
-      user.streak = (user.streak ?? 0) + 1;
+    
+    // Update streak data
+    const today = new Date(completedAt || new Date()).setHours(0, 0, 0, 0);
+    const lastCompletedDay = user.lastCompletedDate ? 
+      new Date(user.lastCompletedDate).setHours(0, 0, 0, 0) : null;
+    
+    // Calculate streak (increase if today is different from last completion date)
+    let streak = user.streak || 0;
+    let completedToday = user.completedToday || 0;
+    
+    if (!lastCompletedDay || today > lastCompletedDay) {
+      // New day, reset daily counter and potentially increase streak
+      completedToday = 1;
+      
+      // If yesterday, increase streak; if gap, reset streak
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayDate = yesterday.setHours(0, 0, 0, 0);
+      
+      if (lastCompletedDay && lastCompletedDay >= yesterdayDate) {
+        streak++; // Consecutive day, increase streak
+      } else {
+        streak = 1; // Reset streak
+      }
+    } else if (today === lastCompletedDay) {
+      // Same day, just increase today's counter
+      completedToday++;
     }
-
-    const newBadges = [];
-    if (user.completedChallenges.length >= 2) {
-      newBadges.push({
-        id: 'badge1',
-        name: 'Challenge Starter',
-        description: 'Complete at least 2 challenges'
-      });
-    }
-
+    
+    // Update user fields
+    user.streak = streak;
+    user.completedToday = completedToday;
+    user.lastCompletedDate = completedAt || new Date();
+    
+    // Save the user
     await user.save();
-
-    res.status(200).json({
-      ...user.toObject(),
+    
+    // 6. Check for badge unlocks
+    const newBadges = await checkForNewBadges(userId, user.completedChallenges);
+    
+    // 7. Return updated progress data
+    return res.status(200).json({
+      xp: newXP,
+      level,
       currentLevelXP,
       nextLevelXP,
+      streak,
+      completedToday,
+      lastCompletedDate: user.lastCompletedDate,
       newBadges
     });
+    
   } catch (error) {
     console.error('Error completing challenge:', error);
-    res.status(500).json({ message: 'Error completing challenge', error: error.message });
+    return res.status(500).json({ error: 'Server error while completing challenge' });
   }
+};
+
+export default {
+  completeChallenge
 };
 
 // Get user progress

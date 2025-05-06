@@ -14,10 +14,9 @@ import questionRoutes from "./routes/questionRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
 import openaiRoutes from './routes/openaiRoutes.js'; // Add this line near other route imports
 import challengesRoutes from './routes/challengesRoutes.js';
-
+import challenges from './routes/challenges.js'; 
 import cors from 'cors'; // ✅ Import CORS
-//import imageModel from './models/image.model.js';
-//const userRoutes = require('./routes/userRoutes'); // Import des routes utilisateurs
+
 
 
 const app = express();
@@ -125,8 +124,9 @@ app.use("/api/reports", reportRoutes);
 app.use("/questions", questionRoutes);
 app.use("/api/matches", matchRoutes);
 app.use('/uploads', express.static('uploads'));
-app.use("/api/openai", openaiRoutes); // Add this before 404 handler
+app.use("/api/openai", openaiRoutes); 
 app.use('/api/challenges', challengesRoutes);
+app.use('/api/adminChallenges', challenges); 
 
 
 
