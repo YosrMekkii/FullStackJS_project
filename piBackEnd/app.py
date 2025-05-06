@@ -54,7 +54,7 @@ def recommend(user_input):
     distances, indices = model.kneighbors([user_vector])
     suggestions = data.iloc[indices[0]]
 
-    return jsonify(suggestions[['offering', 'looking_for']].to_dict(orient='records'))
+    return jsonify(suggestions[['user_id','offering', 'looking_for']].to_dict(orient='records'))
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -92,7 +92,6 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/proposal", proposalRoutes);
 
 // WebSocket logic
-import Message from './models/message.js'; // ✅ à ajouter si pas encore fait
 
 io.on('connection', (socket) => {
   console.log('🟢 Utilisateur connecté :', socket.id);

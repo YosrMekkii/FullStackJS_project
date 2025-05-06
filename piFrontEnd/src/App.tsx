@@ -24,6 +24,8 @@ import AskQuestion from './pages/askquestion';
 import MatchesPage from './pages/MatchesPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import Overview from './pages/Overview.js';
+import ProfileView from './pages/ProfileView.js';
 
 function App() {
   const [user, setUser] = useState<any | null>(null);
@@ -55,6 +57,33 @@ function App() {
     setUser(null);
     navigate("/login");
   };
+
+  // Supposons que ces données sont définies dans ton composant :
+const stats = {
+  totalUsers: 100,
+  activeExperts: 30,
+  pendingApplications: 5,
+  activeReports: 12,
+};
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  // Ajoute les autres champs attendus ici
+}
+
+interface Report {
+  id: string;
+  userId: string;
+  description: string;
+  status: 'open' | 'closed';
+  // Ajoute d'autres champs utiles
+}
+
+// Ensuite tu déclares :
+const users: User[] = [];
+const reports: Report[] = [];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-indigo-800 to-purple-900">
@@ -246,6 +275,7 @@ function App() {
           </div>
         )}
       </nav>
+      
 
       <Routes>
         <Route path="/" element={<Home />} />
@@ -255,8 +285,13 @@ function App() {
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/marketplace" element={<SkillMarketplace />} />
         <Route path="/postskill" element={<PostSkill />} />
-        <Route path="/interests/:id" element={<Interests />} />
+        <Route
+  path="/overview"
+  element={<Overview stats={stats} users={users} reports={reports} />}
+/>        <Route path="/interests/:id" element={<Interests />} />
         <Route path="/skills/:id" element={<SkillDetails />} />
+        <Route path="/profile/:id" element={<ProfileView />} />
+        
         <Route path="/admindashboard" element={<AdminDashboard />} />
         <Route path='/learningsession' element={<LearningSession />} />
         <Route path="/matches" element={<SkillMatching />} />

@@ -1,11 +1,24 @@
 user_id,offering,looking_for
-1,JavaScript development,Python developer
-2,Web design,Graphic designer
-3,SEO optimization,Digital marketing
-4,Project management,Team collaboration
-5,Content writing,Copy editing
-6,Data analysis,Machine learning expertise
-7,App development,UI/UX design
-8,Cloud computing,DevOps
-9,Graphic design,Web development
-10,Database administration,Data science
+u001,Web Development,AI & Machine Learning
+u002,Web Development,Cybersecurity
+u003,Web Development,Blockchain
+u004,Web Development,Data Science
+u005,Web Development,AR/VR
+u006,Web Development,French
+u007,Web Development,Japanese
+u008,Web Development,Gaming
+u009,Web Development,Photography
+67ff666fe10c00ddb76b4bc6,Web Development,Travel
+u011,Web Development,Music
+u012,Web Development,Cooking
+u013,Web Development,IoT
+u014,Web Development,Cloud Computing
+u015,Web Development,Spanish
+u016,Web Development,Arabic
+u017,Web Development,Reading
+67f99a47a7a1a648fbe031e6,Web Development,Sports
+u019,Web Development,Art
+u020,Web Development,German
+u001,C++,AI & Machine Learning
+67f99a47a7a1a648fbe031e6,C++,Cybersecurity
+u003,Web Development,IoT

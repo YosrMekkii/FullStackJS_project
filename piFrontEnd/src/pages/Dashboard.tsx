@@ -1,11 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import Sidebar from '../components/Sidebar';
+import { useNavigate } from 'react-router-dom';
+
+
+interface Recommendation {
+  user_id: string;
+  offering: string;
+  looking_for: string;
+  userDetails?: {
+    firstName: string;
+    country: string;
+    profileImagePath: string;
+  };
+}
+
 
 const Dashboard = () => {
   const [sidebarState, setSidebarState] = useState(false);
   const [mainContentMargin, setMainContentMargin] = useState('ml-64');
-  const [recommendations, setRecommendations] = useState([]);
+  const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [user, setUser] = useState(null);
 
   useEffect(() => {
@@ -22,36 +36,57 @@ const Dashboard = () => {
         }
       }
     }, []);
+
+    const navigate = useNavigate();
+
   // Fetch recommendations on component load
+  // Fetch recommendations and user details on component load
   useEffect(() => {
     const fetchRecommendations = async () => {
       try {
         if (!user) return; // attend que le user soit chargé
-  
+
         const userSkills = user.skills || [];      // tableau de skills
         const userInterests = user.interests || []; // tableau d'intérêts
-  
+
         if (userSkills.length === 0 || userInterests.length === 0) {
           console.warn("Skills ou Interests sont vides.");
           return;
         }
-  
+
         // Pour simplifier, on prend les premiers éléments de chaque tableau (ou adapte selon logique)
         const offering = userSkills[0];
         const lookingFor = userInterests[0];
         const userInput = `${offering},${lookingFor}`;
-  
+
         const encodedInput = encodeURIComponent(userInput);
         const response = await axios.get(`http://localhost:5000/recommendations/${encodedInput}`);
-        setRecommendations(response.data);
+        console.log("Requête envoyée à Flask:", `http://localhost:5000/recommendations/${userInput}`);
+
+        // Récupérer les informations de chaque utilisateur dans les recommandations
+        const updatedRecommendations = await Promise.all(response.data.map(async (rec: Recommendation) => {
+          const userDetailsResponse = await axios.get(`http://localhost:3000/api/users/${rec.user_id}`);
+          const userDetails = userDetailsResponse.data;
+
+          // Ajouter les détails de l'utilisateur à chaque recommandation
+          return {
+            ...rec,
+            userDetails: {
+              firstName: userDetails.firstName,
+              country: userDetails.country,
+              profileImagePath: userDetails.profileImagePath || `https://api.dicebear.com/7.x/initials/svg?seed=${rec.offering}`,
+            },
+          };
+        }));
+
+        setRecommendations(updatedRecommendations);
       } catch (error) {
         console.error('Erreur récupération recommandations:', error);
       }
     };
-  
+
     fetchRecommendations();
-  }, [user]); // 👈 dépendance à 'user' pour ne s'exécuter qu'après l'avoir récupéré
-  
+  }, [user]);
 
   useEffect(() => {
     const handleSidebarChange = (event) => {
@@ -79,17 +114,20 @@ const Dashboard = () => {
             <h2 className="text-lg font-semibold text-gray-900">Recommended Skill Exchanges</h2>
           </div>
           <div className="divide-y divide-gray-200">
-            {recommendations.map((exchange, index) => (
-              <div key={index} className="p-6 flex items-center justify-between hover:bg-gray-50">
-                <div className="flex items-center space-x-4">
+          {recommendations.map((exchange, index) => (
+  <div
+                  key={index}
+                  onClick={() => navigate(`/profile/${exchange.user_id}`)}
+                  className="p-6 flex items-center justify-between hover:bg-gray-50 cursor-pointer">
+                  <div className="flex items-center space-x-4">
                   <img
-                    src={`https://api.dicebear.com/7.x/initials/svg?seed=${exchange.offering}`} // avatar aléatoire
+                    src= {`http://localhost:3000${exchange.userDetails.profileImagePath}`} 
                     alt={exchange.offering}
                     className="h-10 w-10 rounded-full"
                   />
                   <div>
-                    <h3 className="text-sm font-medium text-gray-900">Unknown</h3>
-                    <p className="text-sm text-gray-500">Location Unknown</p>
+                    <h3 className="text-sm font-medium text-gray-900">{exchange.userDetails?.firstName}</h3>
+                    <p className="text-sm text-gray-500">{exchange.userDetails?.country}</p>
                   </div>
                 </div>
                 <div className="flex-1 px-8">
