@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Sidebar from '../components/Sidebar';
 import ActiveChallenge from '../components/ActiveChallenge';
 import api from '../services/api';
+import fetchRecommendedChallenges from '../services/MLapi.ts';
 import {
   Trophy,
   Star,
@@ -327,10 +328,30 @@ const Challenges = () => {
           break;
         }
         case 'recommended': {
+          // Get user interests to pass to the recommendation function
           const interests = selectedInterests.length > 0 ? selectedInterests : undefined;
-          const recResults = await api.fetchRecommendedChallenges(userId, interests);
-          console.log("Fetched recommended challenges:", recResults);
-          setRecommendedChallenges(recResults);
+          
+          try {
+            // First try the ML recommendation system
+            console.log("Attempting to fetch ML-based recommendations...");
+            const recResults = await fetchRecommendedChallenges(userId, interests);
+            console.log("Fetched ML-based recommended challenges:", recResults);
+            
+            // Add a source property to identify ML recommendations
+            const enhancedResults = recResults.map(challenge => ({
+              ...challenge,
+              source: 'ml', // Tag these as coming from the ML system
+            }));
+            
+            setRecommendedChallenges(enhancedResults);
+          } catch (mlError) {
+            // If ML recommendation fails, log the error and use the fallback
+            console.error("ML recommendation failed, using fallback:", mlError);
+            
+            // The fallback is already implemented in the fetchRecommendedChallenges function
+            // It will automatically use the original API if the ML service fails
+          }
+          
           break;
         }
         case 'completed': {

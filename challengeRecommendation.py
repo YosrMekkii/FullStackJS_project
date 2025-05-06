@@ -1,4 +1,5 @@
 from flask import Flask, request, jsonify
+from flask_cors import CORS
 from pymongo import MongoClient
 from bson import ObjectId
 import pandas as pd
@@ -7,6 +8,7 @@ import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
 app = Flask(__name__)
+CORS(app)  # Enable CORS for all routes
 
 # Load model data
 model_data = joblib.load('recommender_model.pkl')
@@ -87,4 +89,4 @@ def recommend_challenges():
     })
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=True, host='0.0.0.0', port=5000)

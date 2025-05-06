@@ -88,6 +88,7 @@ const fetchDailyChallenges = async (userId) => {
   }
 };
 
+/*
 const fetchRecommendedChallenges = async (userId, userInterests = []) => {
   try {
     // Include interests in the request to avoid another database lookup
@@ -114,6 +115,7 @@ const fetchRecommendedChallenges = async (userId, userInterests = []) => {
     throw error;
   }
 };
+*/
 
 const fetchCompletedChallenges = async (userId) => {
   try {
@@ -140,11 +142,12 @@ const completeChallenge = async (challengeId, userId) => {
       xp: xpEarned,
       streak: streakIncrease,
       dailyGoals: dailyGoalCompleted,
-      includeUserUpdate: true // Flag to indicate user document should be updated with new level and stats
+      includeUserUpdate: true, // Flag to indicate user document should be updated with new level and stats
+      saveProgress: true  // Flag to indicate streak and daily goals should be saved
     });
     
-    // After completing a challenge, update the user in localStorage with the new level and stats
-    if (data && data.level) {
+    // After completing a challenge, update the user in localStorage with all stats
+    if (data) {
       updateUserInStorage(data);
     }
     
@@ -154,6 +157,7 @@ const completeChallenge = async (challengeId, userId) => {
     throw error;
   }
 };
+
 
 export const fetchUserProgress = async (userId: string): Promise<ChallengeProgress[]> => {
   try {
@@ -217,7 +221,6 @@ export default {
   setAuthToken,
   fetchChallenges,
   fetchDailyChallenges,
-  fetchRecommendedChallenges,
   fetchCompletedChallenges,
   completeChallenge,
   fetchUserProgress,
