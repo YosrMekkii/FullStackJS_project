@@ -18,7 +18,6 @@ import {
   Medal,
   TrendingUp,
   Heart,
-
 } from 'lucide-react';
 
 interface Challenge {
@@ -52,15 +51,15 @@ interface Badge {
 }
 
 interface UserProgress {
-  xp: number;
   level: number;
-  currentLevelXP: number;
-  nextLevelXP: number;
   streak: number;
   completedToday: number;
   dailyGoal: number;
-  interests: string[];
-  lastCompletedDate?: string;
+  lastCompletedDate: string | null;
+  xp: number;
+  currentLevelXP: number;
+  nextLevelXP: number;
+  interests: string[]; // Fixed the typo from "intereststs"
 }
 
 interface User {
@@ -68,12 +67,18 @@ interface User {
   _id?: string;
   email?: string;
   username?: string;
+  level?: number;
+  interests?: string[];
 }
 
 const Challenges = () => {
   const [activeTab, setActiveTab] = useState<'recommended' | 'daily' | 'all' | 'completed'>('recommended');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'recent' | 'popular' | 'trending'>('recent');
+  const [showLevelUpToast, setShowLevelUpToast] = useState(false);
+  const [previousLevel, setPreviousLevel] = useState(1);
+  const [progress, setProgress] = useState(0);
+
   const [userProgress, setUserProgress] = useState<UserProgress>({
     xp: 0,
     level: 1,
@@ -82,7 +87,8 @@ const Challenges = () => {
     streak: 0,
     completedToday: 0,
     dailyGoal: 5,
-    interests: []
+    interests: [],
+    lastCompletedDate: null,
   });
   const [challenges, setChallenges] = useState<Challenge[]>([]);
   const [recommendedChallenges, setRecommendedChallenges] = useState<Challenge[]>([]);
@@ -104,15 +110,63 @@ const Challenges = () => {
   const [earnedXp, setEarnedXp] = useState(0);
   const [streakAnimation, setStreakAnimation] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [showLevelUpToast, setShowLevelUpToast] = useState(false);
-  const [previousLevel, setPreviousLevel] = useState(1);
 
-  // Progress calculations
-  const progress = (userProgress.xp - userProgress.currentLevelXP) / 
-                   (userProgress.nextLevelXP - userProgress.currentLevelXP) * 100;
+
+  
 
   // Load user data
-  useEffect(() => {
+  useEffect(() => {const calculateProgress = () => {
+  // Handle edge cases
+  if (userProgress.nextLevelXP <= userProgress.currentLevelXP) return 100;
+  if (userProgress.xp < userProgress.currentLevelXP) return 0;
+  
+  const levelDiff = userProgress.nextLevelXP - userProgress.currentLevelXP;
+  if (levelDiff <= 0) return 100;
+  
+  const xpInCurrentLevel = userProgress.xp - userProgress.currentLevelXP;
+  const calculatedProgress = (xpInCurrentLevel / levelDiff) * 100;
+  
+  // Ensure progress is between 0 and 100
+  return Math.max(0, Math.min(100, calculatedProgress));
+};
+
+    
+    const progress = calculateProgress();
+    const updateUserInStorage = (userData) => {
+      try {
+        // Get the current stored user data
+        const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
+        
+        if (storedUser) {
+          // Parse existing data
+          const existingData = JSON.parse(storedUser);
+          
+          // Merge with new data, preserving the ID and other essential fields
+          const updatedData = {
+            ...existingData,
+            ...userData,
+            // Make sure ID is preserved with either id or _id format
+            id: existingData.id || existingData._id,
+            _id: existingData._id || existingData.id
+          };
+          
+          // Store back in the same storage that was used originally
+          if (localStorage.getItem("user")) {
+            localStorage.setItem("user", JSON.stringify(updatedData));
+          } else {
+            sessionStorage.setItem("user", JSON.stringify(updatedData));
+          }
+          
+          console.log("User data updated in storage:", updatedData);
+        } else {
+          console.warn("No user data found in storage to update");
+        }
+      } catch (error) {
+        console.error("Error updating user in storage:", error);
+      }
+    };
+    
+
     const loadUserData = async () => {
       try {
         // Get user from storage
@@ -124,45 +178,130 @@ const Challenges = () => {
           return;
         }
         
-        // Parse user data
-        const parsedUser = JSON.parse(storedUser);
-        console.log("Loaded user data:", parsedUser);
-        setUser(parsedUser);
-        
-        // Fetch user progress
-        const progress = await api.fetchUserProgress(parsedUser.id || parsedUser._id);
-        console.log("Fetched user progress:", progress);
-        
-        // Store previous level for level-up detection
-        setPreviousLevel(progress.level || parsedUser.level || 1);
-        
-        // Use level from progress or from user object if available
-        const userLevel = progress.level || parsedUser.level || 1;
-        
-        setUserProgress({
-          ...progress,
-          level: userLevel // Ensure level is set from either progress or user object
-        });
-        
-        // Set selected interests or show modal
-        if (progress.interests && progress.interests.length > 0) {
-          setSelectedInterests(progress.interests);
-        } else {
-          setShowInterestsModal(true);
+        // Parse user data with error handling
+        let parsedUser;
+        try {
+          parsedUser = JSON.parse(storedUser);
+        } catch (parseError) {
+          console.error("Failed to parse user data:", parseError);
+          setError("Invalid user data in storage. Please login again.");
+          setLoading(false);
+          return;
         }
         
-        // Load challenges for the default tab
-        await loadChallenges('recommended', parsedUser.id || parsedUser._id);
+        console.log("Parsed user data:", parsedUser);
         
+        // Validate the user object has the required fields
+        const userId = parsedUser.id || parsedUser._id;
+        if (!userId) {
+          setError("User ID is missing from stored data. Please login again.");
+          setLoading(false);
+          return;
+        }
+        
+        setUser(parsedUser);
+        
+        // Fetch user progress with error handling
+        try {
+          // First initialize with values from localStorage to prevent flashing
+          if (parsedUser.level) {
+            setUserProgress(prev => ({
+              ...prev,
+              level: parsedUser.level || 1,
+              xp: parsedUser.xp || 0,
+              streak: parsedUser.streak || 0,
+              completedToday: parsedUser.completedToday || 0,
+              lastCompletedDate: parsedUser.lastCompletedDate || null,
+              interests: parsedUser.interests || []
+            }));
+          }
+    
+          // Then fetch from API
+          const progress = await api.fetchUserProgress(userId);
+          console.log("Fetched user progress:", progress);
+          
+          // If we have progress data from the API, use the most recent/complete information
+          if (progress && progress.length > 0) {
+            // Calculate currentLevelXP and nextLevelXP based on level
+            // This is assuming your level thresholds follow a pattern like:
+            // Level 1: 0-1000 XP
+            // Level 2: 1000-2000 XP
+            // Level 3: 2000-3500 XP etc.
+            const level = progress[0]?.level || parsedUser.level || 1;
+            let currentLevelXP = 0;
+            let nextLevelXP = 1000;
+            
+            // Simple progression formula (adjust to match your backend logic)
+            if (level === 1) {
+              currentLevelXP = 0;
+              nextLevelXP = 1000;
+            } else if (level === 2) {
+              currentLevelXP = 1000;
+              nextLevelXP = 2000;
+            } else if (level === 3) {
+              currentLevelXP = 2000;
+              nextLevelXP = 3500;
+            } else if (level >= 4) {
+              // For level 4+, increase by 1500 per level
+              currentLevelXP = 3500 + (level - 4) * 1500;
+              nextLevelXP = currentLevelXP + 1500;
+            }
+            
+            // Use the provided XP or calculate from the progress data
+            const totalXP = progress[0]?.xp || parsedUser.xp || 0;
+            
+            setUserProgress(prev => ({
+              ...prev,
+              xp: totalXP,
+              level: level,
+              currentLevelXP: currentLevelXP,
+              nextLevelXP: nextLevelXP,
+              streak: progress[0]?.streak || parsedUser.streak || 0,
+              completedToday: progress[0]?.completedToday || parsedUser.completedToday || 0,
+              dailyGoal: 5, // Default to 5 if not provided
+              lastCompletedDate: progress[0]?.lastCompletedDate || parsedUser.lastCompletedDate || null,
+              interests: parsedUser.interests || []
+            }));
+            
+            // Also ensure user state has these values
+            setUser(prev => ({
+              ...prev,
+              level: level,
+              xp: totalXP,
+              streak: progress[0]?.streak || parsedUser.streak || 0,
+              completedToday: progress[0]?.completedToday || 0,
+              lastCompletedDate: progress[0]?.lastCompletedDate || null
+            }));
+            
+            // Save these values back to storage to ensure consistency
+            updateUserInStorage({
+              level: level,
+              xp: totalXP,
+              streak: progress[0]?.streak || parsedUser.streak || 0,
+              completedToday: progress[0]?.completedToday || 0,
+              lastCompletedDate: progress[0]?.lastCompletedDate || null
+            });
+          }
+          
+        } catch (progressError) {
+          console.error("Failed to fetch user progress:", progressError);
+          setError("Failed to load progress data. Using cached data if available.");
+          // Continue with what data we have from local storage
+        }
+        
+        // Fix for progress calculation
+        const calculatedProgress = calculateProgress();
+        setProgress(calculatedProgress);
+        
+        // Set loading to false even if progress fetch fails
+        setLoading(false);
       } catch (error) {
         console.error('Error initializing challenges page:', error);
         setError("Failed to load user data. Please try refreshing the page.");
-      } finally {
         setLoading(false);
       }
     };
-    
-    
+
     loadUserData();
   }, []);
 
@@ -181,28 +320,33 @@ const Challenges = () => {
       console.log(`Loading ${tab} challenges for user ID: ${userId}`);
       
       switch (tab) {
-        case 'daily':
+        case 'daily': {
           const dailyResults = await api.fetchDailyChallenges(userId);
           console.log("Fetched daily challenges:", dailyResults);
           setDailyChallenges(dailyResults);
           break;
-        case 'recommended':
-          const recResults = await api.fetchRecommendedChallenges(userId);
+        }
+        case 'recommended': {
+          const interests = selectedInterests.length > 0 ? selectedInterests : undefined;
+          const recResults = await api.fetchRecommendedChallenges(userId, interests);
           console.log("Fetched recommended challenges:", recResults);
           setRecommendedChallenges(recResults);
           break;
-        case 'completed':
+        }
+        case 'completed': {
           const compResults = await api.fetchCompletedChallenges(userId);
           console.log("Fetched completed challenges:", compResults);
           setCompletedChallenges(compResults);
           break;
-        case 'all':
-          // Pass userId to filter out completed challenges
+        }
+        case 'all': {
           const allResults = await api.fetchChallenges(selectedCategory, userId);
           console.log(`Fetched all challenges with category ${selectedCategory}:`, allResults);
           setChallenges(allResults);
           break;
+        }
       }
+      
     } catch (error) {
       console.error(`Error fetching ${tab} challenges:`, error);
       setError(`Failed to load ${tab} challenges. Please try again later.`);
@@ -229,6 +373,7 @@ const Challenges = () => {
     console.log("Starting challenge:", challenge);
     setActiveChallenge(challenge);
   };
+  
   const handleChallengeComplete = async (challengeId: string, success: boolean) => {
     if (!success) {
       console.log("Challenge failed, just closing modal");
@@ -311,6 +456,55 @@ const Challenges = () => {
         lastCompletedDate: result.lastCompletedDate
       }));
       
+      // Update the level in the user object as well to ensure it persists
+      setUser(prev => prev ? {
+        ...prev,
+        level: result.level,
+        streak: result.streak,
+        completedToday: result.completedToday,
+        lastCompletedDate: result.lastCompletedDate
+      } : null);
+      
+      // Save user data to storage including streak and daily goals
+      const dataToSave = {
+        ...result,
+        interests: selectedInterests
+      };
+      const updateUserInStorage = (userData) => {
+        try {
+          // Get the current stored user data
+          const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
+          
+          if (storedUser) {
+            // Parse existing data
+            const existingData = JSON.parse(storedUser);
+            
+            // Merge with new data, preserving the ID and other essential fields
+            const updatedData = {
+              ...existingData,
+              ...userData,
+              // Make sure ID is preserved with either id or _id format
+              id: existingData.id || existingData._id,
+              _id: existingData._id || existingData.id
+            };
+            
+            // Store back in the same storage that was used originally
+            if (localStorage.getItem("user")) {
+              localStorage.setItem("user", JSON.stringify(updatedData));
+            } else {
+              sessionStorage.setItem("user", JSON.stringify(updatedData));
+            }
+            
+            console.log("User data updated in storage:", updatedData);
+          } else {
+            console.warn("No user data found in storage to update");
+          }
+        } catch (error) {
+          console.error("Error updating user in storage:", error);
+        }
+      };
+      updateUserInStorage(dataToSave);
+      
       // Check for level up
       if (result.level > previousLevel) {
         setShowLevelUpToast(true);
@@ -367,6 +561,12 @@ const Challenges = () => {
         ...prev,
         interests: selectedInterests
       }));
+      
+      // Update user object as well
+      setUser(prev => prev ? {
+        ...prev,
+        interests: selectedInterests
+      } : null);
   
       // If we're on recommended tab, refresh recommendations
       if (activeTab === 'recommended') {
@@ -515,6 +715,18 @@ const Challenges = () => {
     return percentage;
   };
 
+  // Debug function to log state (for development only)
+  const debugState = () => {
+    console.log({
+      user,
+      userProgress,
+      progress: Math.round(progress),
+      xp: userProgress.xp,
+      currentLevelXP: userProgress.currentLevelXP,
+      nextLevelXP: userProgress.nextLevelXP
+    });
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="flex">
@@ -541,12 +753,15 @@ const Challenges = () => {
                     <div className="flex-1">
                       <div className="flex items-center justify-between mb-2">
                         <span className="text-sm font-medium text-gray-500">Level Progress</span>
-                        <span className="text-sm font-medium text-indigo-600">{userProgress.xp - userProgress.currentLevelXP}/{userProgress.nextLevelXP - userProgress.currentLevelXP} XP</span>
+                        <span className="text-sm font-medium text-indigo-600">
+                          {Math.max(0, userProgress.xp - userProgress.currentLevelXP)}/
+                          {Math.max(1, userProgress.nextLevelXP - userProgress.currentLevelXP)} XP
+                        </span>
                       </div>
                       <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
                         <div 
                           className="h-full bg-indigo-600 rounded-full transition-all duration-300"
-                          style={{ width: `${progress}%` }}
+                          style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
                         />
                       </div>
                       <div className="mt-2 text-xs text-gray-500">
