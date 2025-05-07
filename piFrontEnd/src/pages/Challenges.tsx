@@ -565,7 +565,7 @@ const Challenges = () => {
         throw new Error("No user data available.");
       }
   
-      const userId = user.id || user._id;
+      const userId = user._id || user.id;
   
       if (!userId) {
         throw new Error("User ID not found in user object.");
