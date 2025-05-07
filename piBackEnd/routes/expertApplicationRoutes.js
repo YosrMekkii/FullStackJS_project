@@ -1,11 +1,11 @@
 import express from 'express';
 import upload from '../middlewares/upload.js';
 import ExpertApplication from '../models/ExpertApplication.js';
-import { getExpertApplications } from '../controllers/expertApplicationController.js';
+import { getExpertApplications, submitExpertApplication,verifyCertificateByApplicationId } from '../controllers/expertApplicationController.js';
 
 const router = express.Router();
 
-// 📤 Envoi d’une demande d’expert avec fichier et motivation
+/*// 📤 Envoi d’une demande d’expert avec fichier et motivation
 router.post('/', upload.single('document'), async (req, res) => {
   try {
     const { userId, motivation } = req.body;
@@ -27,9 +27,14 @@ router.post('/', upload.single('document'), async (req, res) => {
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
-});
-
+});*/
+// POST /api/expert-applications
+router.post('/', upload.single('document'), submitExpertApplication);
 // Route pour récupérer toutes les applications d'experts
 router.get('/applications', getExpertApplications);
+
+// ✅ Route indépendante pour la vérification seule
+
+router.get('/verify-certificate/:id', verifyCertificateByApplicationId);
 
 export default router;

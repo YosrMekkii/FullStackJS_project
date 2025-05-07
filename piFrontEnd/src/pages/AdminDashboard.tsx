@@ -153,6 +153,35 @@ const AdminDashboard = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [applications, setApplications] = useState<any[]>([]);
 
+  
+  const handleVerifyCertificate = async (application: any) => {
+    try {
+      // Envoie l'ID de l'application pour vérifier le certificat
+      const verifyRes = await fetch(`http://localhost:3000/api/expert-applications/verify-certificate/${application._id}`, {
+        method: 'GET', // Utilise GET, puisque tu récupères des informations avec l'ID
+      });
+  
+      if (!verifyRes.ok) {
+        throw new Error('Erreur de vérification du certificat');
+      }
+  
+      const result = await verifyRes.json();
+  
+      // Met à jour l'état avec le résultat de vérification
+      const updatedApplications = applications.map((a: any) =>
+        a._id === application._id ? { ...a, verificationResult: result } : a
+      );
+  
+      setApplications(updatedApplications);
+    } catch (error) {
+      console.error('Erreur de vérification:', error);
+      // Optionnel: Afficher un message d'erreur à l'utilisateur
+      alert('Une erreur est survenue lors de la vérification du certificat.');
+    }
+  };
+  
+  
+
 
 
   // Ouvre la modale avec l'utilisateur sélectionné
@@ -206,7 +235,7 @@ const handleCloseModal = () => {
         console.error("Error fetching total reports:", error);
       }
     };
-    const fetchExpertApplications = async () => {
+    /*const fetchExpertApplications = async () => {
       try {
         const response = await axios.get("http://localhost:3000/api/expert-applications/applications");
         console.log("Fetched Expert Applications:", response.data);
@@ -214,7 +243,7 @@ const handleCloseModal = () => {
       } catch (error) {
         console.error("Error fetching expert applications:", error);
       }
-    };
+    };*/
     
   
     // Appelle toutes les fonctions en parallèle
@@ -269,6 +298,7 @@ const handleCloseModal = () => {
     // Here you would typically make an API call to update the report status
   };
 
+  
   
 
   return (
@@ -417,7 +447,7 @@ const handleCloseModal = () => {
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-4">
             <img
-              src={application.user.photoProfil}
+              src={`http://localhost:3000${application.user.profileImagePath}`}
               alt={application.user.firstName}
               className="h-10 w-10 rounded-full"
             />
@@ -442,6 +472,46 @@ const handleCloseModal = () => {
             <h4 className="text-sm font-medium text-gray-700">Motivation</h4>
             <p className="mt-1 text-sm text-gray-600">{application.motivation}</p>
           </div>
+
+          {application.documentPath && (
+  <div className="mb-4">
+    <h4 className="text-sm font-medium text-gray-700">Document de certification</h4>
+    <a
+      href={`http://localhost:3000/${application.documentPath.replace(/\\/g, '/')}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="mt-1 text-sm text-blue-600 hover:underline block"
+    >
+      {application.documentFilename || 'Voir le document'}
+    </a>
+
+    <button
+      onClick={() => handleVerifyCertificate(application)}  // Ici, tu passes l'application entière
+      className="mt-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50"
+    >
+      Vérifier le certificat
+    </button>
+
+    {/* Affiche le résultat de la vérification */}
+    {application.verificationResult && (
+  <div className="mt-2 text-sm">
+    {application.verificationResult.valid ? (
+      <p className="text-green-600">✅ Certificat valide</p>
+    ) : (
+      <>
+        <p className="text-red-600">❌ Certificat invalide</p>
+        {application.verificationResult.extrait && (
+          <p className="text-gray-600 italic">Extrait détecté : {application.verificationResult.extrait}</p>
+        )}
+        {application.verificationResult.erreurVision && (
+          <p className="text-gray-500">Erreur : {JSON.stringify(application.verificationResult.erreurVision)}</p>
+        )}
+      </>
+    )}
+  </div>
+)}
+  </div>
+)}
 
           {application.status === 'pending' && (
             <div className="flex space-x-4">
