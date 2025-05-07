@@ -151,6 +151,8 @@ const AdminDashboard = () => {
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
   const [showUserModal, setShowUserModal] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [applications, setApplications] = useState<any[]>([]);
+
 
 
   // Ouvre la modale avec l'utilisateur sélectionné
@@ -204,6 +206,15 @@ const handleCloseModal = () => {
         console.error("Error fetching total reports:", error);
       }
     };
+    const fetchExpertApplications = async () => {
+      try {
+        const response = await axios.get("http://localhost:3000/api/expert-applications/applications");
+        console.log("Fetched Expert Applications:", response.data);
+        setApplications(response.data); // ce n'est plus "users", mais "applications"
+      } catch (error) {
+        console.error("Error fetching expert applications:", error);
+      }
+    };
     
   
     // Appelle toutes les fonctions en parallèle
@@ -211,6 +222,7 @@ const handleCloseModal = () => {
     fetchTotalUsers();
     fetchReports();
     fetchTotalReports();
+    fetchExpertApplications();
   }, []);
   
 
@@ -221,10 +233,28 @@ const handleCloseModal = () => {
     pendingApplications: 12,
     activeReports: totalReports
   };
+  const fetchExpertApplications = async () => {
+    try {
+      const response = await axios.get("http://localhost:3000/api/expert-applications/applications");
+      console.log("Fetched Expert Applications:", response.data);
+      setApplications(response.data); // ce n'est plus "users", mais "applications"
+    } catch (error) {
+      console.error("Error fetching expert applications:", error);
+    }
+  };
+  
 
-  const handleExpertApproval = (userId: number, approved: boolean) => {
-    console.log(`Expert application ${approved ? 'approved' : 'rejected'} for user ${userId}`);
-    // Here you would typically make an API call to update the status
+  const handleExpertApproval = async (userId: string, approved: boolean) => {
+    try {
+      const response = await axios.patch(`http://localhost:3000/api/expert/applications/${userId}`, {
+        approved
+      });
+      console.log(`Expert application ${approved ? 'approved' : 'rejected'} for user ${userId}`);
+      // Recharger les applications après mise à jour
+      fetchExpertApplications();
+    } catch (error) {
+      console.error("Error updating expert application:", error);
+    }
   };
 
   const handleReportAction = (reportId: number, action: string, details: { duration?: number; message?: string }) => {
@@ -381,72 +411,62 @@ const handleCloseModal = () => {
 
             {/* Expert Applications Tab */}
             {activeTab === 'experts' && (
-              <div className="divide-y divide-gray-200">
-                {users.filter(user => user.expertApplication).map((user) => (
-                  <div key={user.id} className="p-6 hover:bg-gray-50">
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center space-x-4">
-                        <img
-                          src={user.photoProfil}
-                          alt={user.firstName}
-                          className="h-10 w-10 rounded-full"
-                        />
-                        <div>
-                          <h3 className="text-sm font-medium text-gray-900">{user.firstName}</h3>
-                          <p className="text-sm text-gray-500">{user.country}</p>
-                        </div>
-                      </div>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        user.expertApplication?.status === 'approved' 
-                          ? 'bg-green-100 text-green-800'
-                          : user.expertApplication?.status === 'pending'
-                          ? 'bg-yellow-100 text-yellow-800'
-                          : 'bg-red-100 text-red-800'
-                      }`}>
-                        {user.expertApplication?.status}
-                      </span>
-                    </div>
-                    <div className="ml-14">
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-gray-700">Skills</h4>
-                        <div className="mt-1 flex flex-wrap gap-2">
-                          {user.expertApplication?.skills.map((skill: string, index: number) => (
-                            <span
-                              key={index}
-                              className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800"
-                            >
-                              {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                      <div className="mb-4">
-                        <h4 className="text-sm font-medium text-gray-700">Experience</h4>
-                        <p className="mt-1 text-sm text-gray-600">{user.expertApplication?.experience}</p>
-                      </div>
-                      {user.expertApplication?.status === 'pending' && (
-                        <div className="flex space-x-4">
-                          <button
-                            onClick={() => handleExpertApproval(user.id, true)}
-                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
-                          >
-                            <CheckCircle className="h-4 w-4 mr-2" />
-                            Approve
-                          </button>
-                          <button
-                            onClick={() => handleExpertApproval(user.id, false)}
-                            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
-                          >
-                            <XCircle className="h-4 w-4 mr-2" />
-                            Reject
-                          </button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
+  <div className="divide-y divide-gray-200">
+    {applications.map((application) => (
+      <div key={application._id} className="p-6 hover:bg-gray-50">
+        <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center space-x-4">
+            <img
+              src={application.user.photoProfil}
+              alt={application.user.firstName}
+              className="h-10 w-10 rounded-full"
+            />
+            <div>
+              <h3 className="text-sm font-medium text-gray-900">{application.user.firstName}</h3>
+              <p className="text-sm text-gray-500">{application.user.country}</p>
+            </div>
+          </div>
+          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+            application.status === 'approved'
+              ? 'bg-green-100 text-green-800'
+              : application.status === 'pending'
+              ? 'bg-yellow-100 text-yellow-800'
+              : 'bg-red-100 text-red-800'
+          }`}>
+            {application.status}
+          </span>
+        </div>
+
+        <div className="ml-14">
+          <div className="mb-4">
+            <h4 className="text-sm font-medium text-gray-700">Motivation</h4>
+            <p className="mt-1 text-sm text-gray-600">{application.motivation}</p>
+          </div>
+
+          {application.status === 'pending' && (
+            <div className="flex space-x-4">
+              <button
+                onClick={() => handleExpertApproval(application._id, true)}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Approve
+              </button>
+              <button
+                onClick={() => handleExpertApproval(application._id, false)}
+                className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700"
+              >
+                <XCircle className="h-4 w-4 mr-2" />
+                Reject
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    ))}
+  </div>
+)}
+
 
             {/* Reports Tab */}
             {activeTab === 'reports' && (

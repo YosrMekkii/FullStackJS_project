@@ -5,6 +5,7 @@ import path from 'path';
 import url from 'url'; 
 import './models/user.js'; // juste pour enregistrer le modèle
 import './models/report.js';
+import expertApplicationRoutes from './routes/expertApplicationRoutes.js';
 
 import userRoutes from './routes/userRoutes.js';
 import skillRoutes from './routes/skillRoutes.js';
@@ -124,6 +125,7 @@ app.use("/questions", questionRoutes);
 app.use("/api/matches", matchRoutes);
 app.use('/uploads', express.static('uploads'));
 app.use("/api/openai", openaiRoutes); // Add this before 404 handler
+app.use('/api/expert-applications', expertApplicationRoutes);
 
 
 
