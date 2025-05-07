@@ -103,30 +103,23 @@ app.use("/api/proposal", proposalRoutes);
 // WebSocket logic
 
 io.on('connection', (socket) => {
-  console.log('🟢 Utilisateur connecté :', socket.id);
+  console.log('🔌 A user connected:', socket.id);
 
-  socket.on('sendMessage', async (data) => {
-    console.log('📨 Message reçu :', data);
+  socket.on('join-room', (roomId) => {
+    socket.join(roomId);
+    console.log(`📥 User joined room: ${roomId}`);
+  });
 
-    try {
-      const message = new Message({
-        senderId: data.senderId,
-        receiverId: data.receiverId,
-        content: data.content,
-        timestamp: data.timestamp || new Date()
-      });
+  socket.on('send-message', ({ roomId, message }) => {
+    socket.to(roomId).emit('receive-message', message);
+  });
 
-      await message.save(); // 💾 Enregistrement en base
-
-      // Envoie uniquement au destinataire si tu veux du 1-to-1 (optionnel)
-      io.emit('receiveMessage', message); // 🔁 Diffusion à tous les clients
-    } catch (error) {
-      console.error('❌ Erreur enregistrement message :', error);
-    }
+  socket.on('share-file', ({ roomId, fileShare }) => {
+    socket.to(roomId).emit('receive-file', fileShare);
   });
 
   socket.on('disconnect', () => {
-    console.log('🔴 Utilisateur déconnecté :', socket.id);
+    console.log('❌ A user disconnected');
   });
 });
 

@@ -39,15 +39,20 @@ const Chat: React.FC<ChatProps> = ({
   setNewMessage,
   setFiles,
 }) => {
+  useEffect(() => {
+    if (socket && roomId) {
+      socket.emit('join-room', roomId);
+    }
+  }, [socket, roomId]);
   const chatContainerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    socket.on('receive-message', (message: Message) => {
+    socket.on('receiveMessage', (message: Message) => {
       setMessages(prev => [...prev, message]);
     });
 
     return () => {
-      socket.off('receive-message');
+      socket.off('receiveMessage');
     };
   }, [socket, setMessages]);
 

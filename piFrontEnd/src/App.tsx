@@ -26,6 +26,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Overview from './pages/Overview.js';
 import ProfileView from './pages/ProfileView.js';
+import Appp from './pages/appp.js';
 
 function App() {
   const [user, setUser] = useState<any | null>(null);
@@ -291,6 +292,8 @@ const reports: Report[] = [];
 />        <Route path="/interests/:id" element={<Interests />} />
         <Route path="/skills/:id" element={<SkillDetails />} />
         <Route path="/profile/:id" element={<ProfileView />} />
+        <Route path="/app" element={<Appp />} />
+
         
         <Route path="/admindashboard" element={<AdminDashboard />} />
         <Route path='/learningsession' element={<LearningSession />} />
