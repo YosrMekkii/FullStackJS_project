@@ -5,9 +5,12 @@ import Sidebar from "../components/Sidebar";
 
 interface User {
   _id: string;
-  name: string;
+  name?: string;
+  firstName?: string;
+  lastName?: string;
   email?: string;
   profileImage?: string;
+  profileImagePath?: string;
 }
 
 interface Skill {
@@ -92,6 +95,35 @@ const SkillDetails = () => {
     });
   };
 
+  // Helper function to get user's full name
+  const getUserFullName = (user: User | undefined) => {
+    if (!user) return 'Unknown User';
+    
+    // If name is directly available
+    if (user.name) return user.name;
+    
+    // If we have firstName and lastName
+    if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
+    
+    // If we only have firstName
+    if (user.firstName) return user.firstName;
+    
+    // If we only have lastName
+    if (user.lastName) return user.lastName;
+    
+    return 'Unknown User';
+  };
+
+  // Helper function to get user's profile image or first letter for avatar
+  const getUserInitial = (user: User | undefined) => {
+    if (!user) return '?';
+    
+    if (user.name && user.name.length > 0) return user.name.charAt(0);
+    if (user.firstName && user.firstName.length > 0) return user.firstName.charAt(0);
+    
+    return '?';
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -120,6 +152,8 @@ const SkillDetails = () => {
   }
 
   const isOwner = currentUserId === skill.user?._id;
+  const instructorName = getUserFullName(skill.user);
+  const instructorInitial = getUserInitial(skill.user);
 
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800">
@@ -203,10 +237,10 @@ const SkillDetails = () => {
               <h3 className="text-lg font-semibold mb-4">Instructor</h3>
               <Link to={`/user/${skill.user?._id}`} className="flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors">
                 <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold text-xl mr-3">
-                  {skill.user?.name?.charAt(0) || '?'}
+                  {instructorInitial}
                 </div>
                 <div>
-                  <p className="font-medium">{skill.user?.name || 'Unknown User'}</p>
+                  <p className="font-medium">{instructorName}</p>
                   <p className="text-sm text-gray-500">View Profile</p>
                 </div>
               </Link>

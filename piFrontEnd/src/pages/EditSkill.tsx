@@ -1,6 +1,8 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { Camera, Save } from "lucide-react";
+// src/pages/EditSkill.tsx
+
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
+import { Camera, Save, ArrowLeft } from "lucide-react";
 
 interface UserType {
   _id: string;
@@ -8,25 +10,33 @@ interface UserType {
   email?: string;
 }
 
+interface SkillData {
+  _id: string;
+  title: string;
+  description: string;
+  category: string;
+  image: string;
+  user: string | UserType;
+}
+
 const EditSkill = () => {
-  const navigate = useNavigate();
   const { id } = useParams<{ id: string }>();
-  const [loading, setLoading] = useState(false);
-  const [isDataLoading, setIsDataLoading] = useState(true);
-  
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState("");
+  const [user, setUser] = useState<UserType | null>(null);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     category: "",
     image: ""
   });
-  const [user, setUser] = useState<UserType | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const fileInputRef = React.useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
-    // Récupérer l'utilisateur actuel
     const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
     if (storedUser) {
       try {
@@ -34,39 +44,39 @@ const EditSkill = () => {
         setUser(parsedUser);
       } catch (error) {
         console.error("Erreur parsing user :", error);
+        localStorage.removeItem("user");
+        sessionStorage.removeItem("user");
       }
     }
 
-    // Récupérer les détails de la compétence
-    fetchSkillDetails();
+    fetchSkillData();
   }, [id]);
 
-  const fetchSkillDetails = async () => {
-    setIsDataLoading(true);
+  const fetchSkillData = async () => {
     try {
       const response = await fetch(`http://localhost:3000/skill/skills/${id}`);
       if (!response.ok) {
-        throw new Error("Failed to fetch skill details");
+        throw new Error('Failed to fetch skill data');
       }
-      const skillData = await response.json();
       
-      // Préremplir le formulaire avec les données existantes
+      const skillData: SkillData = await response.json();
+      
       setFormData({
-        title: skillData.title,
-        description: skillData.description,
-        category: skillData.category,
+        title: skillData.title || "",
+        description: skillData.description || "",
+        category: skillData.category || "",
         image: skillData.image || ""
       });
-
-      // Définir l'aperçu de l'image
+      
       if (skillData.image) {
         setImagePreview(skillData.image);
       }
-    } catch (error) {
-      console.error("Error fetching skill details:", error);
-      alert("Failed to load skill details. Please try again.");
-    } finally {
-      setIsDataLoading(false);
+      
+      setLoading(false);
+    } catch (err) {
+      console.error('Error fetching skill data:', err);
+      setError('Failed to load skill data. Please try again.');
+      setLoading(false);
     }
   };
 
@@ -89,43 +99,6 @@ const EditSkill = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-  
-    try {
-      if (!user || !(user as any).id) throw new Error("Utilisateur non connecté");
-  
-      const dataToSend = {
-        ...formData,
-        user: (user as any).id
-      };
-  
-      const response = await fetch(`http://localhost:3000/skill/skills/${id}`, {
-        method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify(dataToSend)
-      });
-  
-      if (!response.ok) {
-        const errRes = await response.json();
-        throw new Error(errRes.error || 'Failed to update skill');
-      }
-  
-      // Redirection vers la page Marketplace après mise à jour
-      navigate('/marketplace');
-    } catch (error: any) {
-      console.error('Error updating skill:', error);
-      alert(error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-  
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setFormData({
       ...formData,
@@ -133,20 +106,65 @@ const EditSkill = () => {
     });
   };
 
-  if (isDataLoading) {
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSaving(true);
+  
+    try {
+      if (!user || !(user as any).id) throw new Error("Utilisateur non connecté");
+  
+      const response = await fetch(`http://localhost:3000/skill/skills/${id}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('token')}`
+        },
+        body: JSON.stringify(formData)
+      });
+  
+      if (!response.ok) {
+        const errRes = await response.json();
+        throw new Error(errRes.error || 'Failed to update skill');
+      }
+  
+      navigate('/marketplace');
+    } catch (error: any) {
+      console.error('Error updating skill:', error);
+      setError(error.message || 'An error occurred while updating the skill');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-900 via-indigo-700 to-purple-900 text-white py-12 px-6 flex flex-col items-center justify-center">
-        <div className="animate-spin rounded-full h-12 w-12 border-4 border-white border-t-transparent"></div>
-        <p className="mt-4">Loading skill data...</p>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading skill data...</p>
+        </div>
       </div>
     );
   }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-900 via-indigo-700 to-purple-900 text-white py-12 px-6 flex flex-col items-center">
-      <div className="max-w-3xl w-full bg-white text-gray-900 p-10 rounded-3xl shadow-xl transform hover:scale-105 transition-all">
-        <h2 className="text-4xl font-extrabold mb-6 text-center text-indigo-700">Edit Your Skill</h2>
-        <p className="text-center text-gray-600 mb-6">Update your skill details below</p>
+      <div className="max-w-3xl w-full bg-white text-gray-900 p-10 rounded-3xl shadow-xl">
+        <div className="flex items-center mb-6">
+          <button 
+            onClick={() => navigate('/marketplace')}
+            className="mr-4 p-2 rounded-full hover:bg-gray-100 transition-colors"
+          >
+            <ArrowLeft className="h-5 w-5 text-gray-700" />
+          </button>
+          <h2 className="text-3xl font-extrabold text-indigo-700">Edit Skill</h2>
+        </div>
+  
+        {error && (
+          <div className="mb-6 p-4 bg-red-50 border-l-4 border-red-500 text-red-700">
+            <p>{error}</p>
+          </div>
+        )}
   
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Titre */}
@@ -230,7 +248,7 @@ const EditSkill = () => {
                 className="hidden"
               />
               <p className="text-sm text-gray-500 text-center">
-                Click the circle to upload a new skill image
+                Click to change the skill image
               </p>
             </div>
           </div>
@@ -246,11 +264,11 @@ const EditSkill = () => {
             </button>
             <button
               type="submit"
-              disabled={loading}
+              disabled={saving}
               className="px-8 py-4 bg-indigo-600 text-white rounded-lg font-bold text-lg flex items-center justify-center space-x-2 hover:bg-indigo-800 transition shadow-md disabled:bg-indigo-400"
             >
               <Save className="w-6 h-6" />
-              <span>{loading ? 'Updating...' : 'Update Skill'}</span>
+              <span>{saving ? 'Saving...' : 'Save Changes'}</span>
             </button>
           </div>
         </form>

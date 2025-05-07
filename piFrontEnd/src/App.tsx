@@ -24,6 +24,8 @@ import AskQuestion from './pages/askquestion';
 import MatchesPage from './pages/MatchesPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import EditSkill from './pages/EditSkill';
+import UserProfile from './pages/userProfile';
 
 function App() {
   const [user, setUser] = useState<any | null>(null);
@@ -276,10 +278,11 @@ function App() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/verify-email/invalid" element={<p>Token invalide ou expiré</p>} />
-<Route path="/verify-email/error" element={<p>Une erreur est survenue</p>} />
+        <Route path="/verify-email/error" element={<p>Une erreur est survenue</p>} />
+        <Route path="/edit-skill/:id" element={<EditSkill />} />
+        <Route path="/user/:userId" element={<UserProfile />} />
       </Routes>
     </div>
   );
 }
-
 export default App;
