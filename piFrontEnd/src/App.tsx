@@ -24,10 +24,8 @@ import AskQuestion from './pages/askquestion';
 import MatchesPage from './pages/MatchesPage';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
-import Overview from './pages/Overview.js';
-import ProfileView from './pages/ProfileView.js';
-import Appp from './pages/appp.js';
-
+import AdminChallenges from './pages/ChallengeManagement';
+import AdminOverview from './pages/AdminOverview';
 function App() {
   const [user, setUser] = useState<any | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -309,8 +307,10 @@ const reports: Report[] = [];
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/reset-password/:token" element={<ResetPassword />} />
         <Route path="/verify-email/invalid" element={<p>Token invalide ou expiré</p>} />
-<Route path="/verify-email/error" element={<p>Une erreur est survenue</p>} />
-      </Routes>
+        <Route path="/verify-email/error" element={<p>Une erreur est survenue</p>} />
+        <Route path="/manage-challenges" element={<AdminChallenges />} />
+        <Route path="/adminoverview" element={<AdminOverview />} />
+        </Routes>
     </div>
   );
 }

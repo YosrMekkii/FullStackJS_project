@@ -84,8 +84,11 @@ router.put("/:id", userController.updateUser);
 router.put("/interests/:id", userController.updateUser);
 router.put("/skills/:id", userController.updateSkills);
 router.put("/achievements/:id", userController.updateBioAndAchievements);
-
-
+//router.get('/progress', getUserProgress);
+//router.get('/completed-challenges', getCompletedChallenges);
+//router.post('/complete-challenge/:challengeId', completeChallenge);
+//router.put('/:userId/interests', updateUserInterests);
+router.put("/:id/interests", userController.updateInterests);
 router.delete("/:id", userController.deleteUser);
 router.post('/signup', upload.single('profileImage'), userController.signupUser);
 router.post("/login", userController.loginUser);
@@ -101,6 +104,8 @@ router.get('/email/:email', userController.getUserByEmail); // Appel de la fonct
 router.post('/forgot-password', userController.forgotPassword);
 router.post('/reset-password/:token', userController.resetPassword);
 router.get('/matches/:id', userController.getMatches);
+router.get('/:userId/progress',userController.getUserProgress);
+router.put('/:userId/progress/:challengeId',userController.updateUserProgress);
 
 
 

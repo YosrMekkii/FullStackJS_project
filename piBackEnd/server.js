@@ -16,10 +16,11 @@ import skillRoutes from './routes/skillRoutes.js';
 import reportRoutes from "./routes/reportRoutes.js";
 import questionRoutes from "./routes/questionRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
-import openaiRoutes from './routes/openaiRoutes.js';
-import aiRoutes from './routes/aiRoutes.js';
-import proposalRoutes  from './routes/proposalRoutes.js';
-import Message from './models/message.js';
+import openaiRoutes from './routes/openaiRoutes.js'; // Add this line near other route imports
+import challengesRoutes from './routes/challengesRoutes.js';
+import challenges from './routes/challenges.js'; 
+import cors from 'cors'; // ✅ Import CORS
+
 
 
 const app = express();
@@ -96,32 +97,11 @@ app.use('/skill', skillRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/questions", questionRoutes);
 app.use("/api/matches", matchRoutes);
-app.use("/api/openai", openaiRoutes);
-app.use("/api/ai", aiRoutes);
-app.use("/api/proposal", proposalRoutes);
+app.use('/uploads', express.static('uploads'));
+app.use("/api/openai", openaiRoutes); 
+app.use('/api/challenges', challengesRoutes);
+app.use('/api/adminChallenges', challenges); 
 
-// WebSocket logic
-
-io.on('connection', (socket) => {
-  console.log('🔌 A user connected:', socket.id);
-
-  socket.on('join-room', (roomId) => {
-    socket.join(roomId);
-    console.log(`📥 User joined room: ${roomId}`);
-  });
-
-  socket.on('send-message', ({ roomId, message }) => {
-    socket.to(roomId).emit('receive-message', message);
-  });
-
-  socket.on('share-file', ({ roomId, fileShare }) => {
-    socket.to(roomId).emit('receive-file', fileShare);
-  });
-
-  socket.on('disconnect', () => {
-    console.log('❌ A user disconnected');
-  });
-});
 
 
 // 404 handler
