@@ -3,12 +3,12 @@ import mongoose from 'mongoose';
 import multer from 'multer';
 import path from 'path';
 import url from 'url'; 
+import './models/user.js'; // juste pour enregistrer le modèle
 import fs from 'fs';
 import http from 'http';
 import { Server } from 'socket.io';
 import cors from 'cors';
 
-import './models/user.js';
 import './models/report.js';
 
 import userRoutes from './routes/userRoutes.js';
@@ -16,10 +16,11 @@ import skillRoutes from './routes/skillRoutes.js';
 import reportRoutes from "./routes/reportRoutes.js";
 import questionRoutes from "./routes/questionRoutes.js";
 import matchRoutes from "./routes/matchRoutes.js";
-import openaiRoutes from './routes/openaiRoutes.js';
-import aiRoutes from './routes/aiRoutes.js';
-import proposalRoutes  from './routes/proposalRoutes.js';
-import Message from './models/message.js';
+import openaiRoutes from './routes/openaiRoutes.js'; // Add this line near other route imports
+import challengesRoutes from './routes/challengesRoutes.js';
+import challenges from './routes/challenges.js'; 
+import cors from 'cors'; // ✅ Import CORS
+
 
 
 const app = express();
@@ -52,6 +53,15 @@ app.post("/api/login", async (req, res) => {
   const { email, password, recaptchaToken } = req.body;
   if (!recaptchaToken) return res.status(400).json({ success: false, message: "reCAPTCHA manquant." });
 
+  if (!recaptchaToken) {
+    return res.status(400).json({ success: false, message: "reCAPTCHA manquant." });
+  }
+
+  // Vérifier le token reCAPTCHA avec Google
+  const recaptchaSecret1 = "6LcGAOAqAAAAABnRcsfkKtY9aOaFyCwODtQ2J-UC"; // Remplace par ta clé secrète reCAPTCHA
+  const recaptchaVerifyURL = `https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecret1}&response=${recaptchaToken}`;
+
+  
   const recaptchaSecret = "6LcGAOAqAAAAABnRcsfkKtY9aOaFyCwODtQ2J-UC";
   const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${recaptchaSecret}&response=${recaptchaToken}`;
 
@@ -89,9 +99,10 @@ app.use('/skill', skillRoutes);
 app.use("/api/reports", reportRoutes);
 app.use("/questions", questionRoutes);
 app.use("/api/matches", matchRoutes);
-app.use("/api/openai", openaiRoutes);
-app.use("/api/ai", aiRoutes);
-app.use("/api/proposal", proposalRoutes);
+app.use('/uploads', express.static('uploads'));
+app.use("/api/openai", openaiRoutes); 
+app.use('/api/challenges', challengesRoutes);
+app.use('/api/adminChallenges', challenges); 
 
 // WebSocket logic
 const connectedUsers = new Map(); // stocke userId -> socketId

@@ -1,5 +1,4 @@
 import mongoose from "mongoose";
-import User from "../models/user.js";  // Ajout de l'extension .js
 
 const reportSchema = new mongoose.Schema({
   reporter: { type: mongoose.Schema.Types.ObjectId, ref: "User", required: true },

@@ -5,6 +5,9 @@ import User from"../models/user.js";
 import crypto from "crypto";
 import nodemailer from "nodemailer";
 import { ObjectId } from 'mongodb'
+import mongoose from 'mongoose';
+import UserProgress from '../models/userProgress.js';
+import Challenge from '../models/challenge.js';
 
 
 import dotenv from 'dotenv';
@@ -136,6 +139,121 @@ const getAllUsers = async (req, res) => {
     res.status(200).json(users);
   } catch (error) {
     res.status(500).json({ error: error.message });
+  }
+};
+
+ const getUserProgress = async (req, res) => {
+  const userId = req.params.userId;
+  
+  try {
+    console.log(`Fetching progress for user ID: ${userId}`);
+    
+    // Fetch all active challenges
+    const challenges = await Challenge.find({ active: true });
+    
+    // Fetch user's progress for these challenges
+    const userProgress = await UserProgress.find({ userId });
+    
+    // Map progress to challenges
+    const progressMap = {};
+    userProgress.forEach(progress => {
+      progressMap[progress.challengeId.toString()] = {
+        completed: progress.completed,
+        progress: progress.progress,
+        startedAt: progress.startedAt,
+        completedAt: progress.completedAt
+      };
+    });
+    
+    // Create response with all challenges and their progress
+    const result = challenges.map(challenge => ({
+      challengeId: challenge._id,
+      title: challenge.title,
+      description: challenge.description,
+      difficulty: challenge.difficulty,
+      points: challenge.points,
+      category: challenge.category,
+      // If user has progress for this challenge, include it, otherwise set defaults
+      progress: progressMap[challenge._id.toString()] || {
+        completed: false,
+        progress: 0,
+        startedAt: null,
+        completedAt: null
+      }
+    }));
+    
+    return res.status(200).json({
+      success: true,
+      progress: result
+    });
+  } catch (error) {
+    console.error(`Error fetching progress for user ${userId}:`, error);
+    return res.status(500).json({ 
+      success: false,
+      message: "Error fetching user progress",
+      error: error.message
+    });
+  }
+};
+
+// Update user progress for a challenge
+ const updateUserProgress = async (req, res) => {
+  const { userId, challengeId } = req.params;
+  const { progress, completed } = req.body;
+  
+  try {
+    // Check if user exists
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: "User not found"
+      });
+    }
+    
+    // Check if challenge exists
+    const challenge = await Challenge.findById(challengeId);
+    if (!challenge) {
+      return res.status(404).json({
+        success: false,
+        message: "Challenge not found"
+      });
+    }
+    
+    // Find or create progress record
+    let userProgress = await UserProgress.findOne({ userId, challengeId });
+    
+    if (!userProgress) {
+      userProgress = new UserProgress({
+        userId,
+        challengeId,
+        progress: progress || 0,
+        completed: completed || false
+      });
+    } else {
+      userProgress.progress = progress !== undefined ? progress : userProgress.progress;
+      userProgress.completed = completed !== undefined ? completed : userProgress.completed;
+    }
+    
+    // Add completedAt date if challenge is completed
+    if (completed && !userProgress.completedAt) {
+      userProgress.completedAt = new Date();
+    }
+    
+    await userProgress.save();
+    
+    return res.status(200).json({
+      success: true,
+      message: "Progress updated successfully",
+      progress: userProgress
+    });
+  } catch (error) {
+    console.error(`Error updating progress for user ${userId} on challenge ${challengeId}:`, error);
+    return res.status(500).json({
+      success: false,
+      message: "Error updating user progress",
+      error: error.message
+    });
   }
 };
 
@@ -290,7 +408,25 @@ const getRecommendations = async (req, res) => {
   }
 };
 
-export const getMatches = async (req, res) => {
+// export const updateUserInterests = async (req, res) => {
+//   try {
+//     const user = await User.findById(req.user.id);
+    
+//     if (!user) {
+//       return res.status(404).json({ msg: 'User not found' });
+//     }
+//     // Update interests
+//     user.interests = req.body.interests;
+//     await user.save();
+    
+//     // Send back success response with updated user data
+//     res.json({ user: user });
+//   } catch (err) {
+//     console.error(err.message);
+//     res.status(500).send('Server Error');
+//   }
+// };
+ const getMatches = async (req, res) => {
   const userId = req.params.id;
   
   try {
@@ -317,7 +453,7 @@ export const getMatches = async (req, res) => {
   }
 };
 
-export const getMatchesFor = async (req, res) => {
+ const getMatchesFor = async (req, res) => {
   const userId = req.params.userId;
   
   try {
@@ -473,7 +609,7 @@ const uploadProfileImage = async (req, res) => {
 
 
 
-const blacklist = new Set(); // Liste noire pour stocker les tokens invalidés
+
 
 const logoutUser = async (req, res) => {
   try {
@@ -650,10 +786,13 @@ export {
   getAllUsers,
   signupUser,
   loginUser,
-  getRecommendations,// Export the recommendation function
+  getRecommendations,
   updateSkills,
   updateInterests,
   logoutUser,
   getUsersByIds,
-  updateBioAndAchievements
-};
+  updateBioAndAchievements,
+  getUserProgress,
+  getMatchesFor,
+  getMatches,
+  updateUserProgress};
