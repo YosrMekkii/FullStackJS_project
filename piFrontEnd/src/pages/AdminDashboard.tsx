@@ -552,8 +552,8 @@ const AdminDashboard = () => {
             setSelectedReport(null);
           }}
           onAction={(action, details) => handleReportAction(selectedReport._id, action, details)}
-          reportedUser={selectedReport.reported.name}
-        />
+          reportedUser={selectedReport.reportedUser?.firstName || 'Unknown'}
+          />
       )}
     </div>
   );

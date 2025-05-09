@@ -55,6 +55,15 @@ interface CompileResult {
 
 function App() {
   const { sessionId } = useParams();
+  const [userId, setUserId] = useState(localStorage.getItem('userId') || uuidv4());
+  useEffect(() => {
+    // Sauvegarde l'ID utilisateur dans le localStorage
+    if (!localStorage.getItem('userId')) {
+      localStorage.setItem('userId', userId);
+    }
+  }, [userId]);
+
+
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [files, setFiles] = useState<FileShare[]>([]);
@@ -84,44 +93,44 @@ function App() {
 
 
 
-  // Initialize WebRTC and other effects
-  useEffect(() => {
-    const initializeWebRTC = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-        streamRef.current = stream;
-        if (localVideoRef.current) {
-          localVideoRef.current.srcObject = stream;
-        }
+  // // Initialize WebRTC and other effects
+  // useEffect(() => {
+  //   const initializeWebRTC = async () => {
+  //     try {
+  //       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+  //       streamRef.current = stream;
+  //       if (localVideoRef.current) {
+  //         localVideoRef.current.srcObject = stream;
+  //       }
 
-        const peer = new Peer(uuidv4());
-        peerRef.current = peer;
+  //       const peer = new Peer(uuidv4());
+  //       peerRef.current = peer;
 
-        peer.on('call', (call) => {
-          call.answer(stream);
-          call.on('stream', (remoteStream) => {
-            if (remoteVideoRef.current) {
-              remoteVideoRef.current.srcObject = remoteStream;
-            }
-          });
-        });
+  //       peer.on('call', (call) => {
+  //         call.answer(stream);
+  //         call.on('stream', (remoteStream) => {
+  //           if (remoteVideoRef.current) {
+  //             remoteVideoRef.current.srcObject = remoteStream;
+  //           }
+  //         });
+  //       });
 
-      } catch (error) {
-        console.error('Error accessing media devices:', error);
-      }
-    };
+  //     } catch (error) {
+  //       console.error('Error accessing media devices:', error);
+  //     }
+  //   };
 
-    initializeWebRTC();
+  //   initializeWebRTC();
 
-    return () => {
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach(track => track.stop());
-      }
-      if (peerRef.current) {
-        peerRef.current.destroy();
-      }
-    };
-  }, []);
+  //   return () => {
+  //     if (streamRef.current) {
+  //       streamRef.current.getTracks().forEach(track => track.stop());
+  //     }
+  //     if (peerRef.current) {
+  //       peerRef.current.destroy();
+  //     }
+  //   };
+  // }, []);
 
   // Scroll to bottom of output when compile result changes
   useEffect(() => {
@@ -197,50 +206,108 @@ function App() {
   };
 
 
-const socket = io('http://192.168.1.13:3000');  // 🔁 Remplace par ton IP locale
+  // const socket = io(window.location.hostname.includes('localhost') 
+  // ? `http://${window.location.hostname}:3000` 
+  // : `https://${window.location.hostname}`);
+  const isLocalhost = window.location.hostname.includes('localhost');
+
+  const socket = io(
+    isLocalhost
+      ? 'http://localhost:3000'
+      : 'http://172.16.7.73:3000' // IP du serveur dans le LAN
+  );
+
+
+  useEffect(() => {
+    const fetchMessages = async () => {
+      try {
+        const response = await fetch(`http://${window.location.hostname}:3000/api/messages`);
+        if (response.ok) {
+          const messageHistory = await response.json();
+          // Convertir les messages du format serveur au format de l'interface utilisateur
+          const formattedMessages = messageHistory.map(msg => ({
+            id: msg._id || uuidv4(),
+            sender: msg.senderId === userId ? 'You' : 'Friend',
+            content: msg.content,
+            timestamp: new Date(msg.timestamp),
+          }));
+          setMessages(formattedMessages);
+          
+          // Auto-scroll après le chargement des messages
+          setTimeout(() => {
+            if (chatContainerRef.current) {
+              chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+            }
+          }, 100);
+        }
+      } catch (error) {
+        console.error('Erreur lors du chargement des messages:', error);
+      }
+    };
+    
+    fetchMessages();
+  }, [userId]);
 
 
 
 
-
-    useEffect(() => {
-      socket.on('receiveMessage', (data) => {
+  useEffect(() => {
+    socket.on('receiveMessage', (data) => {
+      // Ne pas afficher les messages que vous avez envoyés vous-même (ils sont déjà affichés)
+      if (data.senderId !== userId) {
         setMessages(prev => [
           ...prev,
           {
             id: uuidv4(),
             sender: 'Friend',
             content: data.content,
-            timestamp: new Date(),
+            timestamp: new Date(data.timestamp),
           },
         ]);
-      });
-  
-      return () => {
-        socket.off('receiveMessage');
-      };
-    }, []);
-  
-    const handleSendMessage = () => {
-      if (newMessage.trim()) {
-        const message: Message = {
-          id: uuidv4(),
-          sender: 'You',
-          content: newMessage,
-          timestamp: new Date(),
-        };
-        setMessages(prev => [...prev, message]);
-  
-        socket.emit('sendMessage', { content: newMessage });
-  
-        setNewMessage('');
+        
+        // Auto-scroll quand un nouveau message est reçu
         setTimeout(() => {
           if (chatContainerRef.current) {
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
           }
         }, 100);
       }
+    });
+  
+    return () => {
+      socket.off('receiveMessage');
     };
+  }, [userId]); // Ajoutez userId comme dépendance
+
+
+
+const handleSendMessage = () => {
+  if (newMessage.trim()) {
+    const messageData = {
+      senderId: userId,
+      receiverId: 'all', // Pour un chat de groupe, ou spécifiez l'ID d'un utilisateur spécifique
+      content: newMessage,
+      timestamp: new Date()
+    };
+    
+    const message: Message = {
+      id: uuidv4(),
+      sender: 'You',
+      content: newMessage,
+      timestamp: new Date(),
+    };
+    
+    setMessages(prev => [...prev, message]);
+    socket.emit('sendMessage', messageData);
+    setNewMessage('');
+    
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }
+    }, 100);
+  }
+};
   
   
 
@@ -506,31 +573,32 @@ const socket = io('http://192.168.1.13:3000');  // 🔁 Remplace par ton IP loca
 
           {/* Main Content Section */}
           <div className={`${isFullscreen ? 'hidden' : 'col-span-2'}`}>
-            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              {/* Tabs */}
-              <div className="flex border-b border-gray-200">
-                <button
-                  onClick={() => setActiveTab('chat')}
-                  className={`flex items-center px-4 py-2 border-b-2 font-medium text-sm ${
-                    activeTab === 'chat'
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
-                  <MessageSquare className="h-5 w-5 mr-2" />
-                  Chat
-                </button>
-                <button
-                  onClick={() => setActiveTab('code')}
-                  className={`flex items-center px-4 py-2 border-b-2 font-medium text-sm ${
-                    activeTab === 'code'
-                      ? 'border-indigo-500 text-indigo-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                  }`}
-                >
+  <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+    {/* Tabs */}
+    <div className="flex border-b border-gray-200">
+      <button
+        onClick={() => setActiveTab('chat')}
+        className={`flex items-center px-4 py-2 border-b-2 font-medium text-sm ${
+          activeTab === 'chat'
+            ? 'border-indigo-500 text-indigo-600'
+            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+        }`}
+      >
+        <MessageSquare className="h-5 w-5 mr-2" />
+        Chat
+      </button>
+      <button
+        onClick={() => setActiveTab('code')}
+        className={`flex items-center px-4 py-2 border-b-2 font-medium text-sm ${
+          activeTab === 'code'
+            ? 'border-indigo-500 text-indigo-600'
+            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+        }`}
+      >
                   <Code className="h-5 w-5 mr-2" />
                   Code Editor
                 </button>
+
                 <button
                   onClick={() => setActiveTab('whiteboard')}
                   className={`flex items-center px-4 py-2 border-b-2 font-medium text-sm ${
@@ -544,37 +612,27 @@ const socket = io('http://192.168.1.13:3000');  // 🔁 Remplace par ton IP loca
                 </button>
               </div>
 
-              {/* Tab Content */}
-              <div className="p-4">
-                {activeTab === 'chat' && (
-                  <div className="h-[600px] flex flex-col">
-                    {/* Chat Messages */}
-                    <div
-                      ref={chatContainerRef}
-                      className="flex-1 overflow-y-auto mb-4 space-y-4"
-                    >
-                      {messages.map((message) => (
-                        <div
-                          key={message.id}
-                          className={`flex ${
-                            message.sender === 'You' ? 'justify-end' : 'justify-start'
-                          }`}
-                        >
-                          <div
-                            className={`max-w-xs px-4 py-2 rounded-lg ${
-                              message.sender === 'You'
-                                ? 'bg-indigo-600 text-white'
-                                : 'bg-gray-100 text-gray-900'
-                            }`}
-                          >
-                            <p className="text-sm">{message.content}</p>
-                            <p className="text-xs mt-1 opacity-75">
-                              {message.timestamp.toLocaleTimeString()}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+    {/* Tab Content */}
+    <div className="p-4">
+      {activeTab === 'chat' && (
+        <div className="h-[600px] flex flex-col">
+          {/* Chat Messages */}
+          <div ref={chatContainerRef} className="flex-1 overflow-y-auto mb-4 space-y-4">
+            {messages.map((message) => (
+              <div key={message.id} className={`flex ${message.sender === 'You' ? 'justify-end' : 'justify-start'}`}>
+                <div
+                  className={`max-w-xs px-4 py-2 rounded-lg ${
+                    message.sender === 'You' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-900'
+                  }`}
+                >
+                  <p className="text-sm">{message.content}</p>
+                  <p className="text-xs mt-1 opacity-75">
+                    {message.timestamp.toLocaleTimeString()}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
 
                     {/* File Sharing */}
                     {files.length > 0 && (
@@ -608,33 +666,26 @@ const socket = io('http://192.168.1.13:3000');  // 🔁 Remplace par ton IP loca
                       </div>
                     )}
 
-                    {/* Message Input */}
-                    <div className="flex space-x-4">
-                      <input
-                        type="text"
-                        value={newMessage}
-                        onChange={(e) => setNewMessage(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                        placeholder="Type a message..."
-                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                      />
-                      <label className="p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input
-                          type="file"
-                          onChange={handleFileUpload}
-                          className="hidden"
-                        />
-                        <Share className="h-5 w-5 text-gray-400" />
-                      </label>
-                      <button
-                        onClick={handleSendMessage}
-                        className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-                      >
-                        <Send className="h-5 w-5" />
-                      </button>
-                    </div>
-                  </div>
-                )}
+          {/* Message Input */}
+          <div className="flex space-x-4">
+            <input
+              type="text"
+              value={newMessage}
+              onChange={(e) => setNewMessage(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+              placeholder="Type a message..."
+              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            />
+            <label className="p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+              <input type="file" onChange={handleFileUpload} className="hidden" />
+              <Share className="h-5 w-5 text-gray-400" />
+            </label>
+            <button onClick={handleSendMessage} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
+              <Send className="h-5 w-5" />
+            </button>
+          </div>
+        </div>
+      )}
 
                 {activeTab === 'code' && (
                   <div className="h-[600px] flex flex-col">

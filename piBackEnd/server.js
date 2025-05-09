@@ -24,18 +24,20 @@ import Message from './models/message.js';
 
 const app = express();
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173',
-    methods: ['GET', 'POST']
-  }
+    origin: '*', // En développement uniquement! En production, utilisez des domaines spécifiques
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  pingTimeout: 60000, // Délai avant déconnexion en cas d'inactivité
 });
 
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
-app.use(cors({
-  origin: 'http://localhost:5173',
+app.use(express.json());app.use(cors({
+  origin: '*', // En développement uniquement! Pour la production, spécifiez les domaines autorisés
   methods: 'GET,POST,PATCH,PUT,DELETE',
   allowedHeaders: 'Content-Type,Authorization',
 }));
@@ -92,32 +94,102 @@ app.use("/api/ai", aiRoutes);
 app.use("/api/proposal", proposalRoutes);
 
 // WebSocket logic
+const connectedUsers = new Map(); // stocke userId -> socketId
+const userSessions = new Map(); // stocke socketId -> userId
 
 io.on('connection', (socket) => {
   console.log('🟢 Utilisateur connecté :', socket.id);
 
+  // Enregistrer l'utilisateur quand il s'identifie
+  socket.on('userJoined', (userId) => {
+    console.log(`👤 Utilisateur ${userId} enregistré avec socket ${socket.id}`);
+    connectedUsers.set(userId, socket.id);
+    userSessions.set(socket.id, userId);
+    
+    // Informer les autres utilisateurs qu'un nouveau utilisateur est connecté
+    socket.broadcast.emit('userOnline', { userId });
+    
+    // Envoyer la liste des utilisateurs connectés à ce nouvel utilisateur
+    const onlineUsers = Array.from(connectedUsers.keys());
+    socket.emit('onlineUsers', { users: onlineUsers });
+  });
+
+
+
+// Gestion des messages
   socket.on('sendMessage', async (data) => {
     console.log('📨 Message reçu :', data);
 
     try {
+      // Créer un nouveau message dans la base de données
       const message = new Message({
         senderId: data.senderId,
-        receiverId: data.receiverId,
+        receiverId: data.receiverId || 'all', // 'all' pour les messages globaux
         content: data.content,
         timestamp: data.timestamp || new Date()
       });
 
       await message.save(); // 💾 Enregistrement en base
-
-      // Envoie uniquement au destinataire si tu veux du 1-to-1 (optionnel)
-      io.emit('receiveMessage', message); // 🔁 Diffusion à tous les clients
+      
+      // Diffuser le message selon son type
+      if (data.receiverId === 'all' || !data.receiverId) {
+        // Message pour tous
+        io.emit('receiveMessage', message);
+      } else {
+        // Message privé - envoyer seulement à l'expéditeur et au destinataire
+        const receiverSocketId = connectedUsers.get(data.receiverId);
+        
+        // Envoyer à l'expéditeur
+        socket.emit('receiveMessage', message);
+        
+        // Envoyer au destinataire s'il est connecté
+        if (receiverSocketId) {
+          io.to(receiverSocketId).emit('receiveMessage', message);
+        }
+      }
     } catch (error) {
       console.error('❌ Erreur enregistrement message :', error);
+      socket.emit('messageError', { error: 'Erreur lors de l\'envoi du message' });
     }
   });
+   // Partage de fichiers
+   socket.on('fileShared', (fileData) => {
+    if (fileData.receiverId === 'all') {
+      // Fichier partagé avec tout le monde
+      socket.broadcast.emit('newSharedFile', fileData);
+    } else {
+      // Fichier partagé avec un utilisateur spécifique
+      const receiverSocketId = connectedUsers.get(fileData.receiverId);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit('newSharedFile', fileData);
+      }
+    }
+  });
+  // Tableau blanc - synchronisation des dessins
+  socket.on('drawLine', (lineData) => {
+    // Diffuser le trait à tous les autres utilisateurs
+    socket.broadcast.emit('newLine', lineData);
+  });
 
+  // Éditeur de code - synchronisation du code
+  socket.on('codeChange', (codeData) => {
+    // Diffuser les changements de code à tous les autres utilisateurs
+    socket.broadcast.emit('codeUpdated', codeData);
+  });
+
+  // Gérer la déconnexion
   socket.on('disconnect', () => {
-    console.log('🔴 Utilisateur déconnecté :', socket.id);
+    const userId = userSessions.get(socket.id);
+    if (userId) {
+      console.log(`🔴 Utilisateur ${userId} déconnecté`);
+      connectedUsers.delete(userId);
+      userSessions.delete(socket.id);
+      
+      // Informer les autres utilisateurs que cet utilisateur est déconnecté
+      socket.broadcast.emit('userOffline', { userId });
+    } else {
+      console.log('🔴 Socket déconnecté sans utilisateur associé:', socket.id);
+    }
   });
 });
 
@@ -142,6 +214,10 @@ app.get('/api/messages', async (req, res) => {
 
 
 // Start the server
+// server.listen(PORT, () => {
+//   console.log(`🚀 API + WebSocket running on http://localhost:${PORT}`);
+// });
+
 server.listen(PORT, () => {
   console.log(`🚀 API + WebSocket running on http://localhost:${PORT}`);
 });
