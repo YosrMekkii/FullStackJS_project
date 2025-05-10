@@ -20,6 +20,7 @@ import matchRoutes from "./routes/matchRoutes.js";
 import openaiRoutes from './routes/openaiRoutes.js'; // Add this line near other route imports
 import challengesRoutes from './routes/challengesRoutes.js';
 import challenges from './routes/challenges.js'; 
+import recommendationRoutes from './routes/recommendationRoutes.js';
 
 
 
@@ -104,6 +105,7 @@ app.use('/api/challenges', challengesRoutes);
 app.use('/api/adminChallenges', challenges); 
 //app.use("/api/openai", openaiRoutes); // Add this before 404 handler
 app.use('/api/expert-applications', expertApplicationRoutes);
+app.use('/api', recommendationRoutes);
 
 
 

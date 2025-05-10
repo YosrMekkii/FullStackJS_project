@@ -104,32 +104,29 @@ const SkillMarketplace = () => {
 
   // Recommander des skills basées sur les intérêts
   useEffect(() => {
-    if (skills.length > 0 && userInterests.length > 0) {
-      // Algorithme simple de recommandation basé sur la correspondance de catégories et mots-clés
-      const interestKeywords = userInterests.map(interest => interest.toLowerCase());
-      
-      const recommendations = skills
-        .filter(skill => {
-          // Ne pas recommander les skills de l'utilisateur actuel
-          if (skill.user._id === currentUserId) return false;
-          
-          // Vérifier si la catégorie correspond à un intérêt
-          const categoryMatch = interestKeywords.includes(skill.category.toLowerCase());
-          
-          // Vérifier si le titre ou la description contient un mot-clé d'intérêt
-          const titleMatch = interestKeywords.some(keyword => 
-            skill.title.toLowerCase().includes(keyword));
-          const descMatch = interestKeywords.some(keyword => 
-            skill.description.toLowerCase().includes(keyword));
-            
-          return categoryMatch || titleMatch || descMatch;
-        })
-        .sort((a, b) => b.likes - a.likes) // Trier par popularité (nombre de likes)
-        .slice(0, 6); // Limiter à 6 recommandations
-      
-      setRecommendedSkills(recommendations);
+  if (currentUserId) {
+    fetchRecommendedSkills(currentUserId);
+  }
+}, [currentUserId]);
+
+const fetchRecommendedSkills = async (userId: string) => {
+  try {
+    const response = await fetch(`http://localhost:3000/api/recommendations/${userId}`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}` // Si protégé
+      }
+    });
+
+    if (!response.ok) {
+      throw new Error("Erreur lors de la récupération des recommandations");
     }
-  }, [skills, userInterests, currentUserId]);
+
+    const data = await response.json();
+    setRecommendedSkills(data);
+  } catch (error) {
+    console.error("Erreur fetchRecommendedSkills:", error);
+  }
+};
 
   // Filter skills based on category and search term
   const filteredSkills = skills.filter(skill => 
