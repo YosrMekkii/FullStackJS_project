@@ -29,6 +29,9 @@ import AdminOverview from './pages/AdminOverview';
 import Overview from './pages/Overview';
 import ProfileView from './pages/ProfileView';
 import Appp from './pages/appp';
+import EditSkill from './pages/EditSkill';
+import UserProfile from './pages/userProfile';
+
 function App() {
   const [user, setUser] = useState<any | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -313,9 +316,11 @@ const reports: Report[] = [];
         <Route path="/verify-email/error" element={<p>Une erreur est survenue</p>} />
         <Route path="/manage-challenges" element={<AdminChallenges />} />
         <Route path="/adminoverview" element={<AdminOverview />} />
-        </Routes>
+       
+        <Route path="/edit-skill/:id" element={<EditSkill />} />
+        <Route path="/user/:userId" element={<UserProfile />} />
+      </Routes>
     </div>
   );
 }
-
 export default App;

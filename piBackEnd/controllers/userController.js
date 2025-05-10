@@ -652,7 +652,7 @@ const verifyEmail = async (req, res) => {
 
 
 
-const getUserByEmail = async (req, res) => {
+const getUserByEmail = async (req, res) => { 
   try {
     const email = req.params.email; // Récupère l'email depuis les paramètres de l'URL
 
