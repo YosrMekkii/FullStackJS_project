@@ -84,6 +84,40 @@ export const getExpertApplications = async (req, res) => {
       res.status(500).json({ error: 'Erreur serveur lors de la vérification du certificat.' });
     }
   };
+
+export const reviewApplication = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { status, adminComment, adminId } = req.body; // ✅ récupération via body
+
+    if (!['approved', 'rejected'].includes(status)) {
+      return res.status(400).json({ error: "Le statut doit être 'approved' ou 'rejected'." });
+    }
+
+    const application = await ExpertApplication.findById(id).populate('user');
+    if (!application) {
+      return res.status(404).json({ error: "Demande non trouvée." });
+    }
+
+    application.status = status;
+    application.reviewedAt = new Date();
+    application.reviewedBy = adminId; // ✅ ici
+    application.adminComment = adminComment;
+
+    if (status === 'approved') {
+      application.user.role = 'expert';
+      await application.user.save();
+    }
+
+    await application.save();
+
+    return res.status(200).json({ message: `Demande ${status === 'approved' ? 'approuvée' : 'rejetée'} avec succès.` });
+  } catch (error) {
+    console.error("Erreur lors de la révision de la demande :", error);
+    return res.status(500).json({ error: "Erreur serveur." });
+  }
+};
+
   
 
   

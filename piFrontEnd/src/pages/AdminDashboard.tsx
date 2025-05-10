@@ -152,6 +152,26 @@ const AdminDashboard = () => {
   const [showUserModal, setShowUserModal] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [applications, setApplications] = useState<any[]>([]);
+  const [adminId, setAdminId] = useState<string | null>(null);
+  const [user, setUser] = useState<any[]>([]);
+
+
+  useEffect(() => {
+  const storedUserString = localStorage.getItem("user") || sessionStorage.getItem("user");
+
+  if (storedUserString) {
+    try {
+      const parsedUser = JSON.parse(storedUserString);
+      setUser(parsedUser);
+      setAdminId(parsedUser.id); // <-- récupération de l'ID
+    } catch (error) {
+      console.error("Erreur lors du parsing des données utilisateur :", error);
+      localStorage.removeItem("user");
+      sessionStorage.removeItem("user");
+    }
+  }
+}, []);
+
 
   
   const handleVerifyCertificate = async (application: any) => {
@@ -273,18 +293,32 @@ const handleCloseModal = () => {
   };
   
 
-  const handleExpertApproval = async (userId: string, approved: boolean) => {
-    try {
-      const response = await axios.patch(`http://localhost:3000/api/expert/applications/${userId}`, {
-        approved
-      });
-      console.log(`Expert application ${approved ? 'approved' : 'rejected'} for user ${userId}`);
-      // Recharger les applications après mise à jour
-      fetchExpertApplications();
-    } catch (error) {
-      console.error("Error updating expert application:", error);
-    }
-  };
+const handleExpertApproval = async (applicationId: string, approved: boolean) => {
+  if (!adminId) {
+    console.error("Admin ID non défini");
+    return;
+  }
+
+  try {
+    const status = approved ? 'approved' : 'rejected';
+
+    await axios.put(`http://localhost:3000/api/expert-applications/review/${applicationId}`, {
+      status,
+      adminComment: approved
+        ? "Demande approuvée par l'administrateur."
+        : "Demande rejetée par l'administrateur.",
+      adminId
+    });
+
+    console.log(`Expert application ${status} for application ${applicationId}`);
+    fetchExpertApplications();
+  } catch (error) {
+    console.error("Error updating expert application:", error);
+  }
+};
+
+
+
 
   const handleReportAction = (reportId: number, action: string, details: { duration?: number; message?: string }) => {
     console.log(`Taking action on report ${reportId}:`, { action, details });

@@ -1,7 +1,7 @@
 import express from 'express';
 import upload from '../middlewares/upload.js';
 import ExpertApplication from '../models/ExpertApplication.js';
-import { getExpertApplications, submitExpertApplication,verifyCertificateByApplicationId } from '../controllers/expertApplicationController.js';
+import { reviewApplication,getExpertApplications, submitExpertApplication,verifyCertificateByApplicationId } from '../controllers/expertApplicationController.js';
 
 const router = express.Router();
 
@@ -36,5 +36,10 @@ router.get('/applications', getExpertApplications);
 // ✅ Route indépendante pour la vérification seule
 
 router.get('/verify-certificate/:id', verifyCertificateByApplicationId);
+
+// Route pour approuver ou rejeter une demande d'expert
+router.put('/review/:id', reviewApplication);
+
+
 
 export default router;
