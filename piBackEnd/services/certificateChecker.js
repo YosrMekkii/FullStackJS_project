@@ -3,7 +3,7 @@ import OpenAI from 'openai';
 
 // Configurer OpenAI (clé gratuite possible)
 const openai = new OpenAI({
-  apiKey: "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", // Remplacez ou utilisez process.env
+  apiKey: "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", 
 });
 
 export async function checkCertificate(imagePath) {
