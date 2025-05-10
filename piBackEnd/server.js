@@ -10,6 +10,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 
 import './models/report.js';
+import expertApplicationRoutes from './routes/expertApplicationRoutes.js';
 
 import userRoutes from './routes/userRoutes.js';
 import skillRoutes from './routes/skillRoutes.js';
@@ -101,6 +102,8 @@ app.use('/uploads', express.static('uploads'));
 app.use("/api/openai", openaiRoutes); 
 app.use('/api/challenges', challengesRoutes);
 app.use('/api/adminChallenges', challenges); 
+//app.use("/api/openai", openaiRoutes); // Add this before 404 handler
+app.use('/api/expert-applications', expertApplicationRoutes);
 
 
 
