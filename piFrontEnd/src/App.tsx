@@ -26,6 +26,9 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import AdminChallenges from './pages/ChallengeManagement';
 import AdminOverview from './pages/AdminOverview';
+import Overview from './pages/Overview';
+import ProfileView from './pages/ProfileView';
+import Appp from './pages/appp';
 function App() {
   const [user, setUser] = useState<any | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
