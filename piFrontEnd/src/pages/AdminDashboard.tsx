@@ -486,14 +486,18 @@ const AdminDashboard = () => {
                         </div>
                         <AlertTriangle className="h-5 w-5 text-red-500" />
                         <div className="flex items-center space-x-2">
-                          <img
-                            src={`http://localhost:3000${report.reportedUser.profileImagePath}`}  // Chemin de l'image de l'utilisateur
-                            alt={report.reportedUser.firstName}
-                            className="h-8 w-8 rounded-full"
-                          />
+  <img
+    src={
+      report.reportedUser?.profileImagePath
+        ? `http://localhost:3000${report.reportedUser.profileImagePath}`
+        : '/default-avatar.png' // Replace with your actual default image path
+    }
+    alt={report.reportedUser?.firstName || 'User'}
+    className="h-8 w-8 rounded-full"
+  />
                           <div>
                             <p className="text-xs text-gray-500">Reported User</p>
-                            <p className="text-sm font-medium text-gray-900">{report.reportedUser.firstName}</p>
+                            <p className="text-sm font-medium text-gray-900">{}</p>
                           </div>
                         </div>
                       </div>
