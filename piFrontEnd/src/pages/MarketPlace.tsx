@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { UserPlus, PlusCircle, Flag, Search, Heart, Edit, Trash2 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
