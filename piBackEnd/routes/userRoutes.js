@@ -81,7 +81,7 @@ router.get("/", userController.getAllUsers);
 router.post("/batch", userController.getUsersByIds);
 router.get("/:id", userController.getUserById);
 router.put("/:id", userController.updateUser);
-router.put("/interests/:id", userController.updateUser);
+//router.put("/interests/:id", userController.updateUser);
 router.put("/skills/:id", userController.updateSkills);
 router.put("/achievements/:id", userController.updateBioAndAchievements);
 //router.get('/progress', getUserProgress);
@@ -106,10 +106,4 @@ router.post('/reset-password/:token', userController.resetPassword);
 router.get('/matches/:id', userController.getMatches);
 router.get('/:userId/progress',userController.getUserProgress);
 router.put('/:userId/progress/:challengeId',userController.updateUserProgress);
-
-
-
-
-
-
 export default router; // ✅ Export par défaut
