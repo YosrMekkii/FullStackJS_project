@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 // services/recommendationService.js
 import Skill from '../models/skill.js'
 import User from "../models/user.js";
