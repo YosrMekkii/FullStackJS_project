@@ -14,5 +14,6 @@ router.get("/completed", challengeController.getCompletedChallenges);
 router.get("/:id", challengeController.getChallengeById);
 router.post("/complete", challengeController.completeChallenge);
 router.get("/user/progress", challengeController.getUserProgress);
+router.post('/batch', challengeController.getChallengesByIds);  
 
 export default router;

@@ -26,6 +26,9 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import AdminChallenges from './pages/ChallengeManagement';
 import AdminOverview from './pages/AdminOverview';
+import Overview from './pages/Overview';
+import ProfileView from './pages/ProfileView';
+import Appp from './pages/appp';
 function App() {
   const [user, setUser] = useState<any | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -284,10 +287,8 @@ const reports: Report[] = [];
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/marketplace" element={<SkillMarketplace />} />
         <Route path="/postskill" element={<PostSkill />} />
-        <Route
-  path="/overview"
-  element={<Overview stats={stats} users={users} reports={reports} />}
-/>        <Route path="/interests/:id" element={<Interests />} />
+        <Route path="/overview" element={<Overview stats={stats} users={users} reports={reports} />}/>
+        <Route path="/interests/:id" element={<Interests />} />
         <Route path="/skills/:id" element={<SkillDetails />} />
         <Route path="/profile/:id" element={<ProfileView />} />
         <Route path="/app" element={<Appp />} />

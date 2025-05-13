@@ -16,6 +16,8 @@ similarity_matrix = model_data["similarity_matrix"]
 users_df = model_data["users"]
 challenges_df = model_data["challenges"] 
 vectorizer = model_data["vectorizer"]
+kmeans_model = model_data["kmeans_model"]  # Load the K-means model
+challenge_vecs = model_data["challenge_vecs"]  # Load the challenge vectors
 
 # MongoDB Atlas Connection
 client = MongoClient("mongodb+srv://ayari2014khalil:skillexchangedb@skillexchangedb.jyc2i.mongodb.net/")
@@ -52,12 +54,11 @@ def recommend_challenges():
         # Transform using the same vectorizer used during training
         user_vec = vectorizer.transform([interest_text])
         
-        # Compute similarity with all challenges
-        challenge_vecs = vectorizer.transform(challenges_df['tags_category'].tolist())
-        user_challenge_similarity = cosine_similarity(user_vec, challenge_vecs)[0]
+        # Calculate cosine similarity between user and all challenges
+        similarities = cosine_similarity(user_vec, challenge_vecs)[0]
         
-        # Get top N challenge indices
-        top_indices = np.argsort(user_challenge_similarity)[::-1][:num_recommendations]
+        # Get top N indices
+        top_indices = np.argsort(similarities)[::-1][:num_recommendations]
         
     else:
         # User exists in our training data
@@ -72,15 +73,21 @@ def recommend_challenges():
     
     # Fetch challenge details from MongoDB
     challenge_list = []
-    for challenge_id in recommended_challenge_ids:
+    for i, challenge_id in enumerate(recommended_challenge_ids):
         challenge_doc = challenges_collection.find_one({"_id": ObjectId(challenge_id)})
         if challenge_doc:
             # Convert ObjectId to string for JSON serialization
             challenge_doc["_id"] = str(challenge_doc["_id"])
-            # Add similarity score if available
+            
+            # Add similarity score
             if len(user_index) > 0:
                 idx = np.where(challenges_df['challenge_id'] == challenge_id)[0][0]
                 challenge_doc["similarity_score"] = float(user_similarities[idx])
+            else:
+                # For new users, get similarity score
+                idx = np.where(challenges_df['challenge_id'] == challenge_id)[0][0]
+                challenge_doc["similarity_score"] = float(similarities[idx])
+                
             challenge_list.append(challenge_doc)
     
     return jsonify({

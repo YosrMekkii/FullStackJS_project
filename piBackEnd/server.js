@@ -19,7 +19,6 @@ import matchRoutes from "./routes/matchRoutes.js";
 import openaiRoutes from './routes/openaiRoutes.js'; // Add this line near other route imports
 import challengesRoutes from './routes/challengesRoutes.js';
 import challenges from './routes/challenges.js'; 
-import cors from 'cors'; // ✅ Import CORS
 
 
 
@@ -101,7 +100,6 @@ app.use('/uploads', express.static('uploads'));
 app.use("/api/openai", openaiRoutes); 
 app.use('/api/challenges', challengesRoutes);
 app.use('/api/adminChallenges', challenges); 
-
 
 
 // 404 handler

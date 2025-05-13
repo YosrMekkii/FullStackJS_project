@@ -306,75 +306,107 @@ const Challenges = () => {
     loadUserData();
   }, []);
 
-  // Load challenges based on active tab
-  const loadChallenges = async (tab: 'recommended' | 'daily' | 'all' | 'completed', userId?: string) => {
-    setLoading(true);
-    try {
-      if (!userId && user) {
-        userId = user.id || user._id;
-      }
-      
-      if (!userId) {
-        throw new Error("Cannot load challenges: No user ID available");
-      }
-      
-      console.log(`Loading ${tab} challenges for user ID: ${userId}`);
-      
-      switch (tab) {
-        case 'daily': {
-          const dailyResults = await api.fetchDailyChallenges(userId);
-          console.log("Fetched daily challenges:", dailyResults);
-          setDailyChallenges(dailyResults);
-          break;
-        }
-        case 'recommended': {
-          // Get user interests to pass to the recommendation function
-          const interests = selectedInterests.length > 0 ? selectedInterests : undefined;
-          
-          try {
-            // First try the ML recommendation system
-            console.log("Attempting to fetch ML-based recommendations...");
-            const recResults = await fetchRecommendedChallenges(userId, interests);
-            console.log("Fetched ML-based recommended challenges:", recResults);
-            
-            // Add a source property to identify ML recommendations
-            const enhancedResults = recResults.map(challenge => ({
-              ...challenge,
-              source: 'ml', // Tag these as coming from the ML system
-            }));
-            
-            setRecommendedChallenges(enhancedResults);
-          } catch (mlError) {
-            // If ML recommendation fails, log the error and use the fallback
-            console.error("ML recommendation failed, using fallback:", mlError);
-            
-            // The fallback is already implemented in the fetchRecommendedChallenges function
-            // It will automatically use the original API if the ML service fails
-          }
-          
-          break;
-        }
-        case 'completed': {
-          const compResults = await api.fetchCompletedChallenges(userId);
-          console.log("Fetched completed challenges:", compResults);
-          setCompletedChallenges(compResults);
-          break;
-        }
-        case 'all': {
-          const allResults = await api.fetchChallenges(selectedCategory, userId);
-          console.log(`Fetched all challenges with category ${selectedCategory}:`, allResults);
-          setChallenges(allResults);
-          break;
-        }
-      }
-      
-    } catch (error) {
-      console.error(`Error fetching ${tab} challenges:`, error);
-      setError(`Failed to load ${tab} challenges. Please try again later.`);
-    } finally {
-      setLoading(false);
+  // Modify the loadChallenges function to fetch full challenge details for completed challenges
+const loadChallenges = async (tab: 'recommended' | 'daily' | 'all' | 'completed', userId?: string) => {
+  setLoading(true);
+  try {
+    if (!userId && user) {
+      userId = user.id || user._id;
     }
-  };
+    
+    if (!userId) {
+      throw new Error("Cannot load challenges: No user ID available");
+    }
+    
+    console.log(`Loading ${tab} challenges for user ID: ${userId}`);
+    
+    switch (tab) {
+      case 'daily': {
+        const dailyResults = await api.fetchDailyChallenges(userId);
+        console.log("Fetched daily challenges:", dailyResults);
+        // Filter out any challenges that might already be completed
+        const filteredDailyChallenges = dailyResults.filter(challenge => !challenge.completed);
+        setDailyChallenges(filteredDailyChallenges);
+        break;
+      }
+      case 'recommended': {
+        const interests = selectedInterests.length > 0 ? selectedInterests : undefined;
+        
+        try {
+          console.log("Attempting to fetch ML-based recommendations...");
+          const recResults = await fetchRecommendedChallenges(userId, interests);
+          
+          // Filter out completed challenges
+          const filteredRecResults = recResults.filter(challenge => !challenge.completed);
+          
+          const enhancedResults = filteredRecResults.map(challenge => ({
+            ...challenge,
+            source: 'ml',
+          }));
+          
+          setRecommendedChallenges(enhancedResults);
+        } catch (mlError) {
+          console.error("ML recommendation failed, using fallback:", mlError);
+        }
+        break;
+      }
+      case 'completed': {
+        // First get the IDs of completed challenges
+        const completedIdsResult = await api.fetchCompletedChallenges(userId);
+        console.log("Fetched completed challenges IDs:", completedIdsResult);
+        
+        if (completedIdsResult.length === 0) {
+          setCompletedChallenges([]);
+          break;
+        }
+        
+        // Then fetch full challenge details for these IDs
+        const completedChallengeIds = completedIdsResult.map(item => item._id);
+        const uniqueIds = [...new Set(completedChallengeIds)]; // Remove duplicates
+        
+        try {
+          // Add this function to your api.js service
+          const fullChallengeDetails = await api.fetchChallengesByIds(uniqueIds, userId);
+          
+          // Merge completion timestamps with full challenge details
+          const completedWithDetails = fullChallengeDetails.map(challenge => {
+            // Find the latest completion timestamp for this challenge
+            const completionInfo = completedIdsResult
+              .filter(item => item._id === challenge._id)
+              .sort((a, b) => new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime())[0];
+            
+            return {
+              ...challenge,
+              completed: true,
+              completedAt: completionInfo?.completedAt || new Date().toISOString()
+            };
+          });
+          
+          console.log("Completed challenges with full details:", completedWithDetails);
+          setCompletedChallenges(completedWithDetails);
+        } catch (detailsError) {
+          console.error("Failed to fetch full challenge details:", detailsError);
+          setError("Failed to load completed challenge details");
+        }
+        break;
+      }
+      case 'all': {
+        const allResults = await api.fetchChallenges(selectedCategory, userId);
+        console.log(`Fetched all challenges with category ${selectedCategory}:`, allResults);
+        // Filter out completed challenges
+        const filteredAllChallenges = allResults.filter(challenge => !challenge.completed);
+        setChallenges(filteredAllChallenges);
+        break;
+      }
+    }
+    
+  } catch (error) {
+    console.error(`Error fetching ${tab} challenges:`, error);
+    setError(`Failed to load ${tab} challenges. Please try again later.`);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Handle tab change
   useEffect(() => {
@@ -384,180 +416,95 @@ const Challenges = () => {
     }
   }, [activeTab, selectedCategory, user]);
 
-  const handleStartChallenge = (challenge: Challenge) => {
-    // Don't allow starting completed challenges
-    if (challenge.completed) {
-      console.log("Cannot start completed challenge");
-      return;
-    }
-    
-    console.log("Starting challenge:", challenge);
-    setActiveChallenge(challenge);
-  };
+ const handleStartChallenge = (challenge: Challenge) => {
+  // Don't allow starting completed challenges
+  if (challenge.completed) {
+    console.log("Cannot start completed challenge");
+    return;
+  }
+  
+  console.log("Starting challenge:", challenge);
+  setActiveChallenge(challenge);
+};
   
   const handleChallengeComplete = async (challengeId: string, success: boolean) => {
-    if (!success) {
-      console.log("Challenge failed, just closing modal");
-      setActiveChallenge(null);
-      return;
+  if (!success) {
+    console.log("Challenge failed, just closing modal");
+    setActiveChallenge(null);
+    return;
+  }
+  
+  try {
+    console.log(`Challenge ${challengeId} completed successfully, recording completion`);
+    
+    // Get user ID
+    const userId = user?.id || user?._id;
+    if (!userId) {
+      throw new Error("User ID not available");
     }
     
-    try {
-      console.log(`Challenge ${challengeId} completed successfully, recording completion`);
+    // Find the challenge that was completed
+    const completedChallenge = [...recommendedChallenges, ...dailyChallenges, ...challenges, ...completedChallenges]
+      .find(c => c._id === challengeId);
       
-      // Get user ID
-      const userId = user?.id || user?._id;
-      if (!userId) {
-        throw new Error("User ID not available");
-      }
-      
-      // Find the challenge that was completed before making the API call
-      const completedChallenge = [...recommendedChallenges, ...dailyChallenges, ...challenges, ...completedChallenges]
-        .find(c => c._id === challengeId);
-        
-      if (!completedChallenge) {
-        throw new Error("Challenge not found");
-      }
-      
-      // Call API to record completion
-      const result = await api.completeChallenge(challengeId, userId as string);
-      console.log("Challenge completion result:", result);
-      
-      // Store previous level to check for level up
-      const previousLevel = userProgress.level;
-      
-      // Get challenge XP for animation
-      // Show XP animation
-      setEarnedXp(completedChallenge.xp);
-      setShowXpAnimation(true);
-      
-      // Hide XP animation after 3 seconds
-      setTimeout(() => {
-        setShowXpAnimation(false);
-      }, 3000);
-      
-      // Remove the completed challenge from its current list
-      // Check which list contains the challenge and update it
-      if (activeTab === 'recommended') {
-        setRecommendedChallenges(prev => prev.filter(c => c._id !== challengeId));
-      } else if (activeTab === 'daily') {
-        setDailyChallenges(prev => prev.filter(c => c._id !== challengeId));
-      } else if (activeTab === 'all') {
-        setChallenges(prev => prev.filter(c => c._id !== challengeId));
-      }
-      
-      // Add challenge to completed list with completion timestamp
-      const justCompletedChallenge = {
-        ...completedChallenge,
-        completed: true,
-        completedAt: new Date().toISOString()
-      };
-      setCompletedChallenges(prev => [justCompletedChallenge, ...prev]);
-      
-      // Check if streak increased
-      if (result.streak > userProgress.streak) {
-        console.log("Streak increased! Showing animation");
-        setStreakAnimation(true);
-        
-        // Hide streak animation after 4 seconds
-        setTimeout(() => {
-          setStreakAnimation(false);
-        }, 4000);
-      }
-      
-      // Update user progress with new data
-      setUserProgress(prev => ({
-        ...prev,
-        xp: result.xp,
-        level: result.level,
-        currentLevelXP: result.currentLevelXP,
-        nextLevelXP: result.nextLevelXP,
-        streak: result.streak,
-        completedToday: result.completedToday,
-        lastCompletedDate: result.lastCompletedDate
-      }));
-      
-      // Update the level in the user object as well to ensure it persists
-      setUser(prev => prev ? {
-        ...prev,
-        level: result.level,
-        streak: result.streak,
-        completedToday: result.completedToday,
-        lastCompletedDate: result.lastCompletedDate
-      } : null);
-      
-      // Save user data to storage including streak and daily goals
-      const dataToSave = {
-        ...result,
-        interests: selectedInterests
-      };
-      const updateUserInStorage = (userData) => {
-        try {
-          // Get the current stored user data
-          const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
-          
-          if (storedUser) {
-            // Parse existing data
-            const existingData = JSON.parse(storedUser);
-            
-            // Merge with new data, preserving the ID and other essential fields
-            const updatedData = {
-              ...existingData,
-              ...userData,
-              // Make sure ID is preserved with either id or _id format
-              id: existingData.id || existingData._id,
-              _id: existingData._id || existingData.id
-            };
-            
-            // Store back in the same storage that was used originally
-            if (localStorage.getItem("user")) {
-              localStorage.setItem("user", JSON.stringify(updatedData));
-            } else {
-              sessionStorage.setItem("user", JSON.stringify(updatedData));
-            }
-            
-            console.log("User data updated in storage:", updatedData);
-          } else {
-            console.warn("No user data found in storage to update");
-          }
-        } catch (error) {
-          console.error("Error updating user in storage:", error);
-        }
-      };
-      updateUserInStorage(dataToSave);
-      
-      // Check for level up
-      if (result.level > previousLevel) {
-        setShowLevelUpToast(true);
-        setPreviousLevel(result.level);
-        
-        // Hide level up toast after 5 seconds
-        setTimeout(() => {
-          setShowLevelUpToast(false);
-        }, 5000);
-      }
-      
-      // Check for new badges
-      if (result.newBadges && result.newBadges.length > 0) {
-        console.log("New badges earned:", result.newBadges);
-        setNewBadges(result.newBadges);
-        setShowBadgeToast(true);
-        
-        // Hide toast after 5 seconds
-        setTimeout(() => {
-          setShowBadgeToast(false);
-        }, 5000);
-      }
-      
-      // Close challenge modal
-      setActiveChallenge(null);
-      
-    } catch (error) {
-      console.error('Error completing challenge:', error);
-      setError("Failed to record challenge completion. Please try again.");
-      setActiveChallenge(null);
+    if (!completedChallenge) {
+      throw new Error("Challenge not found");
     }
-  };
+    
+    // Call API to record completion
+    const result = await api.completeChallenge(challengeId, userId as string);
+    console.log("Challenge completion result:", result);
+    
+    // Store previous level to check for level up
+    const previousLevel = userProgress.level;
+    
+    // Show XP animation
+    setEarnedXp(completedChallenge.xp);
+    setShowXpAnimation(true);
+    
+    // Hide XP animation after 3 seconds
+    setTimeout(() => {
+      setShowXpAnimation(false);
+    }, 3000);
+    
+    // Remove the completed challenge from its current list
+    if (activeTab === 'recommended') {
+      setRecommendedChallenges(prev => prev.filter(c => c._id !== challengeId));
+    } else if (activeTab === 'daily') {
+      setDailyChallenges(prev => prev.filter(c => c._id !== challengeId));
+    } else if (activeTab === 'all') {
+      setChallenges(prev => prev.filter(c => c._id !== challengeId));
+    }
+    
+    // Add challenge to completed list with completion timestamp
+    const justCompletedChallenge = {
+      ...completedChallenge,
+      completed: true,
+      completedAt: new Date().toISOString()
+    };
+    setCompletedChallenges(prev => [justCompletedChallenge, ...prev]);
+    
+    // Update user progress with new data from API response
+    setUserProgress(prev => ({
+      ...prev,
+      xp: result.xp,
+      level: result.level,
+      currentLevelXP: result.currentLevelXP,
+      nextLevelXP: result.nextLevelXP,
+      streak: result.streak,
+      completedToday: result.completedToday,
+      lastCompletedDate: result.lastCompletedDate
+    }));
+    
+    // Close challenge modal
+    setActiveChallenge(null);
+    
+  } catch (error) {
+    console.error('Error completing challenge:', error);
+    setError("Failed to record challenge completion. Please try again.");
+    setActiveChallenge(null);
+  }
+};
 
   const handleSaveInterests = async () => {
     try {
@@ -907,11 +854,11 @@ const Challenges = () => {
                 ) : (
                   <div className="space-y-4">
                     {getActiveChallenges().length > 0 ? (
-                      getActiveChallenges().map((challenge) => (
-                        <div
-                          key={challenge._id}
-                          className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-indigo-200 transition-colors"
-                        >
+                      getActiveChallenges().map((challenge, index) => (
+  <div
+    key={`${challenge._id}-${index}`}
+    className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:border-indigo-200 transition-colors"
+  >
                           <div className="flex items-start justify-between">
                             <div>
                               <div className="flex items-center space-x-3">

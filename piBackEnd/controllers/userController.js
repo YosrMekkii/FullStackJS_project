@@ -540,6 +540,7 @@ const updateSkills = async (req, res) => {
   }
 };
 
+
 // ✅ Update interests (skills wanted)
 const updateInterests = async (req, res) => {
   try {
