@@ -3,7 +3,7 @@ import User from "../models/user.js";  // Ajout de l'extension .js
 
 const messageSchema = new mongoose.Schema({
     senderId: { type: String, required: true },
-    receiverId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
+    receiverId: { type: String,},
     content: { type: String, required: true },
     timestamp: { type: Date, default: Date.now }
   });

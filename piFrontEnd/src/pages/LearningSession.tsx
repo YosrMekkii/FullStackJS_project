@@ -82,6 +82,7 @@ function App() {
   const [compileResult, setCompileResult] = useState<CompileResult | null>(null);
   const [isCompiling, setIsCompiling] = useState(false);
   const [showOutput, setShowOutput] = useState(false);
+  const [remotePeers, setRemotePeers] = useState<string[]>([]);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
@@ -90,47 +91,112 @@ function App() {
   const streamRef = useRef<MediaStream>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
+  const peerConnections = useRef<Record<string, any>>({});
+
+  // Initialize WebRTC connection
+  
+useEffect(() => {
+  const initializeWebRTC = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      streamRef.current = stream;
+      if (localVideoRef.current) {
+        localVideoRef.current.srcObject = stream;
+      }
+
+      const peerOptions = {
+        host: '192.168.1.15',
+        port: 9000,
+        path: '/myapp',
+        debug: 3,
+      };
+      const peer = new Peer(undefined, {
+  host: 'localhost',
+  port: 9000,
+  path: '/myapp',
+  secure: true,
+});
+const remotePeerId = 'some-other-user-id'; // Ex: reçu du backend ou d'un autre utilisateur
+const conn = peer.connect(remotePeerId);
+conn.on('open', () => {
+  console.log('Connected to peer:', conn.peer);
+  conn.send('Hello from client A!');
+});
+
+conn.on('data', (data) => {
+  console.log('Received:', data);
+});
 
 
 
-  // // Initialize WebRTC and other effects
-  // useEffect(() => {
-  //   const initializeWebRTC = async () => {
-  //     try {
-  //       const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-  //       streamRef.current = stream;
-  //       if (localVideoRef.current) {
-  //         localVideoRef.current.srcObject = stream;
-  //       }
+      const setupPeer = (id: string) => {
+      const peer = new Peer(`${userId}-${Date.now()}`, peerOptions);
+        peerRef.current = peer;
 
-  //       const peer = new Peer(uuidv4());
-  //       peerRef.current = peer;
+peer.on('connection', (conn) => {
+  conn.on('data', (data) => {
+    console.log('Received:', data);
+  });
 
-  //       peer.on('call', (call) => {
-  //         call.answer(stream);
-  //         call.on('stream', (remoteStream) => {
-  //           if (remoteVideoRef.current) {
-  //             remoteVideoRef.current.srcObject = remoteStream;
-  //           }
-  //         });
-  //       });
+  conn.on('open', () => {
+    conn.send('Hello from client B!');
+  });
+});
 
-  //     } catch (error) {
-  //       console.error('Error accessing media devices:', error);
-  //     }
-  //   };
+        peer.on('call', (call) => {
+          console.log('Receiving call from:', call.peer);
+          call.answer(stream);
 
-  //   initializeWebRTC();
+          call.on('stream', (remoteStream) => {
+            console.log('Received remote stream');
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.srcObject = remoteStream;
+            }
+          });
 
-  //   return () => {
-  //     if (streamRef.current) {
-  //       streamRef.current.getTracks().forEach(track => track.stop());
-  //     }
-  //     if (peerRef.current) {
-  //       peerRef.current.destroy();
-  //     }
-  //   };
-  // }, []);
+          call.on('error', (err) => {
+            console.error('Call error:', err);
+          });
+
+          peerConnections.current[call.peer] = call;
+        });
+
+        peer.on('error', (err) => {
+          console.error('Peer connection error:', err);
+          if (err.type === 'unavailable-id' || err.type === 'id-taken') {
+            console.warn(`ID "${id}" is taken. Retrying with fallback ID...`);
+            const fallbackId = `${userId}-${Math.floor(Math.random() * 10000)}`;
+            setupPeer(fallbackId);
+          }
+        });
+      };
+
+      setupPeer(userId);
+
+    } catch (error) {
+      console.error('Error accessing media devices:', error);
+    }
+  };
+
+  initializeWebRTC();
+
+  return () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+    }
+
+    Object.values(peerConnections.current).forEach((call: any) => {
+      if (call && typeof call.close === 'function') {
+        call.close();
+      }
+    });
+
+    if (peerRef.current) {
+      peerRef.current.destroy();
+    }
+  };
+}, [userId, sessionId]);
+
 
   // Scroll to bottom of output when compile result changes
   useEffect(() => {
@@ -205,20 +271,64 @@ function App() {
     }
   };
 
-
-  // const socket = io(window.location.hostname.includes('localhost') 
-  // ? `http://${window.location.hostname}:3000` 
-  // : `https://${window.location.hostname}`);
-  const hostname = window.location.hostname || 'localhost';
-  const backendPort = 3000;
+  // Setup socket connection
+  const socket = io('http://192.168.1.15:3000');
   
-  const socket = io(`http://${hostname}:${backendPort}`);
-  
+  // Handle remote peer joining
+  useEffect(() => {
+    socket.on('peerJoined', ({ userId: remotePeerId, peerId }) => {
+      console.log('New peer joined:', remotePeerId, 'with PeerJS ID:', peerId);
+      
+      // Don't call yourself
+      if (remotePeerId === userId) return;
+      
+      // Keep track of remote peers
+      setRemotePeers(prev => [...prev, peerId]);
+      
+      // Initiate call to new peer
+      if (streamRef.current && peerRef.current) {
+        console.log('Calling peer:', peerId);
+        const call = peerRef.current.call(peerId, streamRef.current);
+        
+        call.on('stream', (remoteStream) => {
+          console.log('Received stream from called peer');
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = remoteStream;
+          }
+        });
+        
+        call.on('error', (err) => {
+          console.error('Call error:', err); 
+        });
+        
+        // Store the call reference
+        peerConnections.current[peerId] = call;
+      }
+    });
+    
+    socket.on('peerLeft', ({ peerId }) => {
+      console.log('Peer left:', peerId);
+      
+      // Remove from active peers list
+      setRemotePeers(prev => prev.filter(id => id !== peerId));
+      
+      // Close and cleanup connection
+      if (peerConnections.current[peerId]) {
+        peerConnections.current[peerId].close();
+        delete peerConnections.current[peerId];
+      }
+    });
+    
+    return () => {
+      socket.off('peerJoined');
+      socket.off('peerLeft');
+    };
+  }, [userId]);
 
   useEffect(() => {
     const fetchMessages = async () => {
       try {
-        const response = await fetch(`http://${window.location.hostname}:3000/api/messages`);
+        const response = await fetch('http://192.168.1.15:3000/api/messages');
         if (response.ok) {
           const messageHistory = await response.json();
           // Convertir les messages du format serveur au format de l'interface utilisateur
@@ -245,15 +355,21 @@ function App() {
     fetchMessages();
   }, [userId]);
 
-
-
-
   useEffect(() => {
     socket.on('connect', () => {
       console.log('Connected to server');
       // Rejoindre une room basée sur l'ID de session
       if (sessionId) {
         socket.emit('joinRoom', { roomId: sessionId, userId });
+        
+        // Also join the video room with the same session ID
+        if (peerRef.current && peerRef.current.id) {
+          socket.emit('joinVideoRoom', { 
+            roomId: sessionId, 
+            userId, 
+            peerId: peerRef.current.id 
+          });
+        }
       }
     });
   
@@ -279,52 +395,49 @@ function App() {
       }, 100);
     });
 
-  
     return () => {
       socket.off('receiveMessage');
     };
-  }, [userId]); // Ajoutez userId comme dépendance
+  }, [userId, sessionId]); 
 
-
-
-const handleSendMessage = () => {
-  if (newMessage.trim()) {
-    const messageId = uuidv4();
-    
-    // Données du message à envoyer au serveur
-    const messageData = {
-      id: messageId,
-      senderId: userId,
-      roomId: sessionId || 'global', // Utiliser l'ID de session comme ID de room
-      content: newMessage,
-      timestamp: new Date()
-    };
-    
-    // Message à afficher localement
-    const message = {
-      id: messageId,
-      sender: 'You',
-      content: newMessage,
-      timestamp: new Date(),
-    };
-    
-    // Ajouter le message à l'état local
-    setMessages(prev => [...prev, message]);
-    
-    // Envoyer le message via socket.io
-    socket.emit('sendMessage', messageData);
-    
-    // Réinitialiser le champ de message
-    setNewMessage('');
-    
-    // Auto-scroll
-    setTimeout(() => {
-      if (chatContainerRef.current) {
-        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-      }
-    }, 100);
-  }
-};
+  const handleSendMessage = () => {
+    if (newMessage.trim()) {
+      const messageId = uuidv4();
+      
+      // Données du message à envoyer au serveur
+      const messageData = {
+        id: messageId,
+        senderId: userId,
+        roomId: sessionId || 'global', // Utiliser l'ID de session comme ID de room
+        content: newMessage,
+        timestamp: new Date()
+      };
+      
+      // Message à afficher localement
+      const message = {
+        id: messageId,
+        sender: 'You',
+        content: newMessage,
+        timestamp: new Date(),
+      };
+      
+      // Ajouter le message à l'état local
+      setMessages(prev => [...prev, message]);
+      
+      // Envoyer le message via socket.io
+      socket.emit('sendMessage', messageData);
+      
+      // Réinitialiser le champ de message
+      setNewMessage('');
+      
+      // Auto-scroll
+      setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+      }, 100);
+    }
+  };
   
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -589,28 +702,28 @@ const handleSendMessage = () => {
 
           {/* Main Content Section */}
           <div className={`${isFullscreen ? 'hidden' : 'col-span-2'}`}>
-  <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-    {/* Tabs */}
-    <div className="flex border-b border-gray-200">
-      <button
-        onClick={() => setActiveTab('chat')}
-        className={`flex items-center px-4 py-2 border-b-2 font-medium text-sm ${
-          activeTab === 'chat'
-            ? 'border-indigo-500 text-indigo-600'
-            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-        }`}
-      >
-        <MessageSquare className="h-5 w-5 mr-2" />
-        Chat
-      </button>
-      <button
-        onClick={() => setActiveTab('code')}
-        className={`flex items-center px-4 py-2 border-b-2 font-medium text-sm ${
-          activeTab === 'code'
-            ? 'border-indigo-500 text-indigo-600'
-            : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-        }`}
-      >
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              {/* Tabs */}
+              <div className="flex border-b border-gray-200">
+                <button
+                  onClick={() => setActiveTab('chat')}
+                  className={`flex items-center px-4 py-2 border-b-2 font-medium text-sm ${
+                    activeTab === 'chat'
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <MessageSquare className="h-5 w-5 mr-2" />
+                  Chat
+                </button>
+                <button
+                  onClick={() => setActiveTab('code')}
+                  className={`flex items-center px-4 py-2 border-b-2 font-medium text-sm ${
+                    activeTab === 'code'
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
                   <Code className="h-5 w-5 mr-2" />
                   Code Editor
                 </button>
@@ -628,33 +741,33 @@ const handleSendMessage = () => {
                 </button>
               </div>
 
-    {/* Tab Content */}
-    <div className="p-4">
-    {activeTab === 'chat' && (
-  <div className="h-[600px] flex flex-col">
-    {/* Chat Messages */}
-    <div ref={chatContainerRef} className="flex-1 overflow-y-auto mb-4 space-y-4">
-      {messages.map((message) => (
-        <div 
-          key={message.id} 
-          className={`flex ${message.sender === 'You' ? 'justify-end' : 'justify-start'}`}
-        >
-          <div
-            className={`max-w-xs px-4 py-2 rounded-lg ${
-              message.sender === 'You' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-900'
-            }`}
-          >
-            <div className="flex items-center mb-1">
-              <span className="text-xs font-medium">{message.sender}</span>
-            </div>
-            <p className="text-sm">{message.content}</p>
-            <p className="text-xs mt-1 opacity-75">
-              {new Date(message.timestamp).toLocaleTimeString()}
-            </p>
-          </div>
-        </div>
-      ))}
-    </div>
+              {/* Tab Content */}
+              <div className="p-4">
+                {activeTab === 'chat' && (
+                  <div className="h-[600px] flex flex-col">
+                    {/* Chat Messages */}
+                    <div ref={chatContainerRef} className="flex-1 overflow-y-auto mb-4 space-y-4">
+                      {messages.map((message) => (
+                        <div 
+                          key={message.id} 
+                          className={`flex ${message.sender === 'You' ? 'justify-end' : 'justify-start'}`}
+                        >
+                          <div
+                            className={`max-w-xs px-4 py-2 rounded-lg ${
+                              message.sender === 'You' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-900'
+                            }`}
+                          >
+                            <div className="flex items-center mb-1">
+                              <span className="text-xs font-medium">{message.sender}</span>
+                            </div>
+                            <p className="text-sm">{message.content}</p>
+                            <p className="text-xs mt-1 opacity-75">
+                              {new Date(message.timestamp).toLocaleTimeString()}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
 
     {/* File Sharing */}
     {files.length > 0 && (

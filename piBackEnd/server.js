@@ -135,30 +135,41 @@ io.on('connection', (socket) => {
 
 
 // Gestion des messages
+// Dans la partie socket.on('sendMessage') de votre code, modifiez comme ceci:
 socket.on('sendMessage', async (data) => {
   console.log('📨 Message reçu :', data);
 
   try {
     const senderId = data.senderId;
-    const receiverId = "67f999a879e4baaee98047c6";  // Utiliser 'all' si receiverId n'est pas fourni
+    
+    // Utiliser roomId comme receiverId pour les messages globaux
+    // Si data.roomId est 'global', cela signifie que c'est un message pour tous
+    let receiverId = data.receiverId || null;
+    
+    // Si roomId est 'global' ou si receiverId n'est pas défini mais roomId est défini
+    if (data.roomId === 'global' || (!receiverId && data.roomId)) {
+      receiverId = 'all'; // ou une autre valeur qui représente tous les utilisateurs
+    }
 
+    // Créer le message
     const message = new Message({
       senderId: senderId,
-      receiverId: receiverId,
+      receiverId: receiverId, // maintenant receiverId est toujours défini
       content: data.content,
-      timestamp: data.timestamp || new Date()
+      timestamp: data.timestamp || new Date(),
     });
 
+    // Sauvegarder le message
     await message.save();
 
     // Diffusion du message
-    if (receiverId === 'all') {
-      io.emit('receiveMessage', message);  // Message global
+    if (receiverId === 'all') { // Message global
+      io.emit('receiveMessage', message); // Envoi à tous les utilisateurs
     } else {
       const receiverSocketId = connectedUsers.get(receiverId);
-      socket.emit('receiveMessage', message);  // Envoi à l'expéditeur
+      socket.emit('receiveMessage', message); // Envoi à l'expéditeur
       if (receiverSocketId) {
-        io.to(receiverSocketId).emit('receiveMessage', message);  // Envoi au destinataire
+        io.to(receiverSocketId).emit('receiveMessage', message); // Envoi au destinataire
       }
     }
   } catch (error) {
@@ -209,14 +220,6 @@ socket.on('sendMessage', async (data) => {
   });
 });
 
-// 404 handler
-app.use((req, res) => {
-  res.status(404).json({ error: "Route not found" });
-});
-
-
-
-// route pour charger les messages stockés :
 app.get('/api/messages', async (req, res) => {
   try {
     const messages = await Message.find().sort({ timestamp: 1 });
@@ -226,6 +229,19 @@ app.get('/api/messages', async (req, res) => {
   }
 });
 
+// 404 handler
+app.use((req, res) => {
+  res.status(404).json({ error: "Route not found" });
+});
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 API + WebSocket running on http://192.168.1.15:${PORT}`);
+});
+
+
+// route pour charger les messages stockés :
+
+
 
 
 // Start the server
@@ -233,6 +249,4 @@ app.get('/api/messages', async (req, res) => {
 //   console.log(`🚀 API + WebSocket running on http://localhost:${PORT}`);
 // });
 
-server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 API + WebSocket running on http://192.168.1.15:${PORT}`);
-});
+
