@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import Editor from "@monaco-editor/react";
 import Peer from 'peerjs';
@@ -16,7 +15,6 @@ import {
   Pencil,
   Download,
   Send,
-  X,
   Maximize2,
   Minimize2,
   Eraser,
@@ -54,7 +52,6 @@ interface CompileResult {
 }
 
 function App() {
-  const { sessionId } = useParams();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [files, setFiles] = useState<FileShare[]>([]);

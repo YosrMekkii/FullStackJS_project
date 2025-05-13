@@ -4,11 +4,9 @@ import axios from "axios";
 import {
   ThumbsUp,
   ThumbsDown,
-  MessageSquare,
   CheckCircle2,
   ArrowLeft,
   Send,
-  Flag,
   Edit,
   Trash,
   X,

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import Sidebar from '../components/Sidebar'; // Import the Sidebar component
 import ExpertApplicationForm from '../pages/ExpertApplicationForm';
@@ -28,8 +28,8 @@ const Profile = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [showGDPRInfo, setShowGDPRInfo] = useState(false);
-  const [profilePicture, setProfilePicture] = useState('');
-  const [uploadPreview, setUploadPreview] = useState(null);
+  const [profilePicture, setProfilePicture] = useState<string | ArrayBuffer | null>(null);
+  const [uploadPreview, setUploadPreview] = useState<string | ArrayBuffer | null>(null);
   const fileInputRef = useRef(null);
   const [showExpertForm, setShowExpertForm] = useState(false);
 

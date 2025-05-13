@@ -1,6 +1,5 @@
-import React from "react";
 import { Link } from 'react-router-dom'; // Import Link for navigation
-import { ArrowRight, Search, ChevronRight, Star, Users, BookOpen, Award, Globe, Briefcase, Code, Sparkles, Target, Heart, Github, Linkedin } from 'lucide-react'; // Added Github and Linkedin icons
+import { ArrowRight, Users,  Globe, Sparkles, Target, Heart, Github, Linkedin } from 'lucide-react'; // Added Github and Linkedin icons
 import dhiaImg from "../assets/DSC0003.jpg"; // Import images for team members
 import khalilImg from "../assets/414d0c0a-b654-46db-9b2b-d80a1cff5a0d.jpeg";
 import yosrImg from "../assets/380348815_227017787014770_2900555263838606331_n.jpg";

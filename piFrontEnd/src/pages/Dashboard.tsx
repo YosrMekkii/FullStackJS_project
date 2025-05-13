@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import Sidebar from '../components/Sidebar';
 import { useNavigate } from 'react-router-dom';
@@ -15,12 +15,21 @@ interface Recommendation {
   };
 }
 
+interface User {
+  id: string;
+  firstName: string;
+  country: string;
+  skills: string[];
+  interests: string[];
+  // ajoute d'autres propriétés si nécessaire
+}
+
 
 const Dashboard = () => {
   const [sidebarState, setSidebarState] = useState(false);
   const [mainContentMargin, setMainContentMargin] = useState('ml-64');
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
       const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
@@ -89,11 +98,13 @@ const Dashboard = () => {
   }, [user]);
 
   useEffect(() => {
-    const handleSidebarChange = (event) => {
-      setSidebarState(event.detail.isCollapsed);
-    };
-    window.addEventListener('sidebarStateChange', handleSidebarChange);
-    return () => window.removeEventListener('sidebarStateChange', handleSidebarChange);
+    const handleSidebarChange = (event: CustomEvent<{ isCollapsed: boolean }>) => {
+  setSidebarState(event.detail.isCollapsed);
+};
+
+    window.addEventListener('sidebarStateChange', (e) => {
+  handleSidebarChange(e as CustomEvent<{ isCollapsed: boolean }>);
+});
   }, []);
 
   useEffect(() => {
@@ -121,10 +132,11 @@ const Dashboard = () => {
                   className="p-6 flex items-center justify-between hover:bg-gray-50 cursor-pointer">
                   <div className="flex items-center space-x-4">
                   <img
-                    src= {`http://localhost:3000${exchange.userDetails.profileImagePath}`} 
-                    alt={exchange.offering}
-                    className="h-10 w-10 rounded-full"
-                  />
+  src={`http://localhost:3000${exchange.userDetails?.profileImagePath}`}
+  alt={exchange.offering}
+  className="h-10 w-10 rounded-full"
+/>
+
                   <div>
                     <h3 className="text-sm font-medium text-gray-900">{exchange.userDetails?.firstName}</h3>
                     <p className="text-sm text-gray-500">{exchange.userDetails?.country}</p>

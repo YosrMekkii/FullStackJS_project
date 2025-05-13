@@ -1,6 +1,5 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
-import { Search, ArrowRight, Star, Users, BookOpen, Award, ChevronRight, Globe, Briefcase, Code, Sparkles } from 'lucide-react';
+import { Search, ArrowRight, Star, ChevronRight, Globe, Briefcase, Code, Sparkles } from 'lucide-react';
 
 export function Home() {
   return (

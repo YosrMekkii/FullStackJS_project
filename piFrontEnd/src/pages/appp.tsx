@@ -1,19 +1,21 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { io } from 'socket.io-client';
 import VideoCall from './VideoCall';
 import Chat from './Chat';
 import Sidebar from './../components/Sidebar';
-import { MessageSquare, Code, Pencil } from 'lucide-react';
+import { MessageSquare } from 'lucide-react';
+
 
 // ... (rest of your imports)
+
 
 function Appp() {
   const { sessionId } = useParams();
   const [socket, setSocket] = useState<any>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState('');
-  const [files, setFiles] = useState<FileShare[]>([]);
+  const [files, setFiles] = useState<any[]>([]);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
   const [activeTab, setActiveTab] = useState<'chat' | 'code' | 'whiteboard'>('chat');
