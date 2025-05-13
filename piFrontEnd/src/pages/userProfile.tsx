@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { useParams, Link } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
@@ -7,9 +7,7 @@ import {
   MapPin, 
   Calendar, 
   Book, 
-  Award, 
-  ChevronLeft,
-  UserPlus,
+  Award,
   ArrowLeft,
   MessageSquare
 } from 'lucide-react';
@@ -40,14 +38,6 @@ interface UserProfile {
   };
 }
 
-interface Skill {
-  _id: string;
-  title: string;
-  description: string;
-  category: string;
-  image: string;
-  createdAt: string;
-}
 
 const UserProfile = () => {
   const { userId } = useParams<{ userId: string }>();
@@ -89,14 +79,14 @@ const UserProfile = () => {
     }
   };
 
-  const formatDate = (dateString: string) => {
+  /*const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString(undefined, {
       year: 'numeric',
       month: 'long',
       day: 'numeric'
     });
-  };
+  };*/
 
   if (loading) {
     return (

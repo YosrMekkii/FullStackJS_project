@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { GraduationCap, Menu, X, ChevronDown, Bell, User } from 'lucide-react';
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -16,7 +16,6 @@ import Challenges from './pages/Challenges';
 import About from './pages/About';
 import SkillMatching from './pages/SkillMatching';
 import StudentInterface from './pages/studentLearningInterface';
-import { Navigate } from "react-router-dom";
 import Community from './pages/community';
 import QA from './pages/questionsanswers';
 import QuestionDetail from './pages/Questiondetail';
@@ -37,10 +36,6 @@ function App() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const navigate = useNavigate();
-
-  const ProtectedRoute = ({ user, children }: { user: any; children: JSX.Element }) => {
-    return user ? children : <Navigate to="/login" />;
-  };
 
   useEffect(() => {
     const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");

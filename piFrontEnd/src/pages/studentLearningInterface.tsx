@@ -1,10 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import Editor from "@monaco-editor/react";
 import Peer from 'peerjs';
-import { io } from 'socket.io-client';
-import axios from 'axios';
 import { 
   Video,
   VideoOff,
@@ -62,24 +59,9 @@ interface ChatMessage {
   role: 'user' | 'assistant' | 'system';
   content: string;
 }
-interface OpenAIStreamChunk {
-  id: string;
-  object: string;
-  created: number;
-  model: string;
-  choices: {
-    index: number;
-    delta: {
-      content?: string;
-      role?: string;
-    };
-    finish_reason: string | null;
-  }[];
-}
 
 
 function StudentInterface() {
-  const { sessionId } = useParams();
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [files, setFiles] = useState<FileShare[]>([]);
@@ -113,9 +95,7 @@ function StudentInterface() {
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([
     {role: 'assistant', content: "Hello! I'm your AI learning assistant. How can I help you with your studies today?"}
   ]);
-  const [mentorStatus, setMentorStatus] = useState<'online' | 'away' | 'offline'>('online');
-  const [showChatOptions, setShowChatOptions] = useState(false);
-
+  const [mentorStatus ] = useState<'online' | 'away' | 'offline'>('online');
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);

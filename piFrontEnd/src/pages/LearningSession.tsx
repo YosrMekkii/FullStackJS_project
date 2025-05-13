@@ -1,10 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { useParams } from 'react-router-dom';
 import { v4 as uuidv4 } from 'uuid';
 import Editor from "@monaco-editor/react";
 import Peer from 'peerjs';
 import { io } from 'socket.io-client';
 import Sidebar from '../components/Sidebar'; // Import the Sidebar component
+import { useParams } from 'react-router-dom';
 import { 
   Video,
   VideoOff,
@@ -16,7 +16,6 @@ import {
   Pencil,
   Download,
   Send,
-  X,
   Maximize2,
   Minimize2,
   Eraser,

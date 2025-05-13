@@ -1,11 +1,9 @@
 import React, { useState } from 'react';
 import { 
   AlertCircle, 
-  UserCheck, 
-  Activity, 
+  UserCheck,  
   Calendar, 
-  Users, 
-  BarChart3, 
+  Users,  
   ArrowUpRight, 
   ArrowDownRight,
   Clock,
