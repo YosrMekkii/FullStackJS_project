@@ -378,7 +378,7 @@ const MatchesPage = () => {
                   className="bg-white rounded-xl shadow-md overflow-hidden transition-transform hover:scale-105 relative"
                 >
                   {/* Make the entire card clickable except for the buttons */}
-                  <Link to={`/profile1/${user.id}`} className="block">
+                  <Link to={`/profile/${user.id}`} className="block">
                     {/* Image section */}
                     <div 
                       className="h-48 bg-cover bg-center bg-gray-200"
