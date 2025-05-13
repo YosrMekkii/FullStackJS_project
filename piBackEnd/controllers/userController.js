@@ -772,7 +772,39 @@ const updateUserInterests = async (req, res) => {
   }
 };
 
+
+
+const sendWarningEmail = async (req, res) => {
+  const { email, message, firstName } = req.body;
+  const transporter = nodemailer.createTransport({
+  service: 'gmail', // ou un autre provider SMTP
+  auth: {
+    user: process.env.EMAIL_USER, // Ton email
+    pass: process.env.EMAIL_PASS, // Ton mot de passe ou App Password
+  },
+});
+
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "⚠ Avertissement important",
+      html: `<p>Bonjour ${firstName || 'Utilisateur'},</p>
+             <p>${message}</p>
+             <p>Merci de votre compréhension.</p>`,
+    });
+
+    res.status(200).json({ message: "Email d'avertissement envoyé avec succès." });
+  } catch (error) {
+    console.error("Erreur lors de l'envoi de l'email d'avertissement :", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || "Une erreur est survenue lors de l'envoi de l'email." });
+    }
+  }
+};
+
 export {
+  sendWarningEmail,
   updateUserInterests,
   forgotPassword,
   resetPassword,
