@@ -106,4 +106,5 @@ router.post('/reset-password/:token', userController.resetPassword);
 router.get('/matches/:id', userController.getMatches);
 router.get('/:userId/progress',userController.getUserProgress);
 router.put('/:userId/progress/:challengeId',userController.updateUserProgress);
+router.get('/leaderboard', userController.getLeaderboard);
 export default router; // ✅ Export par défaut
