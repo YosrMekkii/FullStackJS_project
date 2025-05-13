@@ -10,6 +10,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 
 import './models/report.js';
+import expertApplicationRoutes from './routes/expertApplicationRoutes.js';
 
 import userRoutes from './routes/userRoutes.js';
 import skillRoutes from './routes/skillRoutes.js';
@@ -19,23 +20,29 @@ import matchRoutes from "./routes/matchRoutes.js";
 import openaiRoutes from './routes/openaiRoutes.js'; // Add this line near other route imports
 import challengesRoutes from './routes/challengesRoutes.js';
 import challenges from './routes/challenges.js'; 
+import Message from './models/message.js';
+//import cors from 'cors'; // ✅ Import CORS
+import recommendationRoutes from './routes/recommendationRoutes.js';
+
 
 
 
 const app = express();
 const server = http.createServer(app);
+
 const io = new Server(server, {
   cors: {
-    origin: 'http://localhost:5173',
-    methods: ['GET', 'POST']
-  }
+    origin: '*', // En développement uniquement! En production, utilisez des domaines spécifiques
+    methods: ['GET', 'POST'],
+    credentials: true
+  },
+  pingTimeout: 60000, // Délai avant déconnexion en cas d'inactivité
 });
 
 const PORT = process.env.PORT || 3000;
 
-app.use(express.json());
-app.use(cors({
-  origin: 'http://localhost:5173',
+app.use(express.json());app.use(cors({
+  origin: '*', // En développement uniquement! Pour la production, spécifiez les domaines autorisés
   methods: 'GET,POST,PATCH,PUT,DELETE',
   allowedHeaders: 'Content-Type,Authorization',
 }));
@@ -100,7 +107,107 @@ app.use('/uploads', express.static('uploads'));
 app.use("/api/openai", openaiRoutes); 
 app.use('/api/challenges', challengesRoutes);
 app.use('/api/adminChallenges', challenges); 
+//app.use("/api/openai", openaiRoutes); // Add this before 404 handler
+app.use('/api/expert-applications', expertApplicationRoutes);
+app.use('/api', recommendationRoutes);
 
+// WebSocket logic
+const connectedUsers = new Map(); // stocke userId -> socketId
+const userSessions = new Map(); // stocke socketId -> userId
+
+io.on('connection', (socket) => {
+  console.log('🟢 Utilisateur connecté :', socket.id);
+
+  // Enregistrer l'utilisateur quand il s'identifie
+  socket.on('userJoined', (userId) => {
+    console.log(`👤 Utilisateur ${userId} enregistré avec socket ${socket.id}`);
+    connectedUsers.set(userId, socket.id);
+    userSessions.set(socket.id, userId);
+    
+    // Informer les autres utilisateurs qu'un nouveau utilisateur est connecté
+    socket.broadcast.emit('userOnline', { userId });
+    
+    // Envoyer la liste des utilisateurs connectés à ce nouvel utilisateur
+    const onlineUsers = Array.from(connectedUsers.keys());
+    socket.emit('onlineUsers', { users: onlineUsers });
+  });
+
+
+
+// Gestion des messages
+socket.on('sendMessage', async (data) => {
+  console.log('📨 Message reçu :', data);
+
+  try {
+    const senderId = data.senderId;
+    const receiverId = "67f999a879e4baaee98047c6";  // Utiliser 'all' si receiverId n'est pas fourni
+
+    const message = new Message({
+      senderId: senderId,
+      receiverId: receiverId,
+      content: data.content,
+      timestamp: data.timestamp || new Date()
+    });
+
+    await message.save();
+
+    // Diffusion du message
+    if (receiverId === 'all') {
+      io.emit('receiveMessage', message);  // Message global
+    } else {
+      const receiverSocketId = connectedUsers.get(receiverId);
+      socket.emit('receiveMessage', message);  // Envoi à l'expéditeur
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit('receiveMessage', message);  // Envoi au destinataire
+      }
+    }
+  } catch (error) {
+    console.error('❌ Erreur enregistrement message :', error);
+    socket.emit('messageError', { error: 'Erreur lors de l\'envoi du message' });
+  }
+});
+
+
+   // Partage de fichiers
+   socket.on('fileShared', (fileData) => {
+    if (fileData.receiverId === 'all') {
+      // Fichier partagé avec tout le monde
+      socket.broadcast.emit('newSharedFile', fileData);
+    } else {
+      // Fichier partagé avec un utilisateur spécifique
+      const receiverSocketId = connectedUsers.get(fileData.receiverId);
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit('newSharedFile', fileData);
+      }
+    }
+  });
+  // Tableau blanc - synchronisation des dessins
+  socket.on('drawLine', (lineData) => {
+    // Diffuser le trait à tous les autres utilisateurs
+    socket.broadcast.emit('newLine', lineData);
+  });
+
+  // Éditeur de code - synchronisation du code
+  socket.on('codeChange', (codeData) => {
+    // Diffuser les changements de code à tous les autres utilisateurs
+    socket.broadcast.emit('codeUpdated', codeData);
+  });
+
+  // Gérer la déconnexion
+  socket.on('disconnect', () => {
+    const userId = userSessions.get(socket.id);
+    if (userId) {
+      console.log(`🔴 Utilisateur ${userId} déconnecté`);
+      connectedUsers.delete(userId);
+      userSessions.delete(socket.id);
+      
+      // Informer les autres utilisateurs que cet utilisateur est déconnecté
+      socket.broadcast.emit('userOffline', { userId });
+    } else {
+      console.log('🔴 Socket déconnecté sans utilisateur associé:', socket.id);
+    }
+  });
+});
 
 // 404 handler
 app.use((req, res) => {
@@ -122,6 +229,10 @@ app.get('/api/messages', async (req, res) => {
 
 
 // Start the server
-server.listen(PORT, () => {
-  console.log(`🚀 API + WebSocket running on http://localhost:${PORT}`);
+// server.listen(PORT, () => {
+//   console.log(`🚀 API + WebSocket running on http://localhost:${PORT}`);
+// });
+
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 API + WebSocket running on http://192.168.1.15:${PORT}`);
 });

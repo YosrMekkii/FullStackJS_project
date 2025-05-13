@@ -39,6 +39,70 @@ const Dashboard = () => {
 
     const navigate = useNavigate();
 
+
+// const saveMatch = async (matchedUserId: string) => {
+//   // Check if current user exists and has an ID
+//   if (!user) {
+//     console.error("Current user is null or undefined");
+//     return null;
+//   }
+  
+//   // Safely extract the user ID, with fallbacks
+//   const userId = user._id || user.id;
+  
+//   if (!userId) {
+//     console.error("No valid ID found in user object:", user);
+//     return null;
+//   }
+  
+//   // Check if matchedUserId is valid
+//   if (!matchedUserId) {
+//     console.error("matchedUserId is null or undefined");
+//     return null;
+//   }
+  
+//   // Safe toString conversion with fallbacks
+//   const userIdString = typeof userId === 'object' && userId !== null ? 
+//     userId.toString() : String(userId);
+//   const matchedUserIdString = String(matchedUserId);
+  
+//   console.log("Using IDs for match:", {
+//     userIdString,
+//     matchedUserIdString
+//   });
+  
+//   try {
+//     const matchData = {
+//       userId: userIdString,
+//       matchedUserId: matchedUserIdString,
+//       createdAt: new Date().toISOString()
+//     };
+    
+//     console.log("Sending match data to server:", matchData);
+    
+//     const response = await axios.post('http://localhost:3000/api/matches', matchData);
+//     console.log("Match saved to database:", response.data);
+    
+//     // Check if it's a mutual match
+//     const mutualResponse = await axios.get(
+//       `http://localhost:3000/api/matches/mutual/${userIdString}/${matchedUserIdString}`
+//     );
+    
+//     const isMutual = mutualResponse.data.isMutual;
+//     console.log("Is mutual match:", isMutual);
+    
+//     // Add to local matches state
+//     const savedMatch = response.data;
+//     setMatches(prev => [...prev, savedMatch]);
+    
+//     return { ...savedMatch, isMutual };
+//   } catch (error) {
+//     console.error("Error saving match:", error);
+//     return null;
+//   }
+// };
+
+
   // Fetch recommendations on component load
   // Fetch recommendations and user details on component load
   useEffect(() => {

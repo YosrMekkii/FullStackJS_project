@@ -35,7 +35,7 @@ const userSchema = new mongoose.Schema({
   interactions: [{ type: mongoose.Schema.Types.ObjectId, ref: "user" }],  // ✅ Users they engaged with
   // 🔹 Sécurité & Vérification
   status: { type: Boolean, default: true },
-  role: { type: String, enum: ["user", "admin"], default: "user" },
+  role: { type: String, enum: ["user", "admin", "expert"], default: "user" },
 
   // 🔹 Notifications
   notifications: [{ message: String, date: Date }],
