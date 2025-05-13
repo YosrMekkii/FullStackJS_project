@@ -1,9 +1,11 @@
 from pymongo import MongoClient
 import pandas as pd
 from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.metrics.pairwise import cosine_similarity
+from sklearn.cluster import KMeans
+import numpy as np
 import joblib
 import pprint
+from sklearn.metrics.pairwise import cosine_similarity
 
 # For debugging
 pp = pprint.PrettyPrinter(indent=4)
@@ -79,20 +81,45 @@ challenge_vecs = tfidf_matrix[len(users_df):]
 print(f"User vectors shape: {user_vecs.shape}")
 print(f"Challenge vectors shape: {challenge_vecs.shape}")
 
-# Step 6: Compute similarity
-similarity_matrix = cosine_similarity(user_vecs, challenge_vecs)
+# Step 6: Create K-means model for challenge vectors
+# Choose number of clusters - a good rule of thumb is sqrt(n/2) where n is the number of samples
+n_clusters = min(int(np.sqrt(challenge_vecs.shape[0]/2)), challenge_vecs.shape[0])
+# Ensure at least 1 cluster
+n_clusters = max(1, n_clusters)
+
+print(f"Using {n_clusters} clusters for K-means")
+
+kmeans_model = KMeans(n_clusters=n_clusters, random_state=42)
+kmeans_model.fit(challenge_vecs)
+
+# Step 7: Compute similarity matrix using cosine similarity
+# Initialize the similarity matrix with zeros
+similarity_matrix = np.zeros((len(users_df), len(challenges_df)))
+
+# For each user, compute cosine similarity with all challenges
+for i in range(len(users_df)):
+    user_vec = user_vecs[i].toarray()  # Convert to dense array for cosine_similarity
+    
+    # Calculate cosine similarity between this user and all challenges
+    similarities = cosine_similarity(user_vec, challenge_vecs.toarray())[0]
+    
+    # Fill in the similarity matrix
+    similarity_matrix[i] = similarities
+
 print(f"Similarity matrix shape: {similarity_matrix.shape}")
 
-# Step 7: Save model
+# Step 8: Save model
 model_data = {
     "similarity_matrix": similarity_matrix,
     "users": users_df,
     "challenges": challenges_df,
-    "vectorizer": vectorizer  # Also save the vectorizer for future use
+    "vectorizer": vectorizer,
+    "kmeans_model": kmeans_model,  # Save the K-means model for new users
+    "challenge_vecs": challenge_vecs  # Save challenge vectors for similarity computation
 }
 joblib.dump(model_data, "recommender_model.pkl")
 
-print("\n✅ Model trained and saved using interests vs (tags + category).")
+print("\n✅ K-means-based model trained and saved using interests vs (tags + category).")
 
 # Optional: Print a sample of the similarity matrix
 if similarity_matrix.size > 0:

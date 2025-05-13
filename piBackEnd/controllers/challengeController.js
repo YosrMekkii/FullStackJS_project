@@ -259,6 +259,77 @@ export const getChallengeById = async (req, res) => {
     res.status(500).json({ message: 'Error fetching challenge', error: error.message });
   }
 };
+export const getChallengesByIds = async (req, res) => {
+  try {
+    const { challengeIds, userId } = req.body;
+    
+    if (!challengeIds || !Array.isArray(challengeIds) || challengeIds.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Valid challenge IDs array is required' 
+      });
+    }
+    
+    if (!userId || !mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'Valid user ID is required' 
+      });
+    }
+    
+    // Validate each challenge ID
+    const validIds = challengeIds.filter(id => mongoose.Types.ObjectId.isValid(id));
+    
+    if (validIds.length === 0) {
+      return res.status(400).json({ 
+        success: false,
+        message: 'No valid challenge IDs provided' 
+      });
+    }
+    
+    // Find all challenges that match the IDs
+    const challenges = await Challenge.find({ _id: { $in: validIds } });
+    
+    if (challenges.length === 0) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'No challenges found with the provided IDs' 
+      });
+    }
+    
+    // Find the user to check completed challenges
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ 
+        success: false,
+        message: 'User not found' 
+      });
+    }
+    
+    // Convert user's completed challenges to strings for comparison
+    const completedChallengeIds = user.completedChallenges?.map(id => id.toString()) || [];
+    
+    // Add completed flag to each challenge
+    const challengesWithCompletion = challenges.map(challenge => {
+      const isCompleted = completedChallengeIds.includes(challenge._id.toString());
+      return { ...challenge.toObject(), completed: isCompleted };
+    });
+    
+    res.status(200).json({ 
+      success: true, 
+      data: challengesWithCompletion,
+      count: challengesWithCompletion.length
+    });
+    
+  } catch (error) {
+    console.error('Error fetching challenges by IDs:', error);
+    res.status(500).json({ 
+      success: false,
+      message: 'Error fetching challenges', 
+      error: error.message 
+    });
+  }
+};
 
 // Create a challenge
 export const createChallenge = async (req, res) => {

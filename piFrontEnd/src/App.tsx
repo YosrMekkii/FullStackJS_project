@@ -293,10 +293,8 @@ const reports: Report[] = [];
         <Route path="/dashboard" element={<Dashboard />} />
         <Route path="/marketplace" element={<SkillMarketplace />} />
         <Route path="/postskill" element={<PostSkill />} />
-        <Route
-  path="/overview"
-  element={<Overview stats={stats} users={users} reports={reports} />}
-/>        <Route path="/interests/:id" element={<Interests />} />
+        <Route path="/overview" element={<Overview stats={stats} users={users} reports={reports} />}/>
+        <Route path="/interests/:id" element={<Interests />} />
         <Route path="/skills/:id" element={<SkillDetails />} />
         <Route path="/profile/:id" element={<ProfileView />} />
         <Route path="/app" element={<Appp />} />
