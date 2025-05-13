@@ -19,6 +19,7 @@ import matchRoutes from "./routes/matchRoutes.js";
 import openaiRoutes from './routes/openaiRoutes.js'; // Add this line near other route imports
 import challengesRoutes from './routes/challengesRoutes.js';
 import challenges from './routes/challenges.js'; 
+import Message from './models/message.js';
 //import cors from 'cors'; // ✅ Import CORS
 
 
@@ -128,41 +129,39 @@ io.on('connection', (socket) => {
 
 
 // Gestion des messages
-  socket.on('sendMessage', async (data) => {
-    console.log('📨 Message reçu :', data);
+socket.on('sendMessage', async (data) => {
+  console.log('📨 Message reçu :', data);
 
-    try {
-      // Créer un nouveau message dans la base de données
-      const message = new Message({
-        senderId: data.senderId,
-        receiverId: data.receiverId || 'all', // 'all' pour les messages globaux
-        content: data.content,
-        timestamp: data.timestamp || new Date()
-      });
+  try {
+    const senderId = data.senderId;
+    const receiverId = "67f999a879e4baaee98047c6";  // Utiliser 'all' si receiverId n'est pas fourni
 
-      await message.save(); // 💾 Enregistrement en base
-      
-      // Diffuser le message selon son type
-      if (data.receiverId === 'all' || !data.receiverId) {
-        // Message pour tous
-        io.emit('receiveMessage', message);
-      } else {
-        // Message privé - envoyer seulement à l'expéditeur et au destinataire
-        const receiverSocketId = connectedUsers.get(data.receiverId);
-        
-        // Envoyer à l'expéditeur
-        socket.emit('receiveMessage', message);
-        
-        // Envoyer au destinataire s'il est connecté
-        if (receiverSocketId) {
-          io.to(receiverSocketId).emit('receiveMessage', message);
-        }
+    const message = new Message({
+      senderId: senderId,
+      receiverId: receiverId,
+      content: data.content,
+      timestamp: data.timestamp || new Date()
+    });
+
+    await message.save();
+
+    // Diffusion du message
+    if (receiverId === 'all') {
+      io.emit('receiveMessage', message);  // Message global
+    } else {
+      const receiverSocketId = connectedUsers.get(receiverId);
+      socket.emit('receiveMessage', message);  // Envoi à l'expéditeur
+      if (receiverSocketId) {
+        io.to(receiverSocketId).emit('receiveMessage', message);  // Envoi au destinataire
       }
-    } catch (error) {
-      console.error('❌ Erreur enregistrement message :', error);
-      socket.emit('messageError', { error: 'Erreur lors de l\'envoi du message' });
     }
-  });
+  } catch (error) {
+    console.error('❌ Erreur enregistrement message :', error);
+    socket.emit('messageError', { error: 'Erreur lors de l\'envoi du message' });
+  }
+});
+
+
    // Partage de fichiers
    socket.on('fileShared', (fileData) => {
     if (fileData.receiverId === 'all') {
@@ -229,6 +228,6 @@ app.get('/api/messages', async (req, res) => {
 //   console.log(`🚀 API + WebSocket running on http://localhost:${PORT}`);
 // });
 
-server.listen(PORT, () => {
-  console.log(`🚀 API + WebSocket running on http://localhost:${PORT}`);
+server.listen(PORT, '0.0.0.0', () => {
+  console.log(`🚀 API + WebSocket running on http://192.168.1.15:${PORT}`);
 });

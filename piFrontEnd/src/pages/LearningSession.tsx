@@ -209,14 +209,11 @@ function App() {
   // const socket = io(window.location.hostname.includes('localhost') 
   // ? `http://${window.location.hostname}:3000` 
   // : `https://${window.location.hostname}`);
-  const isLocalhost = window.location.hostname.includes('localhost');
-
-  const socket = io(
-    isLocalhost
-      ? 'http://localhost:3000'
-      : 'http://172.16.7.73:3000' // IP du serveur dans le LAN
-  );
-
+  const hostname = window.location.hostname || 'localhost';
+  const backendPort = 3000;
+  
+  const socket = io(`http://${hostname}:${backendPort}`);
+  
 
   useEffect(() => {
     const fetchMessages = async () => {
@@ -252,27 +249,36 @@ function App() {
 
 
   useEffect(() => {
-    socket.on('receiveMessage', (data) => {
-      // Ne pas afficher les messages que vous avez envoyés vous-même (ils sont déjà affichés)
-      if (data.senderId !== userId) {
-        setMessages(prev => [
-          ...prev,
-          {
-            id: uuidv4(),
-            sender: 'Friend',
-            content: data.content,
-            timestamp: new Date(data.timestamp),
-          },
-        ]);
-        
-        // Auto-scroll quand un nouveau message est reçu
-        setTimeout(() => {
-          if (chatContainerRef.current) {
-            chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-          }
-        }, 100);
+    socket.on('connect', () => {
+      console.log('Connected to server');
+      // Rejoindre une room basée sur l'ID de session
+      if (sessionId) {
+        socket.emit('joinRoom', { roomId: sessionId, userId });
       }
     });
+  
+    socket.on('receiveMessage', (data) => {
+      console.log('Message received:', data);
+      
+      // Formater le message reçu
+      const newMessage = {
+        id: data.id || uuidv4(),
+        sender: data.senderId === userId ? 'You' : 'Friend',
+        content: data.content,
+        timestamp: new Date(data.timestamp)
+      };
+      
+      // Ajouter le message à l'état local
+      setMessages(prev => [...prev, newMessage]);
+      
+      // Auto-scroll quand un nouveau message est reçu
+      setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+      }, 100);
+    });
+
   
     return () => {
       socket.off('receiveMessage');
@@ -283,24 +289,35 @@ function App() {
 
 const handleSendMessage = () => {
   if (newMessage.trim()) {
+    const messageId = uuidv4();
+    
+    // Données du message à envoyer au serveur
     const messageData = {
+      id: messageId,
       senderId: userId,
-      receiverId: 'all', // Pour un chat de groupe, ou spécifiez l'ID d'un utilisateur spécifique
+      roomId: sessionId || 'global', // Utiliser l'ID de session comme ID de room
       content: newMessage,
       timestamp: new Date()
     };
     
-    const message: Message = {
-      id: uuidv4(),
+    // Message à afficher localement
+    const message = {
+      id: messageId,
       sender: 'You',
       content: newMessage,
       timestamp: new Date(),
     };
     
+    // Ajouter le message à l'état local
     setMessages(prev => [...prev, message]);
+    
+    // Envoyer le message via socket.io
     socket.emit('sendMessage', messageData);
+    
+    // Réinitialiser le champ de message
     setNewMessage('');
     
+    // Auto-scroll
     setTimeout(() => {
       if (chatContainerRef.current) {
         chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
@@ -308,7 +325,6 @@ const handleSendMessage = () => {
     }, 100);
   }
 };
-  
   
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -614,78 +630,91 @@ const handleSendMessage = () => {
 
     {/* Tab Content */}
     <div className="p-4">
-      {activeTab === 'chat' && (
-        <div className="h-[600px] flex flex-col">
-          {/* Chat Messages */}
-          <div ref={chatContainerRef} className="flex-1 overflow-y-auto mb-4 space-y-4">
-            {messages.map((message) => (
-              <div key={message.id} className={`flex ${message.sender === 'You' ? 'justify-end' : 'justify-start'}`}>
-                <div
-                  className={`max-w-xs px-4 py-2 rounded-lg ${
-                    message.sender === 'You' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-900'
-                  }`}
-                >
-                  <p className="text-sm">{message.content}</p>
-                  <p className="text-xs mt-1 opacity-75">
-                    {message.timestamp.toLocaleTimeString()}
+    {activeTab === 'chat' && (
+  <div className="h-[600px] flex flex-col">
+    {/* Chat Messages */}
+    <div ref={chatContainerRef} className="flex-1 overflow-y-auto mb-4 space-y-4">
+      {messages.map((message) => (
+        <div 
+          key={message.id} 
+          className={`flex ${message.sender === 'You' ? 'justify-end' : 'justify-start'}`}
+        >
+          <div
+            className={`max-w-xs px-4 py-2 rounded-lg ${
+              message.sender === 'You' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-900'
+            }`}
+          >
+            <div className="flex items-center mb-1">
+              <span className="text-xs font-medium">{message.sender}</span>
+            </div>
+            <p className="text-sm">{message.content}</p>
+            <p className="text-xs mt-1 opacity-75">
+              {new Date(message.timestamp).toLocaleTimeString()}
+            </p>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {/* File Sharing */}
+    {files.length > 0 && (
+      <div className="mb-4">
+        <h3 className="text-sm font-medium text-gray-700 mb-2">Shared Files</h3>
+        <div className="space-y-2">
+          {files.map((file) => (
+            <div
+              key={file.id}
+              className="flex items-center justify-between bg-gray-50 p-2 rounded-lg"
+            >
+              <div className="flex items-center">
+                <Share className="h-5 w-5 text-gray-400 mr-2" />
+                <div>
+                  <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                  <p className="text-xs text-gray-500">
+                    {(file.size / 1024 / 1024).toFixed(2)} MB
                   </p>
                 </div>
               </div>
-            ))}
-          </div>
-
-                    {/* File Sharing */}
-                    {files.length > 0 && (
-                      <div className="mb-4">
-                        <h3 className="text-sm font-medium text-gray-700 mb-2">Shared Files</h3>
-                        <div className="space-y-2">
-                          {files.map((file) => (
-                            <div
-                              key={file.id}
-                              className="flex items-center justify-between bg-gray-50 p-2 rounded-lg"
-                            >
-                              <div className="flex items-center">
-                                <Share className="h-5 w-5 text-gray-400 mr-2" />
-                                <div>
-                                  <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                                  <p className="text-xs text-gray-500">
-                                    {(file.size / 1024 / 1024).toFixed(2)} MB
-                                  </p>
-                                </div>
-                              </div>
-                              <a
-                                href={file.url}
-                                download={file.name}
-                                className="p-2 text-gray-400 hover:text-indigo-600"
-                              >
-                                <Download className="h-5 w-5" />
-                              </a>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-
-          {/* Message Input */}
-          <div className="flex space-x-4">
-            <input
-              type="text"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-              placeholder="Type a message..."
-              className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            />
-            <label className="p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-              <input type="file" onChange={handleFileUpload} className="hidden" />
-              <Share className="h-5 w-5 text-gray-400" />
-            </label>
-            <button onClick={handleSendMessage} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700">
-              <Send className="h-5 w-5" />
-            </button>
-          </div>
+              <a
+                href={file.url}
+                download={file.name}
+                className="p-2 text-gray-400 hover:text-indigo-600"
+              >
+                <Download className="h-5 w-5" />
+              </a>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
+    )}
+
+    {/* Message Input */}
+    <div className="flex space-x-4">
+      <input
+        type="text"
+        value={newMessage}
+        onChange={(e) => setNewMessage(e.target.value)}
+        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+        placeholder="Type a message..."
+        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+      />
+      <label className="p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+        <input type="file" onChange={handleFileUpload} className="hidden" />
+        <Share className="h-5 w-5 text-gray-400" />
+      </label>
+      <button 
+        onClick={handleSendMessage} 
+        className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+      >
+        <Send className="h-5 w-5" />
+      </button>
+    </div>
+  </div>
+)}
+
+
+
+
 
                 {activeTab === 'code' && (
                   <div className="h-[600px] flex flex-col">
