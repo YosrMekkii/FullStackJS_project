@@ -342,9 +342,17 @@ export const fetchUserProgress = async (userId: string): Promise<ChallengeProgre
   }
 };
 
-const updateUserInterests = async (userId, interests) => {
+const updateUserInterests = async (userId, newInterests) => {
   try {
-    const { data } = await API.put(`/users/${userId}/interests`, { interests });
+    // First, get the current interests
+    const { data: currentUser } = await API.get(`/users/${userId}`);
+    const currentInterests = currentUser.interests || [];
+    
+    // Combine current interests with new ones, avoiding duplicates
+    const updatedInterests = [...new Set([...currentInterests, ...newInterests])];
+    
+    // Send the updated interests to the API
+    const { data } = await API.put(`/users/${userId}/interests`, { interests: updatedInterests });
     return data;
   } catch (error) {
     console.error('Error updating user interests:', error);

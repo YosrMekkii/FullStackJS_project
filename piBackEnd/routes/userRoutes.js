@@ -81,7 +81,7 @@ router.get("/", userController.getAllUsers);
 router.post("/batch", userController.getUsersByIds);
 router.get("/:id", userController.getUserById);
 router.put("/:id", userController.updateUser);
-//router.put("/interests/:id", userController.updateUser);
+router.put("/interests/:id", userController.updateUser);
 router.put("/skills/:id", userController.updateSkills);
 router.put("/achievements/:id", userController.updateBioAndAchievements);
 //router.get('/progress', getUserProgress);

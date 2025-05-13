@@ -3,6 +3,7 @@ import axios from 'axios';
 import UserModal from './UserModel'; // Assure-toi que le chemin est correct
 
 import {
+  Trophy,
   Home,
   Users, 
   AlertTriangle,
@@ -18,6 +19,7 @@ import {
   Clock,
   MessageSquare
 } from 'lucide-react';
+import { redirect } from 'react-router-dom';
 
 interface ActionModalProps {
   isOpen: boolean;
@@ -25,6 +27,7 @@ interface ActionModalProps {
   onAction: (action: string, details: { duration?: number; message?: string }) => void;
   reportedUser: string;
 }
+
 
 const ActionModal: React.FC<ActionModalProps> = ({ isOpen, onClose, onAction, reportedUser }) => {
   const [selectedAction, setSelectedAction] = useState<'ban' | 'suspend' | 'warn' | null>(null);
@@ -444,6 +447,10 @@ const handleReportAction = async (
               <Flag className="h-5 w-5 mr-3" />
               Reports
             </button>
+            <a href="/manage-challenges" className="flex items-center px-4 py-2 text-gray-600 hover:bg-indigo-50 hover:text-indigo-600 rounded-lg">
+              <Trophy className="h-5 w-5 mr-3" />
+              manage challenges
+            </a>
           </nav>
         </div>
 
