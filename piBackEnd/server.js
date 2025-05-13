@@ -10,6 +10,7 @@ import { Server } from 'socket.io';
 import cors from 'cors';
 
 import './models/report.js';
+import expertApplicationRoutes from './routes/expertApplicationRoutes.js';
 
 import userRoutes from './routes/userRoutes.js';
 import skillRoutes from './routes/skillRoutes.js';
@@ -21,6 +22,8 @@ import challengesRoutes from './routes/challengesRoutes.js';
 import challenges from './routes/challenges.js'; 
 import Message from './models/message.js';
 //import cors from 'cors'; // ✅ Import CORS
+import recommendationRoutes from './routes/recommendationRoutes.js';
+
 
 
 
@@ -104,6 +107,9 @@ app.use('/uploads', express.static('uploads'));
 app.use("/api/openai", openaiRoutes); 
 app.use('/api/challenges', challengesRoutes);
 app.use('/api/adminChallenges', challenges); 
+//app.use("/api/openai", openaiRoutes); // Add this before 404 handler
+app.use('/api/expert-applications', expertApplicationRoutes);
+app.use('/api', recommendationRoutes);
 
 // WebSocket logic
 const connectedUsers = new Map(); // stocke userId -> socketId

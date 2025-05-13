@@ -24,7 +24,16 @@ const skillSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User', // Référence au modèle User
     required: true
-  }
+  },
+  likes: {
+    type: Number,
+    default: 0
+  },
+  likedBy: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  }]
+
 }, { timestamps: true }); // Ajoute createdAt et updatedAt
 
 const Skill = mongoose.model('Skill', skillSchema);

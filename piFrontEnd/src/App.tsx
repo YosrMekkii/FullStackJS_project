@@ -26,9 +26,12 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import AdminChallenges from './pages/ChallengeManagement';
 import AdminOverview from './pages/AdminOverview';
+import Overview from './pages/Overview';
 import ProfileView from './pages/ProfileView';
 import Appp from './pages/appp';
-import Overview from './pages/Overview';
+import EditSkill from './pages/EditSkill';
+import UserProfile from './pages/userProfile';
+
 function App() {
   const [user, setUser] = useState<any | null>(null);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
@@ -108,12 +111,19 @@ const reports: Report[] = [];
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center space-x-1">
               
-
+                  <Link
+                to="/marketplace"
+                className="px-4 py-2 rounded-lg text-blue-100 font-medium transition-all duration-300 hover:bg-white/10 hover:text-white"
+              >
+                Marketplace
+              </Link>
               <div className="relative">
+             
                 <button
                   onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                   className="px-4 py-2 rounded-lg text-blue-100 font-medium transition-all duration-300 hover:bg-white/10 hover:text-white flex items-center"
                 >
+                 
                   Explore
                   <ChevronDown className={`ml-1 h-4 w-4 transition-transform duration-300 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                 </button>
@@ -139,6 +149,7 @@ const reports: Report[] = [];
                       Q&A
                     </Link>
                   </div>
+                  
                 )}
               </div>
 
@@ -313,9 +324,11 @@ const reports: Report[] = [];
         <Route path="/verify-email/error" element={<p>Une erreur est survenue</p>} />
         <Route path="/manage-challenges" element={<AdminChallenges />} />
         <Route path="/adminoverview" element={<AdminOverview />} />
-        </Routes>
+       
+        <Route path="/edit-skill/:id" element={<EditSkill />} />
+        <Route path="/user/:userId" element={<UserProfile />} />
+      </Routes>
     </div>
   );
 }
-
 export default App;

@@ -11,6 +11,7 @@
     "test": "echo \"No frontend tests configured yet\""
   },
   "dependencies": {
+    "@google-cloud/vision": "^5.1.0",
     "@headlessui/react": "^2.2.0",
     "@monaco-editor/react": "^4.7.0",
     "@pixi/react": "^7.1.2",

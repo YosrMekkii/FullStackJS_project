@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
-import AIChat from './components/AIChat';
-import { useNavigate } from 'react-router-dom';
 import Sidebar from '../components/Sidebar'; // Import the Sidebar component
+import ExpertApplicationForm from '../pages/ExpertApplicationForm';
 import { 
   Mail, 
   MapPin, 
@@ -20,7 +19,6 @@ import {
   AlertTriangle,
   Trash2,
   Camera,
-  Upload,
 } from 'lucide-react';
 
 const Profile = () => {
@@ -33,6 +31,8 @@ const Profile = () => {
   const [profilePicture, setProfilePicture] = useState('');
   const [uploadPreview, setUploadPreview] = useState(null);
   const fileInputRef = useRef(null);
+  const [showExpertForm, setShowExpertForm] = useState(false);
+
   const [profile, setProfile] = useState({
     firstName: "",
     lastName: "",
@@ -58,7 +58,7 @@ const Profile = () => {
     },
     profileImagePath: '',
   });
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState<{ id: string | number } | null>(null);
   const [matches, setMatches] = useState([]); // Add state for matches
   const [isLoadingMatches, setIsLoadingMatches] = useState(false); // Add loading state
   
@@ -614,6 +614,26 @@ const Profile = () => {
                 </div>
               </div>
             </div>
+
+            {/* Devenir Expert Section */}
+<div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+  <h2 className="text-lg font-semibold text-gray-900 mb-4">Devenir Expert</h2>
+
+  {showExpertForm ? (
+    <ExpertApplicationForm 
+      userId={user.id} 
+      onClose={() => setShowExpertForm(false)} 
+    />
+  ) : (
+    <button
+      onClick={() => setShowExpertForm(true)}
+      className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+    >
+      Soumettre une demande
+    </button>
+  )}
+</div>
+
 
             {/* Achievements */}
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
