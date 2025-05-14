@@ -69,7 +69,7 @@ interface ChatMessage {
 }
 
 // Initialize socket.io outside component to prevent multiple connections
-const socket = io('http://192.168.1.15:3000', {
+const socket = io('http://172.20.10.2:3000', {
   reconnection: true,
   reconnectionAttempts: 5,
   reconnectionDelay: 1000,
@@ -139,7 +139,7 @@ function App() {
         }
 
         const peerOptions = {
-          host: '192.168.1.15',
+          host: '172.20.10.2',
           port: 9000,
           path: '/myapp',
           secure: false,
@@ -270,7 +270,7 @@ function App() {
     // Fetch initial messages
     const fetchMessages = async () => {
       try {
-        const response = await fetch(`http://192.168.1.15:3000/api/messages`);
+        const response = await fetch(`http://172.20.10.2:3000/api/messages`);
         if (response.ok) {
           const messageHistory = await response.json();
           const formattedMessages = messageHistory.map((msg: any) => ({

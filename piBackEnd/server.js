@@ -235,7 +235,7 @@ app.use((req, res) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`🚀 API + WebSocket running on http://192.168.1.15:${PORT}`);
+  console.log(`🚀 API + WebSocket running on http://172.20.10.2:${PORT}`);
 });
 
 

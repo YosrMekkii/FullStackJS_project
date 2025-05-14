@@ -877,7 +877,7 @@ export const sendLearningSessionInvite = async (req, res) => {
         <p>Bonjour,</p>
         <p><strong>${inviterName}</strong> a démarré une session d’apprentissage.</p>
         <p>Vous êtes invité(e) à rejoindre la session en cliquant ici :</p>
-        <a href="http://192.168.1.15:5173/learningsession" target="_blank">Rejoindre la session</a>
+        <a href="http://172.20.10.2:5173/learningsession" target="_blank">Rejoindre la session</a>
         <p>À bientôt !</p>
       `,
     };
