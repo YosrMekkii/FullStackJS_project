@@ -554,27 +554,45 @@ const Challenges = () => {
     }
   };
 
-  const handleSaveInterests = async () => {
+   const handleSaveInterests = async () => {
     try {
-      if (!user || !user._id) {
+      if (!user) {
         throw new Error("No user data available.");
       }
-      const result = await api.updateUserInterests(user._id, selectedInterests);
+  
+      const userId = user._id || user.id;
+  
+      if (!userId) {
+        throw new Error("User ID not found in user object.");
+      }
+      
+      console.log(`Saving interests for user ${userId}:`, selectedInterests);
+      
+      // Update interests via API
+      const result = await api.updateUserInterests(userId as string, selectedInterests);
+      console.log("Interests update result:", result);
+  
+      // Update local state
       setUserProgress(prev => ({
         ...prev,
         interests: selectedInterests
       }));
+      
+      // Update user object as well
       setUser(prev => prev ? {
         ...prev,
         interests: selectedInterests
       } : null);
+  
+      // If we're on recommended tab, refresh recommendations
       if (activeTab === 'recommended') {
-        await loadChallenges('recommended', user._id);
+        await loadChallenges('recommended', userId as string);
       }
+  
       setShowInterestsModal(false);
     } catch (error) {
       console.error('Error saving interests:', error);
-      setError("Failed to save interests.");
+      setError("Failed to save interests. Please try again later.");
     }
   };
 
