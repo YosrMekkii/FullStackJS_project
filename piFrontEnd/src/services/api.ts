@@ -359,19 +359,7 @@ const updateUserInterests = async (userId, newInterests) => {
     throw error;
   }
 };
-const fetchLeaderboard = async (limit = 10): Promise<LeaderboardUser[]> => {
-  try {
-    const response = await API.get(`/users/leaderboard?limit=${limit}`);
-    if (response.data?.success && Array.isArray(response.data.data)) {
-      return response.data.data;
-    }
-    console.warn('Invalid leaderboard response, returning empty array');
-    return [];
-  } catch (error) {
-    console.error('Error fetching leaderboard:', error);
-    return [];
-  }
-};
+
 // Helper function to update user in localStorage
 const updateUserInStorage = (data) => {
   try {
@@ -398,7 +386,16 @@ const updateUserInStorage = (data) => {
   }
 };
 
-
+// Leaderboard API calls
+const fetchLeaderboard = async (limit = 10): Promise<LeaderboardUser[]> => {
+  try {
+    const response = await API.get(`/users/leaderboard?limit=${limit}`);
+    return response.data.data || [];
+  } catch (error) {
+    console.error('Error fetching leaderboard:', error);
+    throw error;
+  }
+};
 
 const fetchGlobalLeaderboard = async (limit = 10, page = 1): Promise<LeaderboardResponse> => {
   try {

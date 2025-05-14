@@ -386,76 +386,104 @@ export const checkForNewBadges = async (userId, completedChallenges) => {
 };
 
 
-const completeChallenge = async (req, res) => {
+export const completeChallenge = async (req, res) => {
   try {
-    const { challengeId, userId, completedAt, xp, streak, dailyGoals, isRetry } = req.body;
-
-    // Find user
-    const user = await User.findById(userId);
-    if (!user) {
-      return res.status(404).json({ success: false, message: 'User not found' });
+    const { challengeId, userId, completedAt, includeUserUpdate } = req.body;
+    
+    // Validate inputs
+    if (!challengeId || !userId) {
+      return res.status(400).json({ error: 'Challenge ID and User ID are required' });
     }
-
-    // Find challenge
+    
+    // 1. Find the challenge to get XP value
     const challenge = await Challenge.findById(challengeId);
     if (!challenge) {
-      return res.status(404).json({ success: false, message: 'Challenge not found' });
+      return res.status(404).json({ error: 'Challenge not found' });
     }
-
-    // Update or create progress entry
-    let progress = await Progress.findOne({ userId, challengeId });
-
-    if (progress && isRetry) {
-      // Update existing progress for retry
-      progress.completedAt = completedAt;
-      progress.attempts = (progress.attempts || 0) + 1;
-    } else if (!progress) {
-      // Create new progress entry
-      progress = new Progress({
-        userId,
-        challengeId,
-        completed: true,
-        completedAt,
-        attempts: 1
+    
+    // 2. Get user
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    
+    // 3. Check if already completed
+    if (user.completedChallenges?.some(id => id.toString() === challengeId)) {
+      return res.status(200).json({
+        ...user.toObject(),
+        message: 'Challenge already completed'
       });
     }
-
-    await progress.save();
-
-    // Update user stats (only for non-retries)
-    if (!isRetry) {
-      user.xp = (user.xp || 0) + xp;
-      user.streak = (user.streak || 0) + streak;
-      user.dailyGoals = (user.dailyGoals || 0) + dailyGoals;
+    
+    // 4. Record challenge completion
+    user.completedChallenges ??= [];
+    user.completedChallenges.push(challengeId);
+    
+    // 5. Update user progress
+    // Calculate new XP and level
+    const newXP = (user.xp ?? 0) + challenge.xp;
+    const { level, currentLevelXP, nextLevelXP } = calculateLevel(newXP);
+    user.xp = newXP;
+    user.level = level;
+    
+    // Update streak data
+    const today = new Date(completedAt || new Date()).setHours(0, 0, 0, 0);
+    const lastCompletedDay = user.lastCompletedDate ? 
+      new Date(user.lastCompletedDate).setHours(0, 0, 0, 0) : null;
+    
+    // Calculate streak (increase if today is different from last completion date)
+    let streak = user.streak || 0;
+    let completedToday = user.completedToday || 0;
+    
+    if (!lastCompletedDay || today > lastCompletedDay) {
+      // New day, reset daily counter and potentially increase streak
+      completedToday = 1;
       
-      // Update level based on XP
-      user.level = calculateLevel(user.xp);
-    } else {
-      // For retries, only add the reduced XP
-      user.xp = (user.xp || 0) + xp;
-      user.level = calculateLevel(user.xp);
+      // If yesterday, increase streak; if gap, reset streak
+      const yesterday = new Date(today);
+      yesterday.setDate(yesterday.getDate() - 1);
+      const yesterdayDate = yesterday.setHours(0, 0, 0, 0);
+      
+      if (lastCompletedDay && lastCompletedDay >= yesterdayDate) {
+        streak++; // Consecutive day, increase streak
+      } else {
+        streak = 1; // Reset streak
+      }
+    } else if (today === lastCompletedDay) {
+      // Same day, just increase today's counter
+      completedToday++;
     }
-
+    
+    // Update user fields
+    user.streak = streak;
+    user.completedToday = completedToday;
+    user.lastCompletedDate = completedAt || new Date();
+    
+    // Save the user
     await user.save();
-
-    res.json({
-      success: true,
-      xp: user.xp,
-      level: user.level,
-      streak: user.streak,
-      dailyGoals: user.dailyGoals,
-      currentLevelXP: getCurrentLevelXP(user.level),
-      nextLevelXP: getNextLevelXP(user.level)
+    
+    // 6. Check for badge unlocks
+    const newBadges = await checkForNewBadges(userId, user.completedChallenges);
+    
+    // 7. Return updated progress data
+    return res.status(200).json({
+      xp: newXP,
+      level,
+      currentLevelXP,
+      nextLevelXP,
+      streak,
+      completedToday,
+      lastCompletedDate: user.lastCompletedDate,
+      newBadges
     });
+    
   } catch (error) {
     console.error('Error completing challenge:', error);
-    res.status(500).json({ success: false, message: 'Server error' });
+    return res.status(500).json({ error: 'Server error while completing challenge' });
   }
 };
 
-export default {
-  completeChallenge
-};
+
 
 // Get user progress
 export const getUserProgress = async (req, res) => {
