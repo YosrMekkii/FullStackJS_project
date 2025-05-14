@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import Editor from "@monaco-editor/react";
 import Peer from 'peerjs';
 import { io } from 'socket.io-client';
+import { useParams } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import { 
   Bot, 
