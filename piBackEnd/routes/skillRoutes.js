@@ -10,4 +10,5 @@ router.put('/skills/:id', skillController.updateSkill);
 router.delete('/skills/:id', skillController.deleteSkill);
 router.post('/skills/:id/like', skillController.likeSkill);
 router.post('/skills/:id/unlike', skillController.unlikeSkill);
+router.get('/user/:userId', skillController.getSkillsByUserId);
 export default router;

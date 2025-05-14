@@ -617,9 +617,9 @@ const Profile = () => {
 
             {/* Devenir Expert Section */}
 <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-  <h2 className="text-lg font-semibold text-gray-900 mb-4">Devenir Expert</h2>
+  <h2 className="text-lg font-semibold text-gray-900 mb-4">Become an Expert</h2>
 
-  {showExpertForm ? (
+  {user?.id && showExpertForm ? (
     <ExpertApplicationForm 
       userId={user.id} 
       onClose={() => setShowExpertForm(false)} 
@@ -629,10 +629,12 @@ const Profile = () => {
       onClick={() => setShowExpertForm(true)}
       className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
     >
-      Soumettre une demande
+      Submit a Request
     </button>
   )}
 </div>
+
+
 
 
             {/* Achievements */}

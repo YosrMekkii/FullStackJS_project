@@ -1,5 +1,7 @@
 import skillService from '../services/skillService.js';
 import * as userService from '../services/userService.js';
+import Skill from '../models/skill.js';  // Adjust the path according to your project structure
+
 const createSkill = async (req, res) => {
     try {
         const newSkill = await skillService.createSkill(req.body);
@@ -127,6 +129,20 @@ const unlikeSkill = async (req, res) => {
     }
   };
 
+
+const getSkillsByUserId = async (req, res) => {
+  const { userId } = req.params;
+
+  try {
+    const skills = await Skill.find({ user: userId }).populate('user', 'firstName lastName');
+    res.status(200).json(skills);
+  } catch (error) {
+    console.error('Erreur lors de la récupération des compétences :', error);
+    res.status(500).json({ message: 'Erreur serveur lors de la récupération des compétences.' });
+  }
+};
+
+
 export default {
     createSkill,
     getAllSkills,
@@ -134,5 +150,6 @@ export default {
     updateSkill,
     deleteSkill,
     likeSkill,
-    unlikeSkill
+    unlikeSkill,
+    getSkillsByUserId
 };

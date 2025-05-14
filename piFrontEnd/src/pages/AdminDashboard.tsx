@@ -478,8 +478,8 @@ const handleExpertApproval = async (applicationId: string, approved: boolean) =>
               </div>
             )}
 
-            {/* Expert Applications Tab */}
-            {activeTab === 'experts' && (
+{/* Expert Applications Tab */}
+{activeTab === 'experts' && (
   <div className="divide-y divide-gray-200">
     {applications.map((application) => (
       <div key={application._id} className="p-6 hover:bg-gray-50">
@@ -513,44 +513,44 @@ const handleExpertApproval = async (applicationId: string, approved: boolean) =>
           </div>
 
           {application.documentPath && (
-  <div className="mb-4">
-    <h4 className="text-sm font-medium text-gray-700">Document de certification</h4>
-    <a
-      href={`http://localhost:3000/${application.documentPath.replace(/\\/g, '/')}`}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="mt-1 text-sm text-blue-600 hover:underline block"
-    >
-      {application.documentFilename || 'Voir le document'}
-    </a>
+            <div className="mb-4">
+              <h4 className="text-sm font-medium text-gray-700">Certification Document</h4>
+              <a
+                href={`http://localhost:3000/${application.documentPath.replace(/\\/g, '/')}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-1 text-sm text-blue-600 hover:underline block"
+              >
+                {application.documentFilename || 'View Document'}
+              </a>
 
-    <button
-      onClick={() => handleVerifyCertificate(application)}  // Ici, tu passes l'application entière
-      className="mt-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50"
-    >
-      Vérifier le certificat
-    </button>
+              <button
+                onClick={() => handleVerifyCertificate(application)}  // Here, you pass the entire application
+                className="mt-2 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-opacity-50"
+              >
+                Verify Certificate
+              </button>
 
-    {/* Affiche le résultat de la vérification */}
-    {application.verificationResult && (
-  <div className="mt-2 text-sm">
-    {application.verificationResult.valid ? (
-      <p className="text-green-600">✅ Certificat valide</p>
-    ) : (
-      <>
-        <p className="text-red-600">❌ Certificat invalide</p>
-        {application.verificationResult.extrait && (
-          <p className="text-gray-600 italic">Extrait détecté : {application.verificationResult.extrait}</p>
-        )}
-        {application.verificationResult.erreurVision && (
-          <p className="text-gray-500">Erreur : {JSON.stringify(application.verificationResult.erreurVision)}</p>
-        )}
-      </>
-    )}
-  </div>
-)}
-  </div>
-)}
+              {/* Display verification result */}
+              {application.verificationResult && (
+                <div className="mt-2 text-sm">
+                  {application.verificationResult.valid ? (
+                    <p className="text-green-600">✅ Valid Certificate</p>
+                  ) : (
+                    <>
+                      <p className="text-red-600">❌ Invalid Certificate</p>
+                      {application.verificationResult.extrait && (
+                        <p className="text-gray-600 italic">Extract Detected: {application.verificationResult.extrait}</p>
+                      )}
+                      {application.verificationResult.erreurVision && (
+                        <p className="text-gray-500">Error: {JSON.stringify(application.verificationResult.erreurVision)}</p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
 
           {application.status === 'pending' && (
             <div className="flex space-x-4">
@@ -575,6 +575,7 @@ const handleExpertApproval = async (applicationId: string, approved: boolean) =>
     ))}
   </div>
 )}
+
 
 
             {/* Reports Tab */}

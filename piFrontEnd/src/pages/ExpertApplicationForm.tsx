@@ -13,29 +13,29 @@ const ExpertApplicationForm: React.FC<ExpertApplicationFormProps> = ({ userId, o
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     if (!motivation || !document) {
-      alert("Veuillez remplir tous les champs.");
+      alert("Please fill in all fields.");
       return;
     }
 
     try {
       const formData = new FormData();
-      formData.append("userId", String(userId)); // S'assurer que c'est une string
+      formData.append("userId", String(userId)); // Ensure it's a string
       formData.append("motivation", motivation);
       formData.append("document", document);
 
       await axios.post("http://localhost:3000/api/expert-applications", formData);
 
-      alert("Votre demande a été envoyée !");
-      onClose(); // Ferme le formulaire
+      alert("Your request has been sent!");
+      onClose(); // Close the form
     } catch (error) {
-      console.error("Erreur lors de l'envoi de la demande :", error);
-      alert("Erreur lors de l'envoi.");
+      console.error("Error submitting the request:", error);
+      alert("Submission failed.");
     }
   };
 
   return (
     <div className="p-4 border rounded bg-gray-100 mt-4">
-      <h3 className="text-lg font-semibold mb-2">Demande pour devenir expert</h3>
+      <h3 className="text-lg font-semibold mb-2">Request to Become an Expert</h3>
       
       <form onSubmit={handleSubmit}>
         <textarea
@@ -58,14 +58,14 @@ const ExpertApplicationForm: React.FC<ExpertApplicationFormProps> = ({ userId, o
             type="submit"
             className="bg-green-600 text-white px-4 py-1 rounded hover:bg-green-700"
           >
-            Envoyer
+            Submit
           </button>
           <button
             type="button"
             onClick={onClose}
             className="bg-gray-400 text-white px-4 py-1 rounded hover:bg-gray-500"
           >
-            Annuler
+            Cancel
           </button>
         </div>
       </form>
