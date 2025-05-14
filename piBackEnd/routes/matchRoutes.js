@@ -71,6 +71,9 @@ router.get('/:userId', async (req, res) => {
     res.status(500).json({ error: 'Server error' });
   }
 });
+
+
+
 router.get('/getmatchesfor/:userId', async (req, res) => {
   try {
     const { userId } = req.params;
@@ -87,7 +90,7 @@ router.get('/getmatchesfor/:userId', async (req, res) => {
       const partnerId = isInitiator ? match.matchedUserId : match.userId;
 
       const partner = await User.findById(partnerId).select(
-        'firstName lastName profileImagePath'
+        'firstName lastName profileImagePath email'
       );
 
       return {

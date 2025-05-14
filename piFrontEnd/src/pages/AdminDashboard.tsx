@@ -342,6 +342,18 @@ const handleReportAction = async (
 
       console.log("Email d'avertissement envoyé avec succès.");
     }
+     if (action === "ban" && selectedReport?.reportedUser?._id) {
+      await axios.post("http://localhost:3000/api/users/ban-user", {
+        userId: selectedReport.reportedUser._id,
+      });
+        await axios.post("http://localhost:3000/api/users/send-warning", {
+        email: selectedReport.reportedUser.email,
+        firstName: selectedReport.reportedUser.firstName || "Utilisateur",
+        message: "Vous avez été banni définitivement de la plateforme.",
+      });
+      console.log("Utilisateur banni définitivement.");
+    }
+
 
     // 2. Met à jour le statut du report dans la base de données
     await axios.post("http://localhost:3000/api/reports/update-status", {

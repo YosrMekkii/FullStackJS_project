@@ -107,5 +107,9 @@ router.get('/matches/:id', userController.getMatches);
 router.get('/:userId/progress',userController.getUserProgress);
 router.put('/:userId/progress/:challengeId',userController.updateUserProgress);
 router.post('/send-warning', userController.sendWarningEmail);
+router.post('/ban-user', userController.permanentBanUser);
+router.post('/send-session-invite', userController.sendLearningSessionInvite);
+
+
 
 export default router; // ✅ Export par défaut
