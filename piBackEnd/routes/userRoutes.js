@@ -112,4 +112,5 @@ router.post('/send-session-invite', userController.sendLearningSessionInvite);
 
 
 
+router.get('/leaderboard', userController.getLeaderboard);
 export default router; // ✅ Export par défaut

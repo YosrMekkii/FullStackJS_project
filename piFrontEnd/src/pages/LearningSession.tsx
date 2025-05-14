@@ -3,9 +3,11 @@ import { v4 as uuidv4 } from 'uuid';
 import Editor from "@monaco-editor/react";
 import Peer from 'peerjs';
 import { io } from 'socket.io-client';
-import Sidebar from '../components/Sidebar'; // Import the Sidebar component
-import { useParams } from 'react-router-dom';
+import Sidebar from '../components/Sidebar';
 import { 
+  Bot, 
+  User, 
+  Brain, 
   Video,
   VideoOff,
   Mic,
@@ -19,9 +21,17 @@ import {
   Maximize2,
   Minimize2,
   Eraser,
-  Play,  // Added for the run button
-  Save // Added for saving code
+  Play,
+  Save
 } from 'lucide-react';
+
+// Define interfaces
+interface AIMessage {
+  id: string;
+  content: string;
+  isAI: boolean;
+  timestamp: Date;
+}
 
 interface Message {
   id: string;
@@ -52,23 +62,41 @@ interface CompileResult {
   executionTime: number;
 }
 
+interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+// Initialize socket.io outside component to prevent multiple connections
+const socket = io('http://192.168.1.15:3000', {
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+});
+
 function App() {
   const { sessionId } = useParams();
-  const [userId, setUserId] = useState(localStorage.getItem('userId') || uuidv4());
-  useEffect(() => {
-    // Sauvegarde l'ID utilisateur dans le localStorage
-    if (!localStorage.getItem('userId')) {
-      localStorage.setItem('userId', userId);
-    }
-  }, [userId]);
-
-
+  const [userId] = useState(localStorage.getItem('userId') || uuidv4());
+  const [activeTab, setActiveTab] = useState<'chat' | 'code' | 'whiteboard' | 'ai-help'>('chat');
+  const [aiMessages, setAiMessages] = useState<AIMessage[]>([
+    {
+      id: uuidv4(),
+      content: "Hello! I'm your AI learning assistant. How can I help you today?",
+      isAI: true,
+      timestamp: new Date(),
+    },
+  ]);
+  const [aiQuestion, setAiQuestion] = useState('');
+  const [aiResponding, setAiResponding] = useState(false);
+  const [aiTyping, setAiTyping] = useState(false);
+  const [aiStream, setAiStream] = useState('');
+  const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [files, setFiles] = useState<FileShare[]>([]);
   const [isVideoEnabled, setIsVideoEnabled] = useState(true);
   const [isAudioEnabled, setIsAudioEnabled] = useState(true);
-  const [activeTab, setActiveTab] = useState<'chat' | 'code' | 'whiteboard'>('chat');
   const [code, setCode] = useState('// Start coding here\n');
   const [language, setLanguage] = useState('javascript');
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -77,7 +105,6 @@ function App() {
   const [lines, setLines] = useState<DrawingLine[]>([]);
   const [currentLine, setCurrentLine] = useState<DrawingLine | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
-  // Added for code compilation
   const [compileResult, setCompileResult] = useState<CompileResult | null>(null);
   const [isCompiling, setIsCompiling] = useState(false);
   const [showOutput, setShowOutput] = useState(false);
@@ -86,61 +113,60 @@ function App() {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const aiChatContainerRef = useRef<HTMLDivElement>(null);
   const peerRef = useRef<Peer>();
   const streamRef = useRef<MediaStream>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
   const peerConnections = useRef<Record<string, any>>({});
 
+  // Save userId to localStorage
+  useEffect(() => {
+    if (!localStorage.getItem('userId')) {
+      localStorage.setItem('userId', userId);
+    }
+  }, [userId]);
+
   // Initialize WebRTC connection
-  
-useEffect(() => {
-  const initializeWebRTC = async () => {
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-      streamRef.current = stream;
-      if (localVideoRef.current) {
-        localVideoRef.current.srcObject = stream;
-      }
+  useEffect(() => {
+    const initializeWebRTC = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        streamRef.current = stream;
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
 
-      const peerOptions = {
-        host: '192.168.1.15',
-        port: 9000,
-        path: '/myapp',
-        debug: 3,
-      };
-      const peer = new Peer(undefined, {
-  host: 'localhost',
-  port: 9000,
-  path: '/myapp',
-  secure: true,
-});
-const remotePeerId = 'some-other-user-id'; // Ex: reçu du backend ou d'un autre utilisateur
-const conn = peer.connect(remotePeerId);
-conn.on('open', () => {
-  console.log('Connected to peer:', conn.peer);
-  conn.send('Hello from client A!');
-});
+        const peerOptions = {
+          host: '192.168.1.15',
+          port: 9000,
+          path: '/myapp',
+          secure: false,
+          debug: 3,
+        };
 
-conn.on('data', (data) => {
-  console.log('Received:', data);
-});
-
-
-
-      const setupPeer = (id: string) => {
-      const peer = new Peer(`${userId}-${Date.now()}`, peerOptions);
+        const peer = new Peer(`${userId}-${Date.now()}`, peerOptions);
         peerRef.current = peer;
 
-peer.on('connection', (conn) => {
-  conn.on('data', (data) => {
-    console.log('Received:', data);
-  });
+        peer.on('open', (id) => {
+          console.log('PeerJS connected with ID:', id);
+          if (sessionId) {
+            socket.emit('joinVideoRoom', { 
+              roomId: sessionId, 
+              userId, 
+              peerId: id 
+            });
+          }
+        });
 
-  conn.on('open', () => {
-    conn.send('Hello from client B!');
-  });
-});
+        peer.on('connection', (conn) => {
+          conn.on('data', (data) => {
+            console.log('Received data:', data);
+          });
+          conn.on('open', () => {
+            conn.send(`Hello from ${userId}`);
+          });
+        });
 
         peer.on('call', (call) => {
           console.log('Receiving call from:', call.peer);
@@ -163,97 +189,429 @@ peer.on('connection', (conn) => {
         peer.on('error', (err) => {
           console.error('Peer connection error:', err);
           if (err.type === 'unavailable-id' || err.type === 'id-taken') {
-            console.warn(`ID "${id}" is taken. Retrying with fallback ID...`);
             const fallbackId = `${userId}-${Math.floor(Math.random() * 10000)}`;
-            setupPeer(fallbackId);
+            peerRef.current = new Peer(fallbackId, peerOptions);
           }
         });
-      };
 
-      setupPeer(userId);
+      } catch (error) {
+        console.error('Error accessing media devices:', error);
+      }
+    };
 
-    } catch (error) {
-      console.error('Error accessing media devices:', error);
-    }
-  };
+    initializeWebRTC();
 
-  initializeWebRTC();
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      Object.values(peerConnections.current).forEach((call: any) => {
+        if (call && typeof call.close === 'function') {
+          call.close();
+        }
+      });
+      if (peerRef.current) {
+        peerRef.current.destroy();
+      }
+    };
+  }, [userId, sessionId]);
 
-  return () => {
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-    }
-
-    Object.values(peerConnections.current).forEach((call: any) => {
-      if (call && typeof call.close === 'function') {
-        call.close();
+  // Socket.io event listeners and message fetching
+  useEffect(() => {
+    socket.on('connect', () => {
+      console.log('Connected to server');
+      if (sessionId) {
+        socket.emit('joinRoom', { roomId: sessionId, userId });
       }
     });
 
-    if (peerRef.current) {
-      peerRef.current.destroy();
+    socket.on('receiveMessage', (data) => {
+      const newMessage: Message = {
+        id: data.id || uuidv4(),
+        sender: data.senderId === userId ? 'You' : 'Friend',
+        content: data.content,
+        timestamp: new Date(data.timestamp),
+      };
+      setMessages((prev) => [...prev, newMessage]);
+      setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+      }, 100);
+    });
+
+    socket.on('peerJoined', ({ userId: remotePeerId, peerId }) => {
+      if (remotePeerId === userId) return;
+      setRemotePeers(prev => [...new Set([...prev, peerId])]);
+      
+      if (streamRef.current && peerRef.current) {
+        const call = peerRef.current.call(peerId, streamRef.current);
+        call.on('stream', (remoteStream) => {
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = remoteStream;
+          }
+        });
+        call.on('error', (err) => {
+          console.error('Call error:', err);
+        });
+        peerConnections.current[peerId] = call;
+      }
+    });
+
+    socket.on('peerLeft', ({ peerId }) => {
+      setRemotePeers(prev => prev.filter(id => id !== peerId));
+      if (peerConnections.current[peerId]) {
+        peerConnections.current[peerId].close();
+        delete peerConnections.current[peerId];
+      }
+    });
+
+    // Fetch initial messages
+    const fetchMessages = async () => {
+      try {
+        const response = await fetch(`http://192.168.1.15:3000/api/messages`);
+        if (response.ok) {
+          const messageHistory = await response.json();
+          const formattedMessages = messageHistory.map((msg: any) => ({
+            id: msg._id || uuidv4(),
+            sender: msg.senderId === userId ? 'You' : 'Friend',
+            content: msg.content,
+            timestamp: new Date(msg.timestamp),
+          }));
+          setMessages(formattedMessages);
+          setTimeout(() => {
+            if (chatContainerRef.current) {
+              chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+            }
+          }, 100);
+        }
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+      }
+    };
+    fetchMessages();
+
+    return () => {
+      socket.off('connect');
+      socket.off('receiveMessage');
+      socket.off('peerJoined');
+      socket.off('peerLeft');
+    };
+  }, [userId, sessionId]);
+
+  // Auto-scroll for AI chat
+  useEffect(() => {
+    if (aiChatContainerRef.current) {
+      aiChatContainerRef.current.scrollTop = aiChatContainerRef.current.scrollHeight;
+    }
+  }, [aiMessages, aiStream]);
+
+  // Auto-scroll for regular chat
+  useEffect(() => {
+    if (chatContainerRef.current) {
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+    }
+  }, [messages]);
+
+  // Clear error message after 5 seconds
+  useEffect(() => {
+    if (errorMessage) {
+      const timer = setTimeout(() => setErrorMessage(null), 5000);
+      return () => clearTimeout(timer);
+    }
+  }, [errorMessage]);
+
+  // Handle asking the AI
+  const handleAskAI = async () => {
+    if (!aiQuestion.trim()) return;
+
+    const userQuestion: AIMessage = {
+      id: uuidv4(),
+      content: aiQuestion,
+      isAI: false,
+      timestamp: new Date(),
+    };
+
+    setAiMessages((prev) => [...prev, userQuestion]);
+    const updatedHistory = [...chatHistory, { role: 'user', content: aiQuestion }];
+    setChatHistory(updatedHistory);
+
+    setAiTyping(true);
+    setAiResponding(true);
+    setAiStream('');
+
+    try {
+      await callOpenAI(aiQuestion, updatedHistory);
+    } catch (error) {
+      console.error('Error calling AI API:', error);
+      const errorMsg = "I'm sorry, I'm having trouble connecting right now. Please try again.";
+      setErrorMessage(errorMsg);
+      const errorMessageObj: AIMessage = {
+        id: uuidv4(),
+        content: errorMsg,
+        isAI: true,
+        timestamp: new Date(),
+      };
+      setAiMessages((prev) => [...prev, errorMessageObj]);
+      setChatHistory((prev) => [...prev, { role: 'assistant', content: errorMsg }]);
+    } finally {
+      setAiQuestion('');
+      setAiTyping(false);
+      setAiResponding(false);
     }
   };
-}, [userId, sessionId]);
 
+  // Call OpenAI API
+  const callOpenAI = async (question: string, history: ChatMessage[]) => {
+    try {
+      const response = await fetch('http://192.168.1.15:3000/api/openai/ask', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ question, history }),
+      });
 
-  // Scroll to bottom of output when compile result changes
-  useEffect(() => {
-    if (outputRef.current && compileResult) {
-      outputRef.current.scrollTop = outputRef.current.scrollHeight;
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to fetch from backend');
+      }
+
+      const data = await response.json();
+      const aiResponse = data.response;
+
+      const aiMessage: AIMessage = {
+        id: uuidv4(),
+        content: aiResponse,
+        isAI: true,
+        timestamp: new Date(),
+      };
+
+      setAiMessages((prev) => [...prev, aiMessage]);
+      setChatHistory((prev) => [...prev, { role: 'assistant', content: aiResponse }]);
+    } catch (error) {
+      console.error('Error calling AI API:', error);
+      throw error;
     }
-  }, [compileResult]);
+  };
 
-  // Redraw canvas when lines change
+  // Send message
+  const handleSendMessage = () => {
+    if (!newMessage.trim()) return;
+
+    const messageId = uuidv4();
+    const messageData = {
+      id: messageId,
+      senderId: userId,
+      roomId: sessionId || 'global',
+      content: newMessage,
+      timestamp: new Date(),
+    };
+
+    const message: Message = {
+      id: messageId,
+      sender: 'You',
+      content: newMessage,
+      timestamp: new Date(),
+    };
+
+    setMessages((prev) => [...prev, message]);
+    socket.emit('sendMessage', messageData);
+    setNewMessage('');
+
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }
+    }, 100);
+  };
+
+  // File upload
+  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      const fileShare: FileShare = {
+        id: uuidv4(),
+        name: file.name,
+        size: file.size,
+        sender: 'You',
+        url: URL.createObjectURL(file),
+        timestamp: new Date(),
+      };
+      setFiles((prev) => [...prev, fileShare]);
+    }
+  };
+
+  // Code editor
+  const handleCodeChange = (value: string | undefined) => {
+    if (value !== undefined) {
+      setCode(value);
+    }
+  };
+
+  const compileCode = async () => {
+    setIsCompiling(true);
+    setShowOutput(true);
+    try {
+      const startTime = performance.now();
+      const response = await mockCompileRequest(code, language);
+      const endTime = performance.now();
+      setCompileResult({
+        output: response.output,
+        error: response.error,
+        executionTime: endTime - startTime,
+      });
+    } catch (error) {
+      setCompileResult({
+        output: '',
+        error: 'Error connecting to compilation service',
+        executionTime: 0,
+      });
+    } finally {
+      setIsCompiling(false);
+    }
+  };
+
+  const mockCompileRequest = async (code: string, language: string) => {
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+    if (language === 'javascript') {
+      try {
+        let output = '';
+        const consoleLog = console.log;
+        console.log = (...args) => {
+          output += args.join(' ') + '\n';
+        };
+        // WARNING: Unsafe, for demo only
+        // eslint-disable-next-line no-eval
+        eval(code);
+        console.log = consoleLog;
+        return { output, error: '' };
+      } catch (err) {
+        return { output: '', error: (err as Error).message };
+      }
+    }
+    return {
+      output: `[Mock output] Running ${language} code...\nHello, world!`,
+      error: '',
+    };
+  };
+
+  const handleSaveCode = () => {
+    const blob = new Blob([code], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `code.${getFileExtension(language)}`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
+
+  const getFileExtension = (lang: string) => {
+    switch (lang) {
+      case 'javascript': return 'js';
+      case 'typescript': return 'ts';
+      case 'python': return 'py';
+      case 'java': return 'java';
+      case 'cpp': return 'cpp';
+      default: return 'txt';
+    }
+  };
+
+  // Whiteboard
   useEffect(() => {
     if (!canvasRef.current) return;
-    
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
     if (!ctx) return;
-    
-    // Clear canvas
     ctx.clearRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = '#FFFFFF';
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    
-    // Redraw all lines
-    lines.forEach(drawLine);
-    
-    function drawLine(line: DrawingLine) {
-      if (!ctx) return;
-      
-      ctx.beginPath();
-      ctx.lineWidth = line.tool === 'eraser' ? 20 : line.width;
-      
-      if (line.tool === 'eraser') {
-        ctx.strokeStyle = '#FFFFFF';
-        ctx.globalCompositeOperation = 'destination-out';
-      } else {
-        ctx.strokeStyle = line.color;
-        ctx.globalCompositeOperation = 'source-over';
-      }
-      
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
-      
-      for (let i = 0; i < line.points.length - 1; i++) {
-        ctx.moveTo(line.points[i].x, line.points[i].y);
-        ctx.lineTo(line.points[i + 1].x, line.points[i + 1].y);
-      }
-      
-      ctx.stroke();
-    }
-    
-    // Draw current line if it exists
-    if (currentLine) {
-      drawLine(currentLine);
-    }
-    
-    // Reset composite operation
-    ctx.globalCompositeOperation = 'source-over';
+    lines.forEach((line) => drawLine(line, ctx));
+    if (currentLine) drawLine(currentLine, ctx);
   }, [lines, currentLine]);
 
+  const drawLine = (line: DrawingLine, ctx: CanvasRenderingContext2D) => {
+    ctx.beginPath();
+    ctx.lineWidth = line.tool === 'eraser' ? 20 : line.width;
+    ctx.strokeStyle = line.tool === 'eraser' ? '#FFFFFF' : line.color;
+    ctx.globalCompositeOperation = line.tool === 'eraser' ? 'destination-out' : 'source-over';
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    for (let i = 0; i < line.points.length - 1; i++) {
+      ctx.moveTo(line.points[i].x, line.points[i].y);
+      ctx.lineTo(line.points[i + 1].x, line.points[i + 1].y);
+    }
+    ctx.stroke();
+    ctx.globalCompositeOperation = 'source-over';
+  };
+
+  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const newLine: DrawingLine = {
+      points: [{ x, y }],
+      color: currentColor,
+      width: tool === 'eraser' ? 20 : 2,
+      tool,
+    };
+    setCurrentLine(newLine);
+    setIsDrawing(true);
+  };
+
+  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (!isDrawing || !currentLine || !canvasRef.current) return;
+    const canvas = canvasRef.current;
+    const rect = canvas.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    setCurrentLine((prevLine) => {
+      if (!prevLine) return null;
+      const updatedLine = {
+        ...prevLine,
+        points: [...prevLine.points, { x, y }],
+      };
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        const lastPoint = prevLine.points[prevLine.points.length - 1];
+        ctx.beginPath();
+        ctx.lineWidth = prevLine.tool === 'eraser' ? 20 : prevLine.width;
+        ctx.strokeStyle = prevLine.tool === 'eraser' ? '#FFFFFF' : prevLine.color;
+        ctx.globalCompositeOperation = prevLine.tool === 'eraser' ? 'destination-out' : 'source-over';
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.moveTo(lastPoint.x, lastPoint.y);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+        ctx.globalCompositeOperation = 'source-over';
+      }
+      return updatedLine;
+    });
+  };
+
+  const endDrawing = () => {
+    if (isDrawing && currentLine) {
+      setLines((prevLines) => [...prevLines, currentLine]);
+      setCurrentLine(null);
+      setIsDrawing(false);
+    }
+  };
+
+  const clearWhiteboard = () => {
+    setLines([]);
+    if (canvasRef.current) {
+      const ctx = canvasRef.current.getContext('2d');
+      if (ctx) {
+        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
+      }
+    }
+  };
+
+  // Video controls
   const toggleVideo = () => {
     if (streamRef.current) {
       const videoTrack = streamRef.current.getVideoTracks()[0];
@@ -270,393 +628,20 @@ peer.on('connection', (conn) => {
     }
   };
 
-  // Setup socket connection
-  const socket = io('http://192.168.1.15:3000');
-  
-  // Handle remote peer joining
-  useEffect(() => {
-    socket.on('peerJoined', ({ userId: remotePeerId, peerId }) => {
-      console.log('New peer joined:', remotePeerId, 'with PeerJS ID:', peerId);
-      
-      // Don't call yourself
-      if (remotePeerId === userId) return;
-      
-      // Keep track of remote peers
-      setRemotePeers(prev => [...prev, peerId]);
-      
-      // Initiate call to new peer
-      if (streamRef.current && peerRef.current) {
-        console.log('Calling peer:', peerId);
-        const call = peerRef.current.call(peerId, streamRef.current);
-        
-        call.on('stream', (remoteStream) => {
-          console.log('Received stream from called peer');
-          if (remoteVideoRef.current) {
-            remoteVideoRef.current.srcObject = remoteStream;
-          }
-        });
-        
-        call.on('error', (err) => {
-          console.error('Call error:', err); 
-        });
-        
-        // Store the call reference
-        peerConnections.current[peerId] = call;
-      }
-    });
-    
-    socket.on('peerLeft', ({ peerId }) => {
-      console.log('Peer left:', peerId);
-      
-      // Remove from active peers list
-      setRemotePeers(prev => prev.filter(id => id !== peerId));
-      
-      // Close and cleanup connection
-      if (peerConnections.current[peerId]) {
-        peerConnections.current[peerId].close();
-        delete peerConnections.current[peerId];
-      }
-    });
-    
-    return () => {
-      socket.off('peerJoined');
-      socket.off('peerLeft');
-    };
-  }, [userId]);
-
-  useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        const response = await fetch('http://192.168.1.15:3000/api/messages');
-        if (response.ok) {
-          const messageHistory = await response.json();
-          // Convertir les messages du format serveur au format de l'interface utilisateur
-          const formattedMessages = messageHistory.map(msg => ({
-            id: msg._id || uuidv4(),
-            sender: msg.senderId === userId ? 'You' : 'Friend',
-            content: msg.content,
-            timestamp: new Date(msg.timestamp),
-          }));
-          setMessages(formattedMessages);
-          
-          // Auto-scroll après le chargement des messages
-          setTimeout(() => {
-            if (chatContainerRef.current) {
-              chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-            }
-          }, 100);
-        }
-      } catch (error) {
-        console.error('Erreur lors du chargement des messages:', error);
-      }
-    };
-    
-    fetchMessages();
-  }, [userId]);
-
-  useEffect(() => {
-    socket.on('connect', () => {
-      console.log('Connected to server');
-      // Rejoindre une room basée sur l'ID de session
-      if (sessionId) {
-        socket.emit('joinRoom', { roomId: sessionId, userId });
-        
-        // Also join the video room with the same session ID
-        if (peerRef.current && peerRef.current.id) {
-          socket.emit('joinVideoRoom', { 
-            roomId: sessionId, 
-            userId, 
-            peerId: peerRef.current.id 
-          });
-        }
-      }
-    });
-  
-    socket.on('receiveMessage', (data) => {
-      console.log('Message received:', data);
-      
-      // Formater le message reçu
-      const newMessage = {
-        id: data.id || uuidv4(),
-        sender: data.senderId === userId ? 'You' : 'Friend',
-        content: data.content,
-        timestamp: new Date(data.timestamp)
-      };
-      
-      // Ajouter le message à l'état local
-      setMessages(prev => [...prev, newMessage]);
-      
-      // Auto-scroll quand un nouveau message est reçu
-      setTimeout(() => {
-        if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-        }
-      }, 100);
-    });
-
-    return () => {
-      socket.off('receiveMessage');
-    };
-  }, [userId, sessionId]); 
-
-  const handleSendMessage = () => {
-    if (newMessage.trim()) {
-      const messageId = uuidv4();
-      
-      // Données du message à envoyer au serveur
-      const messageData = {
-        id: messageId,
-        senderId: userId,
-        roomId: sessionId || 'global', // Utiliser l'ID de session comme ID de room
-        content: newMessage,
-        timestamp: new Date()
-      };
-      
-      // Message à afficher localement
-      const message = {
-        id: messageId,
-        sender: 'You',
-        content: newMessage,
-        timestamp: new Date(),
-      };
-      
-      // Ajouter le message à l'état local
-      setMessages(prev => [...prev, message]);
-      
-      // Envoyer le message via socket.io
-      socket.emit('sendMessage', messageData);
-      
-      // Réinitialiser le champ de message
-      setNewMessage('');
-      
-      // Auto-scroll
-      setTimeout(() => {
-        if (chatContainerRef.current) {
-          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
-        }
-      }, 100);
-    }
-  };
-  
-
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      const fileShare: FileShare = {
-        id: uuidv4(),
-        name: file.name,
-        size: file.size,
-        sender: 'You',
-        url: URL.createObjectURL(file),
-        timestamp: new Date(),
-      };
-      setFiles(prev => [...prev, fileShare]);
-    }
-  };
-
-  const handleCodeChange = (value: string | undefined) => {
-    if (value !== undefined) {
-      setCode(value);
-    }
-  };
-
   const toggleFullscreen = () => {
     setIsFullscreen(!isFullscreen);
   };
 
-  const clearWhiteboard = () => {
-    setLines([]);
-    
-    if (canvasRef.current) {
-      const ctx = canvasRef.current.getContext('2d');
-      if (ctx) {
-        ctx.clearRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-        ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, canvasRef.current.width, canvasRef.current.height);
-      }
-    }
-  };
-
-  // Code compilation function
-  const compileCode = async () => {
-    setIsCompiling(true);
-    setShowOutput(true);
-    
-    try {
-      // In a real application, you would send the code to a backend service
-      // Here we're demonstrating a mock implementation
-      
-      const startTime = performance.now();
-      
-      // Mock API call to a code execution service
-      // Replace with actual API call in production
-      const response = await mockCompileRequest(code, language);
-      
-      const endTime = performance.now();
-      const executionTime = endTime - startTime;
-      
-      setCompileResult({
-        output: response.output,
-        error: response.error,
-        executionTime: executionTime
-      });
-    } catch (error) {
-      setCompileResult({
-        output: '',
-        error: 'Error connecting to compilation service',
-        executionTime: 0
-      });
-    } finally {
-      setIsCompiling(false);
-    }
-  };
-  
-  // This is a mock function that simulates sending code to a backend
-  // In a real application, replace this with an actual API call
-  const mockCompileRequest = async (code: string, language: string) => {
-    // Simulate network delay
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
-    // For demonstration purposes only
-    // Simple evaluation for JavaScript code (NEVER use eval in production)
-    if (language === 'javascript') {
-      try {
-        // This is just for demo purposes, NEVER use in production
-        // Ideally, code would be executed in a sandboxed environment on the backend
-        let output = '';
-        const consoleLog = console.log;
-        // Override console.log to capture output
-        console.log = (...args) => {
-          output += args.join(' ') + '\n';
-        };
-        
-        // WARNING: This is extremely unsafe and only for demo purposes
-        // eslint-disable-next-line no-eval
-        eval(code);
-        
-        // Restore console.log
-        console.log = consoleLog;
-        
-        return { output, error: '' };
-      } catch (err) {
-        return { output: '', error: (err as Error).message };
-      }
-    }
-    
-    // For other languages, return a placeholder message
-    return {
-      output: `[Mock output] Running ${language} code...\nHello, world!`,
-      error: ''
-    };
-  };
-
-  const handleSaveCode = () => {
-    // Create a blob and download the code file
-    const blob = new Blob([code], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `code.${getFileExtension(language)}`;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
-  };
-  
-  const getFileExtension = (lang: string) => {
-    switch (lang) {
-      case 'javascript': return 'js';
-      case 'typescript': return 'ts';
-      case 'python': return 'py';
-      case 'java': return 'java';
-      case 'cpp': return 'cpp';
-      default: return 'txt';
-    }
-  };
-
-  // Canvas drawing handlers
-  const startDrawing = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    const newLine: DrawingLine = {
-      points: [{ x, y }],
-      color: currentColor,
-      width: tool === 'eraser' ? 20 : 2,
-      tool
-    };
-    
-    setCurrentLine(newLine);
-    setIsDrawing(true);
-  };
-
-  const draw = (e: React.MouseEvent<HTMLCanvasElement>) => {
-    if (!isDrawing || !currentLine || !canvasRef.current) return;
-    
-    const canvas = canvasRef.current;
-    const rect = canvas.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const y = e.clientY - rect.top;
-    
-    const newPoint = { x, y };
-    
-    setCurrentLine(prevLine => {
-      if (!prevLine) return null;
-      
-      const updatedLine = { 
-        ...prevLine,
-        points: [...prevLine.points, newPoint]
-      };
-      
-      // Draw the latest segment immediately for smooth drawing
-      const ctx = canvas.getContext('2d');
-      if (ctx) {
-        const lastPoint = prevLine.points[prevLine.points.length - 1];
-        
-        ctx.beginPath();
-        ctx.lineWidth = prevLine.tool === 'eraser' ? 20 : prevLine.width;
-        
-        if (prevLine.tool === 'eraser') {
-          ctx.strokeStyle = '#FFFFFF';
-          ctx.globalCompositeOperation = 'destination-out';
-        } else {
-          ctx.strokeStyle = prevLine.color;
-          ctx.globalCompositeOperation = 'source-over';
-        }
-        
-        ctx.lineCap = 'round';
-        ctx.lineJoin = 'round';
-        ctx.moveTo(lastPoint.x, lastPoint.y);
-        ctx.lineTo(newPoint.x, newPoint.y);
-        ctx.stroke();
-        
-        // Reset composite operation
-        ctx.globalCompositeOperation = 'source-over';
-      }
-      
-      return updatedLine;
-    });
-  };
-
-  const endDrawing = () => {
-    if (isDrawing && currentLine) {
-      setLines(prevLines => [...prevLines, currentLine]);
-      setCurrentLine(null);
-      setIsDrawing(false);
-    }
-  };
-
   return (
     <div className="min-h-screen bg-gray-50">
-            <Sidebar />
-
+      <Sidebar />
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {errorMessage && (
+          <div className="fixed top-4 right-4 bg-red-500 text-white p-3 rounded-lg shadow-lg">
+            {errorMessage}
+          </div>
+        )}
         <div className="grid grid-cols-3 gap-6">
-          {/* Video Call Section */}
           <div className={`${isFullscreen ? 'fixed inset-0 z-50 bg-black' : 'col-span-1'}`}>
             <div className="relative bg-black rounded-lg overflow-hidden">
               <video
@@ -699,10 +684,8 @@ peer.on('connection', (conn) => {
             </div>
           </div>
 
-          {/* Main Content Section */}
           <div className={`${isFullscreen ? 'hidden' : 'col-span-2'}`}>
             <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-              {/* Tabs */}
               <div className="flex border-b border-gray-200">
                 <button
                   onClick={() => setActiveTab('chat')}
@@ -726,7 +709,6 @@ peer.on('connection', (conn) => {
                   <Code className="h-5 w-5 mr-2" />
                   Code Editor
                 </button>
-
                 <button
                   onClick={() => setActiveTab('whiteboard')}
                   className={`flex items-center px-4 py-2 border-b-2 font-medium text-sm ${
@@ -738,17 +720,26 @@ peer.on('connection', (conn) => {
                   <Pencil className="h-5 w-5 mr-2" />
                   Whiteboard
                 </button>
+                <button
+                  onClick={() => setActiveTab('ai-help')}
+                  className={`flex items-center px-4 py-2 border-b-2 font-medium text-sm ${
+                    activeTab === 'ai-help'
+                      ? 'border-indigo-500 text-indigo-600'
+                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  }`}
+                >
+                  <Brain className="h-5 w-5 mr-2" />
+                  AI Help
+                </button>
               </div>
 
-              {/* Tab Content */}
               <div className="p-4">
                 {activeTab === 'chat' && (
                   <div className="h-[600px] flex flex-col">
-                    {/* Chat Messages */}
                     <div ref={chatContainerRef} className="flex-1 overflow-y-auto mb-4 space-y-4">
                       {messages.map((message) => (
-                        <div 
-                          key={message.id} 
+                        <div
+                          key={message.id}
                           className={`flex ${message.sender === 'You' ? 'justify-end' : 'justify-start'}`}
                         >
                           <div
@@ -767,70 +758,61 @@ peer.on('connection', (conn) => {
                         </div>
                       ))}
                     </div>
-
-    {/* File Sharing */}
-    {files.length > 0 && (
-      <div className="mb-4">
-        <h3 className="text-sm font-medium text-gray-700 mb-2">Shared Files</h3>
-        <div className="space-y-2">
-          {files.map((file) => (
-            <div
-              key={file.id}
-              className="flex items-center justify-between bg-gray-50 p-2 rounded-lg"
-            >
-              <div className="flex items-center">
-                <Share className="h-5 w-5 text-gray-400 mr-2" />
-                <div>
-                  <p className="text-sm font-medium text-gray-900">{file.name}</p>
-                  <p className="text-xs text-gray-500">
-                    {(file.size / 1024 / 1024).toFixed(2)} MB
-                  </p>
-                </div>
-              </div>
-              <a
-                href={file.url}
-                download={file.name}
-                className="p-2 text-gray-400 hover:text-indigo-600"
-              >
-                <Download className="h-5 w-5" />
-              </a>
-            </div>
-          ))}
-        </div>
-      </div>
-    )}
-
-    {/* Message Input */}
-    <div className="flex space-x-4">
-      <input
-        type="text"
-        value={newMessage}
-        onChange={(e) => setNewMessage(e.target.value)}
-        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-        placeholder="Type a message..."
-        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-      />
-      <label className="p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
-        <input type="file" onChange={handleFileUpload} className="hidden" />
-        <Share className="h-5 w-5 text-gray-400" />
-      </label>
-      <button 
-        onClick={handleSendMessage} 
-        className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
-      >
-        <Send className="h-5 w-5" />
-      </button>
-    </div>
-  </div>
-)}
-
-
-
-
+                    {files.length > 0 && (
+                      <div className="mb-4">
+                        <h3 className="text-sm font-medium text-gray-700 mb-2">Shared Files</h3>
+                        <div className="space-y-2">
+                          {files.map((file) => (
+                            <div
+                              key={file.id}
+                              className="flex items-center justify-between bg-gray-50 p-2 rounded-lg"
+                            >
+                              <div className="flex items-center">
+                                <Share className="h-5 w-5 text-gray-400 mr-2" />
+                                <div>
+                                  <p className="text-sm font-medium text-gray-900">{file.name}</p>
+                                  <p className="text-xs text-gray-500">
+                                    {(file.size / 1024 / 1024).toFixed(2)} MB
+                                  </p>
+                                </div>
+                              </div>
+                              <a
+                                href={file.url}
+                                download={file.name}
+                                className="p-2 text-gray-400 hover:text-indigo-600"
+                              >
+                                <Download className="h-5 w-5" />
+                              </a>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex space-x-4">
+                      <input
+                        type="text"
+                        value={newMessage}
+                        onChange={(e) => setNewMessage(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
+                        placeholder="Type a message..."
+                        className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                      />
+                      <label className="p-2 border border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="file" onChange={handleFileUpload} className="hidden" />
+                        <Share className="h-5 w-5 text-gray-400" />
+                      </label>
+                      <button
+                        onClick={handleSendMessage}
+                        className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+                      >
+                        <Send className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {activeTab === 'code' && (
                   <div className="h-[600px] flex flex-col">
-                    {/* Code Editor Controls */}
                     <div className="flex justify-between items-center mb-4">
                       <div className="flex items-center space-x-2">
                         <select
@@ -871,13 +853,8 @@ peer.on('connection', (conn) => {
                         {showOutput ? 'Hide Output' : 'Show Output'}
                       </button>
                     </div>
-
-                    {/* Split View: Editor and Output */}
                     <div className={`flex flex-col flex-1 ${showOutput ? 'h-full' : ''}`}>
-                      {/* Editor */}
-                      <div className={`border border-gray-200 rounded-lg overflow-hidden ${
-                        showOutput ? 'h-1/2' : 'h-full'
-                      }`}>
+                      <div className={`border border-gray-200 rounded-lg overflow-hidden ${showOutput ? 'h-1/2' : 'h-full'}`}>
                         <Editor
                           height="100%"
                           language={language}
@@ -892,8 +869,6 @@ peer.on('connection', (conn) => {
                           }}
                         />
                       </div>
-
-                      {/* Output Panel */}
                       {showOutput && (
                         <div className="mt-4 h-1/2 flex flex-col">
                           <div className="flex items-center justify-between">
@@ -904,7 +879,7 @@ peer.on('connection', (conn) => {
                               </span>
                             )}
                           </div>
-                          <div 
+                          <div
                             ref={outputRef}
                             className="flex-1 mt-2 p-3 bg-gray-900 text-gray-100 font-mono text-sm rounded overflow-y-auto"
                           >
@@ -934,17 +909,13 @@ peer.on('connection', (conn) => {
                     <div className="mb-4 flex items-center space-x-4">
                       <button
                         onClick={() => setTool('pen')}
-                        className={`p-2 rounded ${
-                          tool === 'pen' ? 'bg-indigo-600 text-white' : 'bg-gray-200'
-                        }`}
+                        className={`p-2 rounded ${tool === 'pen' ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}
                       >
                         <Pencil className="h-5 w-5" />
                       </button>
                       <button
                         onClick={() => setTool('eraser')}
-                        className={`p-2 rounded ${
-                          tool === 'eraser' ? 'bg-indigo-600 text-white' : 'bg-gray-200'
-                        }`}
+                        className={`p-2 rounded ${tool === 'eraser' ? 'bg-indigo-600 text-white' : 'bg-gray-200'}`}
                       >
                         <Eraser className="h-5 w-5" />
                       </button>
@@ -962,7 +933,7 @@ peer.on('connection', (conn) => {
                       </button>
                     </div>
                     <div className="border border-gray-200 rounded-lg overflow-hidden">
-                      <canvas 
+                      <canvas
                         ref={canvasRef}
                         width={800}
                         height={520}
@@ -975,6 +946,71 @@ peer.on('connection', (conn) => {
                     </div>
                   </div>
                 )}
+
+                {activeTab === 'ai-help' && (
+                  <div className="h-[600px] flex flex-col">
+                    <div ref={aiChatContainerRef} className="flex-1 overflow-y-auto mb-4 space-y-4">
+                      {aiMessages.map((message) => (
+                        <div
+                          key={message.id}
+                          className={`flex ${message.isAI ? 'justify-start' : 'justify-end'}`}
+                        >
+                          <div
+                            className={`max-w-[80%] p-3 rounded-lg ${
+                              message.isAI ? 'bg-blue-50 text-gray-800' : 'bg-indigo-100 text-gray-800'
+                            }`}
+                          >
+                            <div className="flex items-center mb-1">
+                              {message.isAI ? (
+                                <Bot className="h-4 w-4 mr-1 text-blue-600" />
+                              ) : (
+                                <User className="h-4 w-4 mr-1 text-indigo-600" />
+                              )}
+                              <div className="font-medium text-xs text-gray-500">
+                                {message.isAI ? 'AI Assistant' : 'You'}
+                              </div>
+                            </div>
+                            <p className="text-sm whitespace-pre-wrap">{message.content}</p>
+                            <div className="text-xs text-gray-500 mt-1 text-right">
+                              {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                      {aiTyping && (
+                        <div className="flex justify-start">
+                          <div className="max-w-[80%] p-3 rounded-lg bg-blue-50 text-gray-800">
+                            <div className="flex items-center mb-1">
+                              <Bot className="h-4 w-4 mr-1 text-blue-600" />
+                              <div className="font-medium text-xs text-gray-500">AI Assistant</div>
+                            </div>
+                            <p className="text-sm whitespace-pre-wrap">{aiStream || '...'}</p>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="text"
+                        value={aiQuestion}
+                        onChange={(e) => setAiQuestion(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && !aiResponding && handleAskAI()}
+                        placeholder="Ask the AI assistant a question..."
+                        className="w-full p-3 pr-12 border border-gray-300 rounded-lg focus:ring-blue-500 focus:border-blue-500"
+                        disabled={aiResponding}
+                      />
+                      <button
+                        onClick={handleAskAI}
+                        disabled={aiResponding || !aiQuestion.trim()}
+                        className={`absolute right-2 top-1/2 transform -translate-y-1/2 p-2 text-white rounded-full ${
+                          aiResponding || !aiQuestion.trim() ? 'bg-gray-400' : 'bg-blue-600 hover:bg-blue-700'
+                        }`}
+                      >
+                        <Send className="h-5 w-5" />
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -982,7 +1018,6 @@ peer.on('connection', (conn) => {
       </div>
     </div>
   );
-
 }
 
 export default App;
