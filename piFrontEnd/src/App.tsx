@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Routes, Route, Link, useNavigate } from 'react-router-dom';
 import { GraduationCap, Menu, X, ChevronDown, Bell, User } from 'lucide-react';
+import recommendationsRouter from './routes/recommendations.js';
 import Home from './pages/Home';
 import Login from './pages/Login';
 import SignUp from './pages/SignUp';

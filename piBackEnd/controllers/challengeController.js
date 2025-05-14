@@ -385,7 +385,7 @@ export const checkForNewBadges = async (userId, completedChallenges) => {
   return newBadges;
 };
 
-// Complete a challenge
+
 export const completeChallenge = async (req, res) => {
   try {
     const { challengeId, userId, completedAt, includeUserUpdate } = req.body;
@@ -483,9 +483,7 @@ export const completeChallenge = async (req, res) => {
   }
 };
 
-export default {
-  completeChallenge
-};
+
 
 // Get user progress
 export const getUserProgress = async (req, res) => {

@@ -100,9 +100,8 @@ const Challenges = () => {
   const [showInterestsModal, setShowInterestsModal] = useState(false);
   const [selectedInterests, setSelectedInterests] = useState<string[]>([]);
   const [availableInterests, setAvailableInterests] = useState<string[]>([
-    'JavaScript', 'Python', 'React', 'Data Structures', 'Algorithms', 
-    'Machine Learning', 'Web Development', 'Mobile Development',
-    'Databases', 'System Design', 'Frontend', 'Backend'
+    'JavaScript', 'Python', 'React', 
+    'Machine Learning', 'Web Development', 'Frontend', 'Backend','C++', 'Java', 'Frensh','Spanish', 'English', 'German', 'Italian', 'Chinese', 'Japanese', 'Korean', 'Russian', 'Arabic', 'Arabic','Portuguese'
   ]);
   const [user, setUser] = useState<User | null>(null);
   const [newBadges, setNewBadges] = useState<any[]>([]);
@@ -112,11 +111,7 @@ const Challenges = () => {
   const [streakAnimation, setStreakAnimation] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-
-  
-
-  // Load user data
-  useEffect(() => {const calculateProgress = () => {
+const calculateProgress = (userProgress) => {
   // Handle edge cases
   if (userProgress.nextLevelXP <= userProgress.currentLevelXP) return 100;
   if (userProgress.xp < userProgress.currentLevelXP) return 0;
@@ -131,8 +126,12 @@ const Challenges = () => {
   return Math.max(0, Math.min(100, calculatedProgress));
 };
 
+  
+
+  // Load user data
+  useEffect(() => {
+
     
-    const progress = calculateProgress();
     const updateUserInStorage = (userData) => {
       try {
         // Get the current stored user data
@@ -290,10 +289,8 @@ const Challenges = () => {
           // Continue with what data we have from local storage
         }
         
-        // Fix for progress calculation
-        const calculatedProgress = calculateProgress();
-        setProgress(calculatedProgress);
-        
+        const calculatedProgress = calculateProgress(userProgress);
+       setProgress(calculatedProgress);
         // Set loading to false even if progress fetch fails
         setLoading(false);
       } catch (error) {
@@ -426,10 +423,141 @@ const loadChallenges = async (tab: 'recommended' | 'daily' | 'all' | 'completed'
   console.log("Starting challenge:", challenge);
   setActiveChallenge(challenge);
 };
+  function showPopup(message: string, type: 'success' | 'error' | 'info' = 'info'): void {
+  // Create a container for the popup
+  const popupContainer = document.createElement('div');
+  popupContainer.classList.add('fixed', 'top-6', 'right-6', 'z-50', 'max-w-sm', 'w-full', 'transform', 'transition-all', 'duration-500');
+  popupContainer.style.animation = 'slideInRight 0.3s ease-out forwards';
   
+  // Define the color scheme based on the message type
+  let bgColor, iconBgColor, iconColor, borderColor;
+  let icon = '';
+  
+  switch (type) {
+    case 'success':
+      bgColor = 'bg-green-50';
+      iconBgColor = 'bg-green-100';
+      iconColor = 'text-green-600';
+      borderColor = 'border-green-200';
+      icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ${iconColor}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+      </svg>`;
+      break;
+    case 'error':
+      bgColor = 'bg-red-50';
+      iconBgColor = 'bg-red-100';
+      iconColor = 'text-red-600';
+      borderColor = 'border-red-200';
+      icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ${iconColor}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+      </svg>`;
+      break;
+    default: // info
+      bgColor = 'bg-blue-50';
+      iconBgColor = 'bg-blue-100';
+      iconColor = 'text-blue-600';
+      borderColor = 'border-blue-200';
+      icon = `<svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 ${iconColor}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>`;
+  }
+  
+  // Create popup content
+  popupContainer.innerHTML = `
+    <div class="rounded-lg shadow-lg ${bgColor} border ${borderColor} overflow-hidden">
+      <div class="p-4 flex items-start">
+        <div class="flex-shrink-0">
+          <div class="rounded-full p-2 ${iconBgColor}">
+            ${icon}
+          </div>
+        </div>
+        <div class="ml-3 w-0 flex-1 pt-0.5">
+          <p class="text-sm font-medium text-gray-900">${message}</p>
+        </div>
+        <div class="ml-4 flex-shrink-0 flex">
+          <button class="rounded-md inline-flex text-gray-400 hover:text-gray-500 focus:outline-none">
+            <svg class="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="h-1 ${type === 'error' ? 'bg-red-500' : type === 'success' ? 'bg-green-500' : 'bg-blue-500'} w-full" id="progress-bar"></div>
+    </div>
+  `;
+  
+  // Add the popup to the DOM
+  document.body.appendChild(popupContainer);
+  
+  // Add animation styles
+  const style = document.createElement('style');
+  style.textContent = `
+    @keyframes slideInRight {
+      0% {
+        opacity: 0;
+        transform: translateX(100%);
+      }
+      100% {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+    
+    @keyframes slideOutRight {
+      0% {
+        opacity: 1;
+        transform: translateX(0);
+      }
+      100% {
+        opacity: 0;
+        transform: translateX(100%);
+      }
+    }
+    
+    @keyframes progressShrink {
+      0% {
+        width: 100%;
+      }
+      100% {
+        width: 0%;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+  
+  // Start progress bar animation
+  const progressBar = popupContainer.querySelector('#progress-bar');
+  if (progressBar) {
+    progressBar.style.animation = 'progressShrink 3s linear forwards';
+  }
+  
+  // Add click handler to close button
+  const closeButton = popupContainer.querySelector('button');
+  if (closeButton) {
+    closeButton.addEventListener('click', () => {
+      closePopup();
+    });
+  }
+  
+  // Function to close the popup with animation
+  const closePopup = () => {
+    popupContainer.style.animation = 'slideOutRight 0.3s ease-in forwards';
+    setTimeout(() => {
+      if (document.body.contains(popupContainer)) {
+        document.body.removeChild(popupContainer);
+      }
+    }, 300);
+  };
+  
+  // Automatically remove the popup after 3 seconds
+  setTimeout(() => {
+    closePopup();
+  }, 3000);
+}
   const handleChallengeComplete = async (challengeId: string, success: boolean) => {
+    
   if (!success) {
-    console.log("Challenge failed, just closing modal");
+    showPopup("Challenge failed");
     setActiveChallenge(null);
     return;
   }
@@ -708,36 +836,37 @@ const loadChallenges = async (tab: 'recommended' | 'daily' | 'all' | 'completed'
             <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 mb-8">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
                 {/* Level and XP */}
-                <div className="col-span-2">
-                  <div className="flex items-center space-x-4">
-                    <div className="relative">
-                      <div className="h-20 w-20 rounded-full bg-indigo-100 flex items-center justify-center">
-                        <Trophy className="h-10 w-10 text-indigo-600" />
-                      </div>
-                      <div className="absolute -bottom-2 -right-2 bg-indigo-600 text-white rounded-full h-8 w-8 flex items-center justify-center text-sm font-bold">
-                        {userProgress.level}
-                      </div>
-                    </div>
-                    <div className="flex-1">
-                      <div className="flex items-center justify-between mb-2">
-                        <span className="text-sm font-medium text-gray-500">Level Progress</span>
-                        <span className="text-sm font-medium text-indigo-600">
-                          {Math.max(0, userProgress.xp - userProgress.currentLevelXP)}/
-                          {Math.max(1, userProgress.nextLevelXP - userProgress.currentLevelXP)} XP
-                        </span>
-                      </div>
-                      <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-                        <div 
-                          className="h-full bg-indigo-600 rounded-full transition-all duration-300"
-                          style={{ width: `${Math.max(0, Math.min(100, progress))}%` }}
-                        />
-                      </div>
-                      <div className="mt-2 text-xs text-gray-500">
-                        Total XP: {userProgress.xp}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                {/* Level and XP */}
+<div className="col-span-2">
+  <div className="flex items-center space-x-4">
+    <div className="relative">
+      <div className="h-20 w-20 rounded-full bg-indigo-100 flex items-center justify-center">
+        <Trophy className="h-10 w-10 text-indigo-600" />
+      </div>
+      <div className="absolute -bottom-2 -right-2 bg-indigo-600 text-white rounded-full h-8 w-8 flex items-center justify-center text-sm font-bold">
+        {userProgress.level}
+      </div>
+    </div>
+    <div className="flex-1">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-sm font-medium text-gray-500">Level Progress</span>
+        <span className="text-sm font-medium text-indigo-600">
+          {Math.max(0, userProgress.xp - userProgress.currentLevelXP)}/
+          {Math.max(1, userProgress.nextLevelXP - userProgress.currentLevelXP)} XP
+        </span>
+      </div>
+      <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
+        <div 
+          className="h-full bg-indigo-600 rounded-full transition-all duration-300"
+          style={{ width: `${Math.round(progress)}%` }}
+        />
+      </div>
+      <div className="mt-2 text-xs text-gray-500">
+        Total XP: {userProgress.xp}
+      </div>
+    </div>
+  </div>
+</div>
 
                 {/* Streak */}
                 <div className={`bg-gradient-to-r from-orange-500 to-red-500 rounded-xl p-4 text-white ${streakAnimation ? 'animate-pulse' : ''}`}>

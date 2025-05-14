@@ -39,8 +39,8 @@ const INTERESTS_CATEGORIES: Category[] = [
     name: "Technology",
     icon: <Brain className="h-6 w-6" />,
     items: [
-      "AI & Machine Learning", "Blockchain", "IoT", "Cloud Computing", "Cybersecurity", "Mobile Development", "Data Science", "AR/VR"
-    ]
+      'JavaScript', 'Python', 'React', 
+    'Machine Learning', 'Web Development', 'Frontend', 'Backend','C++', 'Java']
   },
   {
     name: "Languages",

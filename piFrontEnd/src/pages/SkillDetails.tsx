@@ -1,7 +1,9 @@
+
 import { useState, useEffect } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { ArrowLeft, UserPlus, Calendar, Tag, Clock, Edit, Trash2 } from "lucide-react";
+import { ArrowLeft, UserPlus, Calendar, Tag, Clock, Edit, Trash2, Heart, Flag } from "lucide-react";
 import Sidebar from "../components/Sidebar";
+import ReportModal from "../components/ReportModal";
 
 interface User {
   _id: string;
@@ -22,18 +24,24 @@ interface Skill {
   user: User;
   createdAt: string;
   updatedAt: string;
+  likes: number;
+  isLiked?: boolean;
 }
 
 const SkillDetails = () => {
   const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // Fixed: Correctly use useNavigate hook
   const [skill, setSkill] = useState<Skill | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [similarSkills, setSimilarSkills] = useState<Skill[]>([]);
+  const [similarSkillsError, setSimilarSkillsError] = useState("");
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [skillToReport, setSkillToReport] = useState<Skill | null>(null);
+  const isAuthenticated = !!localStorage.getItem("user") || !!sessionStorage.getItem("user");
 
   useEffect(() => {
-    // Obtenir l'ID de l'utilisateur actuel
     const storedUser = localStorage.getItem("user") || sessionStorage.getItem("user");
     if (storedUser) {
       try {
@@ -44,7 +52,6 @@ const SkillDetails = () => {
       }
     }
 
-    // Charger les détails de la compétence
     fetchSkillDetails();
   }, [id]);
 
@@ -55,7 +62,16 @@ const SkillDetails = () => {
         throw new Error("Failed to fetch skill details");
       }
       const data = await response.json();
+      // Fetch liked skills if authenticated
+      if (isAuthenticated && currentUserId) {
+        const likedSkillsRes = await fetch(`http://localhost:3000/api/users/${currentUserId}/liked-skills`);
+        if (likedSkillsRes.ok) {
+          const likedSkills = await likedSkillsRes.json();
+          data.isLiked = likedSkills.includes(data._id);
+        }
+      }
       setSkill(data);
+      fetchSimilarSkillsByCategory(data.category);
     } catch (err) {
       setError("Failed to load skill details. Please try again later.");
       console.error("Error fetching skill:", err);
@@ -64,64 +80,189 @@ const SkillDetails = () => {
     }
   };
 
+  const fetchSimilarSkillsByCategory = async (category: string) => {
+    try {
+      const response = await fetch(
+        `http://localhost:3000/api/recommendations/category/${encodeURIComponent(category)}`,
+        {
+          headers: {
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch similar skills: ${response.statusText}`);
+      }
+
+      const data = await response.json();
+      console.log("Similar skills data:", data);
+
+      let skills = [];
+      if (Array.isArray(data)) {
+        skills = data;
+      } else if (Array.isArray(data.similar_skills)) {
+        skills = data.similar_skills;
+      } else {
+        throw new Error("Invalid response format from backend");
+      }
+
+      // Fetch liked status for similar skills
+      if (isAuthenticated && currentUserId && skills.length > 0) {
+        const likedSkillsRes = await fetch(`http://localhost:3000/api/users/${currentUserId}/liked-skills`);
+        if (likedSkillsRes.ok) {
+          const likedSkills = await likedSkillsRes.json();
+          skills = skills.map((skill: Skill) => ({
+            ...skill,
+            isLiked: likedSkills.includes(skill._id),
+          }));
+        }
+      }
+
+      if (skills.length === 0) {
+        setSimilarSkillsError("No similar skills found in this category.");
+      } else {
+        setSimilarSkillsError("");
+      }
+
+      setSimilarSkills(skills);
+    } catch (err) {
+      console.error("Error fetching similar skills:", err);
+      setSimilarSkillsError("Failed to load similar skills. Please try again.");
+    }
+  };
+
   const handleDeleteSkill = async () => {
     if (window.confirm("Are you sure you want to delete this skill?")) {
       try {
         const response = await fetch(`http://localhost:3000/skill/skills/${id}`, {
-          method: 'DELETE',
+          method: "DELETE",
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('token')}`
-          }
+            Authorization: `Bearer ${localStorage.getItem("token")}`,
+          },
         });
 
         if (response.ok) {
-          navigate('/marketplace');
+          navigate("/marketplace");
         } else {
-          throw new Error('Failed to delete skill');
+          throw new Error("Failed to delete skill");
         }
       } catch (err) {
-        console.error('Error deleting skill:', err);
-        alert('Failed to delete skill. Please try again.');
+        console.error("Error deleting skill:", err);
+        alert("Failed to delete skill. Please try again.");
       }
+    }
+  };
+
+  const handleToggleLike = async (skillId: string) => {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+
+    try {
+      const skill = similarSkills.find((s) => s._id === skillId);
+      if (!skill) return;
+
+      const isCurrentlyLiked = skill.isLiked;
+      const action = isCurrentlyLiked ? "unlike" : "like";
+
+      const response = await fetch(`http://localhost:3000/api/skills/${skillId}/${action}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({ userId: currentUserId }),
+      });
+
+      if (response.ok) {
+        setSimilarSkills(
+          similarSkills.map((s) =>
+            s._id === skillId
+              ? {
+                  ...s,
+                  likes: isCurrentlyLiked ? s.likes - 1 : s.likes + 1,
+                  isLiked: !isCurrentlyLiked,
+                }
+              : s
+          )
+        );
+      } else {
+        throw new Error("Failed to update like");
+      }
+    } catch (err) {
+      console.error("Error toggling like:", err);
+      alert("Failed to update like. Please try again.");
+    }
+  };
+
+  const handleOpenReportModal = (skill: Skill) => {
+    setSkillToReport(skill);
+    setIsReportModalOpen(true);
+  };
+
+  const handleSubmitReport = async (reason: string, details: string) => {
+    if (!isAuthenticated) {
+      navigate("/login");
+      return;
+    }
+
+    if (!skillToReport) return;
+
+    try {
+      const response = await fetch("http://localhost:3000/api/reports", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+        body: JSON.stringify({
+          skillId: skillToReport._id,
+          reporterId: currentUserId,
+          reportedUserId: skillToReport.user._id,
+          reason,
+          details,
+        }),
+      });
+
+      if (response.ok) {
+        alert("Report submitted successfully.");
+      } else {
+        throw new Error("Failed to submit report");
+      }
+    } catch (err) {
+      console.error("Error submitting report:", err);
+      alert("Failed to submit report. Please try again.");
+    } finally {
+      setIsReportModalOpen(false);
+      setSkillToReport(null);
     }
   };
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     return date.toLocaleDateString(undefined, {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric'
+      year: "numeric",
+      month: "long",
+      day: "numeric",
     });
   };
 
-  // Helper function to get user's full name
   const getUserFullName = (user: User | undefined) => {
-    if (!user) return 'Unknown User';
-    
-    // If name is directly available
+    if (!user) return "Unknown User";
     if (user.name) return user.name;
-    
-    // If we have firstName and lastName
     if (user.firstName && user.lastName) return `${user.firstName} ${user.lastName}`;
-    
-    // If we only have firstName
     if (user.firstName) return user.firstName;
-    
-    // If we only have lastName
     if (user.lastName) return user.lastName;
-    
-    return 'Unknown User';
+    return "Unknown User";
   };
 
-  // Helper function to get user's profile image or first letter for avatar
   const getUserInitial = (user: User | undefined) => {
-    if (!user) return '?';
-    
+    if (!user) return "?";
     if (user.name && user.name.length > 0) return user.name.charAt(0);
     if (user.firstName && user.firstName.length > 0) return user.firstName.charAt(0);
-    
-    return '?';
+    return "?";
   };
 
   if (loading) {
@@ -140,8 +281,8 @@ const SkillDetails = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center text-red-600">
           <p>{error || "Skill not found"}</p>
-          <button 
-            onClick={() => navigate('/marketplace')}
+          <button
+            onClick={() => navigate("/marketplace")}
             className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
           >
             Back to Marketplace
@@ -158,22 +299,18 @@ const SkillDetails = () => {
   return (
     <div className="min-h-screen bg-gray-50 text-gray-800">
       <Sidebar />
-      
       <div className="max-w-5xl mx-auto px-6 py-8">
-        {/* Navigation */}
-        <Link 
-          to="/marketplace" 
+        <Link
+          to="/marketplace"
           className="flex items-center text-indigo-600 mb-6 font-medium hover:text-indigo-800 transition-colors"
         >
           <ArrowLeft className="h-4 w-4 mr-2" />
           Back to Marketplace
         </Link>
-        
-        {/* Header with Image */}
         <div className="relative h-64 md:h-80 rounded-xl overflow-hidden mb-8">
-          <img 
-            src={skill.image || 'https://via.placeholder.com/1200x400?text=No+Image'} 
-            alt={skill.title} 
+          <img
+            src={skill.image || "https://via.placeholder.com/1200x400?text=No+Image"}
+            alt={skill.title}
             className="w-full h-full object-cover"
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent flex items-end">
@@ -185,24 +322,18 @@ const SkillDetails = () => {
             </div>
           </div>
         </div>
-        
-        {/* Main Content */}
         <div className="flex flex-col md:flex-row gap-8">
-          {/* Left Column - Skill Description */}
           <div className="flex-1">
             <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
               <h2 className="text-2xl font-bold mb-4">Description</h2>
               <div className="prose max-w-none">
-                {/* We display the description with proper formatting, preserving line breaks */}
-                {skill.description.split('\n').map((paragraph, idx) => (
+                {skill.description.split("\n").map((paragraph, idx) => (
                   <p key={idx} className="mb-4 text-gray-700 leading-relaxed">
                     {paragraph}
                   </p>
                 ))}
               </div>
             </div>
-            
-            {/* Action Buttons */}
             {isOwner ? (
               <div className="flex gap-4 mb-6">
                 <button
@@ -229,13 +360,101 @@ const SkillDetails = () => {
                 <span>Connect with Instructor</span>
               </Link>
             )}
+            {similarSkillsError && (
+              <p className="text-red-600 mb-6">{similarSkillsError}</p>
+            )}
+            {similarSkills.length > 0 && (
+              <div className="mb-12">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">Similar Skills</h2>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {similarSkills.map((skill) => (
+                    <div
+                      key={`sim-${skill._id}`}
+                      className="bg-white rounded-xl shadow-md overflow-hidden border border-gray-100 transition-all duration-300 hover:shadow-lg hover:translate-y-[-4px] border-l-4 border-l-indigo-500"
+                    >
+                      <div className="relative">
+                        <img
+                          src={skill.image || "https://via.placeholder.com/400x300?text=No+Image"}
+                          alt={skill.title}
+                          className="w-full h-48 object-cover"
+                        />
+                        <div className="absolute top-3 right-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenReportModal(skill);
+                            }}
+                            className="p-2 bg-white/80 rounded-full hover:bg-white text-gray-600 hover:text-red-500 transition-colors"
+                            title="Report this skill"
+                          >
+                            <Flag className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
+                          <span className="text-white text-sm font-medium px-3 py-1 bg-indigo-600 rounded-full">
+                            {skill.category}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="p-6">
+                        <h3 className="text-xl font-semibold mb-2 text-gray-800">{skill.title}</h3>
+                        <p className="text-gray-600 mb-4 line-clamp-2">{skill.description}</p>
+                        <div className="flex justify-between items-center mb-4">
+                          <p className="font-medium text-gray-700 flex items-center">
+                            <span className="inline-block bg-gray-100 rounded-full p-1 mr-2">
+                              <img
+                                src={`https://ui-avatars.com/api/?name=${encodeURIComponent(
+                                  skill.user?.name || "Unknown"
+                                )}&background=random`}
+                                alt="Avatar"
+                                className="h-6 w-6 rounded-full"
+                              />
+                            </span>
+                            By {skill.user?.name || "Anonymous"}
+                          </p>
+                          <button
+                            onClick={() => handleToggleLike(skill._id)}
+                            className="flex items-center gap-1 text-gray-600 hover:text-red-500 transition-colors"
+                          >
+                            <Heart
+                              className={`h-5 w-5 ${skill.isLiked ? "fill-red-500 text-red-500" : ""}`}
+                            />
+                            <span>{skill.likes || 0}</span>
+                          </button>
+                        </div>
+                        <div className="flex gap-2">
+                          <Link
+                            to={`/skills/${skill._id}`}
+                            className="flex-1 text-center py-2 border border-indigo-600 text-indigo-600 rounded-lg hover:bg-indigo-50 font-medium transition-colors"
+                          >
+                            View Details
+                          </Link>
+                          <Link
+                            to={
+                              isAuthenticated && skill.user?._id
+                                ? `/profile/${skill.user._id}`
+                                : "/login"
+                            }
+                            className="flex-1 bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 font-medium transition-colors flex items-center justify-center gap-2"
+                          >
+                            <UserPlus className="h-4 w-4" />
+                            <span>Connect</span>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
-          
-          {/* Right Column - Information */}
           <div className="md:w-72">
             <div className="bg-white rounded-xl shadow-sm p-6 mb-6">
               <h3 className="text-lg font-semibold mb-4">Instructor</h3>
-              <Link to={`/user/${skill.user?._id}`} className="flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors">
+              <Link
+                to={`/user/${skill.user?._id}`}
+                className="flex items-center hover:bg-gray-50 p-2 rounded-lg transition-colors"
+              >
                 <div className="w-12 h-12 bg-indigo-100 rounded-full flex items-center justify-center text-indigo-700 font-bold text-xl mr-3">
                   {instructorInitial}
                 </div>
@@ -245,7 +464,6 @@ const SkillDetails = () => {
                 </div>
               </Link>
             </div>
-            
             <div className="bg-white rounded-xl shadow-sm p-6">
               <h3 className="text-lg font-semibold mb-4">Information</h3>
               <ul className="space-y-4">
@@ -275,6 +493,14 @@ const SkillDetails = () => {
           </div>
         </div>
       </div>
+      {skillToReport && (
+        <ReportModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          onSubmit={handleSubmitReport}
+          skillTitle={skillToReport.title}
+        />
+      )}
     </div>
   );
 };

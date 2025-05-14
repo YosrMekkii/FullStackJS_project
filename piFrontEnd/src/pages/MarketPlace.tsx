@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { UserPlus, PlusCircle, Flag, Search, Heart, Edit, Trash2 } from "lucide-react";
 import Sidebar from "../components/Sidebar";
+import ReportModal from "../components/ReportModal";
 
 interface Skill {
   _id: string;
@@ -34,6 +35,8 @@ const SkillMarketplace = () => {
   const [userInterests, setUserInterests] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [skillToReport, setSkillToReport] = useState<Skill | null>(null);
 
   useEffect(() => {
     // Récupérer l'ID de l'utilisateur actuel depuis le stockage
@@ -164,6 +167,51 @@ const fetchRecommendedSkills = async (userId: string) => {
       }
     }
   };
+
+  // Add this function to handle opening the report modal
+const handleOpenReportModal = (skill: Skill) => {
+  setSkillToReport(skill);
+  setIsReportModalOpen(true);
+};
+
+// Add this function to handle submitting the report
+const handleSubmitReport = async (reason: string, details: string) => {
+  if (!isAuthenticated) {
+    navigate('/login');
+    return;
+  }
+  
+  if (!skillToReport) return;
+  
+  try {
+    const response = await fetch('http://localhost:3000/api/reports', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({
+        skillId: skillToReport._id,
+        reporterId: currentUserId,
+        reportedUserId: skillToReport.user._id,
+        reason,
+        details
+      })
+    });
+
+    if (response.ok) {
+      alert('Report submitted successfully.');
+    } else {
+      throw new Error('Failed to submit report');
+    }
+  } catch (err) {
+    console.error('Error submitting report:', err);
+    alert('Failed to submit report. Please try again.');
+  } finally {
+    setIsReportModalOpen(false);
+    setSkillToReport(null);
+  }
+};
   
   // Handle like/unlike
   const handleToggleLike = async (skillId: string) => {
@@ -285,11 +333,16 @@ const fetchRecommendedSkills = async (userId: string) => {
                     />
                     <div className="absolute top-3 right-3">
                       <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleOpenReportModal(skill);
+                        }}
                         className="p-2 bg-white/80 rounded-full hover:bg-white text-gray-600 hover:text-red-500 transition-colors"
                         title="Report this skill"
                       >
                         <Flag className="h-4 w-4" />
                       </button>
+
                     </div>
                     <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-4">
                       <span className="text-white text-sm font-medium px-3 py-1 bg-indigo-600 rounded-full">
@@ -493,6 +546,14 @@ const fetchRecommendedSkills = async (userId: string) => {
           </div>
         )}
       </div>
+      {skillToReport && (
+        <ReportModal
+          isOpen={isReportModalOpen}
+          onClose={() => setIsReportModalOpen(false)}
+          onSubmit={handleSubmitReport}
+          skillTitle={skillToReport.title}
+        />
+      )}
     </div>
   );
 };

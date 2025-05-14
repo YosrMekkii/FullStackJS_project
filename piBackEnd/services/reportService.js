@@ -17,6 +17,8 @@ export const getAllReports = async () => {
   }
 };
 
+
+
 export const getReportById = async (id) => {
   try {
     return await Report.findById(id).populate("reporter reportedUser");
@@ -25,13 +27,7 @@ export const getReportById = async (id) => {
   }
 };
 
-export const updateReportStatus = async (id, status) => {
-  try {
-    return await Report.findByIdAndUpdate(id, { status }, { new: true });
-  } catch (error) {
-    throw new Error("Error updating report status: " + error.message);
-  }
-};
+
 
 export const deleteReport = async (id) => {
   try {
@@ -48,4 +44,12 @@ export const getTotalReports = async () => {
   } catch (error) {
     throw new Error("Erreur lors du comptage des rapports: " + error.message);
   }
+};
+
+export const updateReportStatus = async (reportId, status) => {
+  return await Report.findByIdAndUpdate(
+    reportId,
+    { status },
+    { new: true }
+  );
 };

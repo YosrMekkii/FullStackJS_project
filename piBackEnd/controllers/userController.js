@@ -80,7 +80,8 @@ const getUsersByIds = async (req, res) => {
         location: 1,
         bio: 1,
         skills: 1,
-        profileImagePath: 1
+        profileImagePath: 1,
+        email: 1
       }
     );
 
@@ -100,7 +101,8 @@ const getUsersByIds = async (req, res) => {
           location: user.location || "",
           bio: user.bio || "",
           skills: user.skills || [],
-          profileImagePath: user.profileImagePath || ""
+          profileImagePath: user.profileImagePath || "",
+          email: user.email || ""
         } : null,
         exists: !!user
       };
@@ -539,6 +541,20 @@ const updateSkills = async (req, res) => {
     res.status(500).json({ error: error.message });
   }
 };
+const getLeaderboard = async (req, res) => {
+  try {
+    const leaderboard = await User.find()
+      .sort({ xp: -1 }) // Sort by XP in descending order
+      .limit(5) // Limit to top 5 users
+      .select('firstName lastName xp level profileImagePath'); // Only select relevant fields
+
+    res.status(200).json(leaderboard);
+  } catch (error) {
+    console.error('Error fetching leaderboard:', error);
+    res.status(500).json({ message: 'Server error while fetching leaderboard' });
+  }
+};
+
 
 
 // ✅ Update interests (skills wanted)
@@ -772,7 +788,111 @@ const updateUserInterests = async (req, res) => {
   }
 };
 
+
+
+const sendWarningEmail = async (req, res) => {
+  const { email, message, firstName } = req.body;
+  const transporter = nodemailer.createTransport({
+  service: 'gmail', // ou un autre provider SMTP
+  auth: {
+    user: process.env.EMAIL_USER, // Ton email
+    pass: process.env.EMAIL_PASS, // Ton mot de passe ou App Password
+  },
+});
+
+  try {
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: "⚠ Avertissement important",
+      html: `<p>Bonjour ${firstName || 'Utilisateur'},</p>
+             <p>${message}</p>
+             <p>Merci de votre compréhension.</p>`,
+    });
+
+    res.status(200).json({ message: "Email d'avertissement envoyé avec succès." });
+  } catch (error) {
+    console.error("Erreur lors de l'envoi de l'email d'avertissement :", error);
+    if (!res.headersSent) {
+      res.status(500).json({ error: error.message || "Une erreur est survenue lors de l'envoi de l'email." });
+    }
+  }
+};
+
+
+export const permanentBanUser = async (req, res) => {
+  const transporter = nodemailer.createTransport({
+  service: 'gmail', // ou un autre provider SMTP
+  auth: {
+    user: process.env.EMAIL_USER, // Ton email
+    pass: process.env.EMAIL_PASS, // Ton mot de passe ou App Password
+  },
+});
+  try {
+    const { userId } = req.body;
+
+    if (!userId) {
+      return res.status(400).json({ message: "User ID manquant" });
+    }
+
+    const user = await User.findByIdAndUpdate(
+      userId,
+      { isVerified: false },
+      { new: true }
+    );
+
+    if (!user) {
+      return res.status(404).json({ message: "Utilisateur non trouvé" });
+    }
+
+    res.status(200).json({ message: "Utilisateur banni définitivement", user });
+  } catch (error) {
+    res.status(500).json({ message: "Erreur lors du bannissement", error: error.message });
+  }
+};
+
+
+export const sendLearningSessionInvite = async (req, res) => {
+  try {
+    const { email, inviterName } = req.body;
+
+    if (!email || !inviterName) {
+      return res.status(400).json({ message: 'Email ou nom manquant.' });
+    }
+
+    // Transporteur email (exemple Gmail, à adapter selon ton setup)
+    const transporter = nodemailer.createTransport({
+      service: 'gmail',
+      auth: {
+        user: process.env.EMAIL_USER, // ex: "tonemail@gmail.com"
+        pass: process.env.EMAIL_PASS, // mot de passe ou app password
+      },
+    });
+
+    const mailOptions = {
+      from: process.env.EMAIL_USER,
+      to: email,
+      subject: `${inviterName} vous invite à rejoindre une session d’apprentissage !`,
+      html: `
+        <p>Bonjour,</p>
+        <p><strong>${inviterName}</strong> a démarré une session d’apprentissage.</p>
+        <p>Vous êtes invité(e) à rejoindre la session en cliquant ici :</p>
+        <a href="http://192.168.1.15:5173/learningsession" target="_blank">Rejoindre la session</a>
+        <p>À bientôt !</p>
+      `,
+    };
+
+    await transporter.sendMail(mailOptions);
+
+    res.status(200).json({ message: 'Email envoyé avec succès.' });
+  } catch (error) {
+    res.status(500).json({ message: 'Erreur envoi mail', error: error.message });
+  }
+};
+
+
 export {
+  sendWarningEmail,
   updateUserInterests,
   forgotPassword,
   resetPassword,
@@ -796,4 +916,5 @@ export {
   getUserProgress,
   getMatchesFor,
   getMatches,
-  updateUserProgress};
+  updateUserProgress,
+getLeaderboard};

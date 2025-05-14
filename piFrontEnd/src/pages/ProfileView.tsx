@@ -242,56 +242,7 @@ const ProfileView = () => {
           </div>
 
           {/* Right Column - Matches */}
-          {profile.visibilitySettings.matches && (
-            <div className="col-span-1">
-              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
-                <h2 className="text-lg font-semibold text-gray-900 mb-4">Current Matches</h2>
-                <div className="space-y-6">
-                  {isLoadingMatches ? (
-                    <div className="flex items-center justify-center py-8">
-                      <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600"></div>
-                      <span className="ml-2 text-gray-600">Loading matches...</span>
-                    </div>
-                  ) : matches.length > 0 ? (
-                    matches.map((match) => (
-                      <div key={match.id} className="border-b border-gray-200 last:border-0 pb-4 last:pb-0">
-                        <div className="flex items-center space-x-3 mb-2">
-                          <img
-                            src={match.partner.avatar}
-                            alt={match.partner.name}
-                            className="h-10 w-10 rounded-full object-cover"
-                          />
-                          <div>
-                            <h3 className="text-sm font-medium text-gray-900">{match.partner.name}</h3>
-                            <p className="text-xs text-gray-500">Started {match.startDate}</p>
-                          </div>
-                        </div>
-                        <div className="space-y-1">
-                          <p className="text-sm">
-                            <span className="text-gray-600">Teaching:</span>{" "}
-                            <span className="text-indigo-600">{match.skillShared}</span>
-                          </p>
-                          <p className="text-sm">
-                            <span className="text-gray-600">Learning:</span>{" "}
-                            <span className="text-indigo-600">{match.skillLearned}</span>
-                          </p>
-                        </div>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium mt-2 ${
-                          match.status === 'Active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {match.status}
-                        </span>
-                      </div>
-                    ))
-                  ) : (
-                    <div className="text-center py-6">
-                      <p className="text-gray-500">No matches found</p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
+
         </div>
       </div>
     </div>

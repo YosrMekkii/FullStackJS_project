@@ -5,7 +5,7 @@ import API from './api'; // Adjust this import based on your project structure
 const getMLRecommendations = async (userId, numRecommendations = 5) => {
   try {
     // Call your Flask recommendation API
-    const response = await fetch('http://127.0.0.1:5000/recommend', {
+    const response = await fetch('http://127.0.0.1:5001/recommend', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

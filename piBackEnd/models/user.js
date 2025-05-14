@@ -9,7 +9,6 @@ const userSchema = new mongoose.Schema({
   email: { type: String, required: true, unique: true },
   password: { type: String, required: true },
   authProvider: { type: String, enum: ["local", "google", "github"], default: "local" },
-  isVerified: { type: Boolean, default: false },
   verificationToken: { type: String, default: null },
   resetPasswordToken: { type: String, default: null },
   resetPasswordExpires: { type: Date, default: null },
