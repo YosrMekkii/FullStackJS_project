@@ -4,22 +4,25 @@ import { ChevronLeft, User, MessageCircle, Loader2, X, AlertTriangle, BookOpen }
 import axios from 'axios';
 import Sidebar from '../components/Sidebar';
 
+
 interface Match {
   id: string;
   userId: string;
   matchedUserId: string;
   createdAt: string;
- // _id?: string; // Added to handle MongoDB ObjectId
+  // _id?: string; // Added to handle MongoDB ObjectId
 }
 
 interface MatchedUser {
   _id: string;
+  id?: string;
   firstName: string;
   lastName: string;
   location: string;
   bio: string;
   skills: string[];
   profileImagePath: string;
+  email: string; // Added email field for the user
 }
 
 interface BatchUserResult {
@@ -36,6 +39,8 @@ const MatchesPage = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [invalidMatches, setInvalidMatches] = useState<string[]>([]);
   const [debugInfo, setDebugInfo] = useState<any>(null);
+  const [currentUser, setCurrentUser] = useState<any>(null);
+  const [sendingInvite, setSendingInvite] = useState<string | null>(null);
 
   // Get user from localStorage
   useEffect(() => {
@@ -44,6 +49,7 @@ const MatchesPage = () => {
       try {
         const parsedUser = JSON.parse(storedUser);
         setUserId(parsedUser.id);
+        setCurrentUser(parsedUser); 
       } catch (error) {
         console.error("Error parsing user data:", error);
         setError("Failed to load user data");
@@ -117,7 +123,14 @@ const MatchesPage = () => {
           // Filter valid users (those with a non-null user property)
           const validUsers = batchResults
             .filter(result => result && result.user !== null)
-            .map(result => result.user as MatchedUser);
+            .map(result => {
+              // Ensure user has id property set to match with matchedUserId
+              const user = result.user as MatchedUser;
+              if (!user.id && user._id) {
+                user.id = user._id;
+              }
+              return user;
+            });
           
           // Filter invalid user IDs (those marked as not existing)
           const invalidUserIds = batchResults
@@ -166,6 +179,49 @@ const MatchesPage = () => {
     } catch (error) {
       console.error("Error removing match:", error);
       setError("Failed to remove match");
+    }
+  };
+
+  // Send learning session invite
+  const sendLearningSessionInvite = async (user: MatchedUser) => {
+    if (!currentUser) return;
+    
+    try {
+      setSendingInvite(user._id || user.id);
+      
+      // Debug info to see what values we're actually sending
+      console.log("Sending invite with data:", {
+        email: user.email,
+        user: user,
+        currentUser: currentUser,
+        inviterName: currentUser.firstName || currentUser.name || "Un utilisateur"
+      });
+      
+      // Make sure both required fields are present
+      if (!user.email) {
+        console.error("Missing email for user:", user);
+        alert("Impossible d'envoyer l'invitation: l'email de l'utilisateur est manquant.");
+        return;
+      }
+      
+      const inviterName = currentUser.firstName || currentUser.name || "Un utilisateur";
+      
+      // Send email to the matched user
+      const response = await axios.post('http://localhost:3000/api/users/send-session-invite', {
+        email: user.email,
+        inviterName: inviterName
+      });
+      
+      console.log("Invite sent successfully:", response.data);
+      alert(`Invitation envoyée à ${user.firstName} avec succès!`);
+    } catch (error: any) {
+      console.error("Error sending session invite:", error);
+      
+      // Show more helpful error message
+      const errorMsg = error.response?.data?.message || "Échec de l'envoi de l'invitation.";
+      alert(`Erreur: ${errorMsg} Veuillez réessayer.`);
+    } finally {
+      setSendingInvite(null);
     }
   };
 
@@ -374,11 +430,11 @@ const MatchesPage = () => {
               
               return (
                 <div 
-                  key={user.id} 
+                  key={user._id || user.id} 
                   className="bg-white rounded-xl shadow-md overflow-hidden transition-transform hover:scale-105 relative"
                 >
                   {/* Make the entire card clickable except for the buttons */}
-                  <Link to={`/profile/${user.id}`} className="block">
+                  <Link to={`/profile/${user._id || user.id}`} className="block">
                     {/* Image section */}
                     <div 
                       className="h-48 bg-cover bg-center bg-gray-200"
@@ -429,16 +485,32 @@ const MatchesPage = () => {
                       </div>
                       {/* Action buttons */}
                       <div className="mt-6 flex justify-between">
-                        <Link
-                          to={`/studentInterface`} ///${user.id}
+                        <button
+                          onClick={(e) => {
+                            e.preventDefault(); // Prevent triggering the parent Link
+                            e.stopPropagation();
+                            sendLearningSessionInvite(user).then(() => {
+                           window.location.href= '/learningsession';
+                            }
+                            );
+                          }}
                           className="flex items-center text-green-600 hover:text-green-800"
-                          onClick={(e) => e.stopPropagation()} // Prevent triggering the parent Link
+                          disabled={sendingInvite === (user._id || user.id)}
                         >
-                          <BookOpen className="h-4 w-4 mr-1" />
-                          <span className="text-sm">Student Interface</span>
-                        </Link>
+                          {sendingInvite === (user._id || user.id) ? (
+                            <>
+                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                              <span className="text-sm">Envoi...</span>
+                            </>
+                          ) : (
+                            <>
+                              <BookOpen className="h-4 w-4 mr-1" />
+                              <span className="text-sm">Student Interface</span>
+                            </>
+                          )}
+                        </button>
                         <Link
-                          to={`/messages/${user.id}`}
+                          to={`/messages/${user._id || user.id}`}
                           className="flex items-center text-indigo-600 hover:text-indigo-800"
                           onClick={(e) => e.stopPropagation()} // Prevent triggering the parent Link
                         >

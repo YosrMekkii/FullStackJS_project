@@ -36,11 +36,21 @@ export const getReportById = async (req, res) => {
 
 export const updateReportStatus = async (req, res) => {
   try {
-    const report = await reportService.updateReportStatus(req.params.id, req.body.status);
-    if (!report) return res.status(404).json({ message: "Report not found" });
-    res.json(report);
+    const { reportId, status } = req.body;
+
+    if (!reportId || !status) {
+      return res.status(400).json({ message: 'reportId et status sont requis' });
+    }
+
+    const updatedReport = await reportService.updateReportStatus(reportId, status);
+
+    if (!updatedReport) {
+      return res.status(404).json({ message: 'Report non trouvé' });
+    }
+
+    res.status(200).json({ message: 'Statut mis à jour', report: updatedReport });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ message: error.message });
   }
 };
 
@@ -62,6 +72,7 @@ export const getTotalReports = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
 
 // POST /api/reports/:id/action
 // export const handleReportAction = async (req: Request, res: Response) => {

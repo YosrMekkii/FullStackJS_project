@@ -324,12 +324,64 @@ const handleExpertApproval = async (applicationId: string, approved: boolean) =>
 
 
 
-  const handleReportAction = (reportId: number, action: string, details: { duration?: number; message?: string }) => {
-    console.log(`Taking action on report ${reportId}:`, { action, details });
-    // Here you would typically make an API call to apply the action
+const handleReportAction = async (
+  reportId: string,
+  action: string,
+  details: { duration?: number; message?: string }
+) => {
+  console.log(`Taking action on report ${reportId}:`, { action, details });
+
+  try {
+    // 1. Si l'action est "warn", envoie un email
+    if (action === "warn" && selectedReport?.reportedUser?.email) {
+      await axios.post("http://localhost:3000/api/users/send-warning", {
+        email: selectedReport.reportedUser.email,
+        firstName: selectedReport.reportedUser.firstName || "Utilisateur",
+        message: details.message,
+      });
+
+      console.log("Email d'avertissement envoyé avec succès.");
+    }
+     if (action === "ban" && selectedReport?.reportedUser?._id) {
+      await axios.post("http://localhost:3000/api/users/ban-user", {
+        userId: selectedReport.reportedUser._id,
+      });
+        await axios.post("http://localhost:3000/api/users/send-warning", {
+        email: selectedReport.reportedUser.email,
+        firstName: selectedReport.reportedUser.firstName || "Utilisateur",
+        message: "Vous avez été banni définitivement de la plateforme.",
+      });
+      console.log("Utilisateur banni définitivement.");
+    }
+
+
+    // 2. Met à jour le statut du report dans la base de données
+    await axios.post("http://localhost:3000/api/reports/update-status", {
+      reportId,
+      status: "treated",
+    });
+
+    // 3. Met à jour l'état local
+    setReports((prevReports) =>
+      prevReports.map((r) =>
+        r.id === reportId ? { ...r, status: "treated" } : r
+      )
+    );
+
+    // 4. Ferme la modale et réinitialise le report sélectionné
     setShowActionModal(false);
     setSelectedReport(null);
-  };
+
+    // (Optionnel) Affiche un toast de succès ici
+    console.log("Statut du report mis à jour avec succès.");
+  } catch (err) {
+    console.error("Erreur lors du traitement du report :", err);
+    // (Optionnel) Affiche un toast d’erreur ici
+  }
+};
+
+
+
 
   const handleReportResolution = (reportId: number, action: 'resolve' | 'dismiss') => {
     console.log(`Report ${reportId} ${action}d`);

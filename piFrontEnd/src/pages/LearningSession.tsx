@@ -3,8 +3,8 @@ import { v4 as uuidv4 } from 'uuid';
 import Editor from "@monaco-editor/react";
 import Peer from 'peerjs';
 import { io } from 'socket.io-client';
-import Sidebar from '../components/Sidebar';
 import { useParams } from 'react-router-dom';
+import Sidebar from '../components/Sidebar';
 import { 
   Bot, 
   User, 
@@ -68,6 +68,13 @@ interface ChatMessage {
   content: string;
 }
 
+// Initialize socket.io outside component to prevent multiple connections
+const socket = io('http://192.168.1.15:3000', {
+  reconnection: true,
+  reconnectionAttempts: 5,
+  reconnectionDelay: 1000,
+});
+
 function App() {
   const { sessionId } = useParams();
   const [userId] = useState(localStorage.getItem('userId') || uuidv4());
@@ -86,8 +93,6 @@ function App() {
   const [aiStream, setAiStream] = useState('');
   const [chatHistory, setChatHistory] = useState<ChatMessage[]>([]);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const aiChatContainerRef = useRef<HTMLDivElement>(null);
-
   const [messages, setMessages] = useState<Message[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [files, setFiles] = useState<FileShare[]>([]);
@@ -104,14 +109,17 @@ function App() {
   const [compileResult, setCompileResult] = useState<CompileResult | null>(null);
   const [isCompiling, setIsCompiling] = useState(false);
   const [showOutput, setShowOutput] = useState(false);
+  const [remotePeers, setRemotePeers] = useState<string[]>([]);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
   const chatContainerRef = useRef<HTMLDivElement>(null);
+  const aiChatContainerRef = useRef<HTMLDivElement>(null);
   const peerRef = useRef<Peer>();
   const streamRef = useRef<MediaStream>();
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const outputRef = useRef<HTMLDivElement>(null);
+  const peerConnections = useRef<Record<string, any>>({});
 
   // Save userId to localStorage
   useEffect(() => {
@@ -119,6 +127,178 @@ function App() {
       localStorage.setItem('userId', userId);
     }
   }, [userId]);
+
+  // Initialize WebRTC connection
+  useEffect(() => {
+    const initializeWebRTC = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+        streamRef.current = stream;
+        if (localVideoRef.current) {
+          localVideoRef.current.srcObject = stream;
+        }
+
+        const peerOptions = {
+          host: '192.168.1.15',
+          port: 9000,
+          path: '/myapp',
+          secure: false,
+          debug: 3,
+        };
+
+        const peer = new Peer(`${userId}-${Date.now()}`, peerOptions);
+        peerRef.current = peer;
+
+        peer.on('open', (id) => {
+          console.log('PeerJS connected with ID:', id);
+          if (sessionId) {
+            socket.emit('joinVideoRoom', { 
+              roomId: sessionId, 
+              userId, 
+              peerId: id 
+            });
+          }
+        });
+
+        peer.on('connection', (conn) => {
+          conn.on('data', (data) => {
+            console.log('Received data:', data);
+          });
+          conn.on('open', () => {
+            conn.send(`Hello from ${userId}`);
+          });
+        });
+
+        peer.on('call', (call) => {
+          console.log('Receiving call from:', call.peer);
+          call.answer(stream);
+
+          call.on('stream', (remoteStream) => {
+            console.log('Received remote stream');
+            if (remoteVideoRef.current) {
+              remoteVideoRef.current.srcObject = remoteStream;
+            }
+          });
+
+          call.on('error', (err) => {
+            console.error('Call error:', err);
+          });
+
+          peerConnections.current[call.peer] = call;
+        });
+
+        peer.on('error', (err) => {
+          console.error('Peer connection error:', err);
+          if (err.type === 'unavailable-id' || err.type === 'id-taken') {
+            const fallbackId = `${userId}-${Math.floor(Math.random() * 10000)}`;
+            peerRef.current = new Peer(fallbackId, peerOptions);
+          }
+        });
+
+      } catch (error) {
+        console.error('Error accessing media devices:', error);
+      }
+    };
+
+    initializeWebRTC();
+
+    return () => {
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach(track => track.stop());
+      }
+      Object.values(peerConnections.current).forEach((call: any) => {
+        if (call && typeof call.close === 'function') {
+          call.close();
+        }
+      });
+      if (peerRef.current) {
+        peerRef.current.destroy();
+      }
+    };
+  }, [userId, sessionId]);
+
+  // Socket.io event listeners and message fetching
+  useEffect(() => {
+    socket.on('connect', () => {
+      console.log('Connected to server');
+      if (sessionId) {
+        socket.emit('joinRoom', { roomId: sessionId, userId });
+      }
+    });
+
+    socket.on('receiveMessage', (data) => {
+      const newMessage: Message = {
+        id: data.id || uuidv4(),
+        sender: data.senderId === userId ? 'You' : 'Friend',
+        content: data.content,
+        timestamp: new Date(data.timestamp),
+      };
+      setMessages((prev) => [...prev, newMessage]);
+      setTimeout(() => {
+        if (chatContainerRef.current) {
+          chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+        }
+      }, 100);
+    });
+
+    socket.on('peerJoined', ({ userId: remotePeerId, peerId }) => {
+      if (remotePeerId === userId) return;
+      setRemotePeers(prev => [...new Set([...prev, peerId])]);
+      
+      if (streamRef.current && peerRef.current) {
+        const call = peerRef.current.call(peerId, streamRef.current);
+        call.on('stream', (remoteStream) => {
+          if (remoteVideoRef.current) {
+            remoteVideoRef.current.srcObject = remoteStream;
+          }
+        });
+        call.on('error', (err) => {
+          console.error('Call error:', err);
+        });
+        peerConnections.current[peerId] = call;
+      }
+    });
+
+    socket.on('peerLeft', ({ peerId }) => {
+      setRemotePeers(prev => prev.filter(id => id !== peerId));
+      if (peerConnections.current[peerId]) {
+        peerConnections.current[peerId].close();
+        delete peerConnections.current[peerId];
+      }
+    });
+
+    // Fetch initial messages
+    const fetchMessages = async () => {
+      try {
+        const response = await fetch(`http://192.168.1.15:3000/api/messages`);
+        if (response.ok) {
+          const messageHistory = await response.json();
+          const formattedMessages = messageHistory.map((msg: any) => ({
+            id: msg._id || uuidv4(),
+            sender: msg.senderId === userId ? 'You' : 'Friend',
+            content: msg.content,
+            timestamp: new Date(msg.timestamp),
+          }));
+          setMessages(formattedMessages);
+          setTimeout(() => {
+            if (chatContainerRef.current) {
+              chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+            }
+          }, 100);
+        }
+      } catch (error) {
+        console.error('Error fetching messages:', error);
+      }
+    };
+    fetchMessages();
+
+    return () => {
+      socket.off('connect');
+      socket.off('receiveMessage');
+      socket.off('peerJoined');
+      socket.off('peerLeft');
+    };
+  }, [userId, sessionId]);
 
   // Auto-scroll for AI chat
   useEffect(() => {
@@ -182,10 +362,10 @@ function App() {
     }
   };
 
-  // Call OpenAI API (non-streaming)
+  // Call OpenAI API
   const callOpenAI = async (question: string, history: ChatMessage[]) => {
     try {
-      const response = await fetch('http://localhost:3000/api/openai/ask', {
+      const response = await fetch('http://192.168.1.15:3000/api/openai/ask', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question, history }),
@@ -214,58 +394,6 @@ function App() {
     }
   };
 
-  // Socket.io setup
-  const hostname = window.location.hostname || 'localhost';
-  const backendPort = 3000;
-  const socket = io(`http://${hostname}:${backendPort}`);
-
-  // Fetch initial messages
-  useEffect(() => {
-    const fetchMessages = async () => {
-      try {
-        const response = await fetch(`http://${hostname}:${backendPort}/api/messages`);
-        if (response.ok) {
-          const messageHistory = await response.json();
-          const formattedMessages = messageHistory.map((msg: any) => ({
-            id: msg._id || uuidv4(),
-            sender: msg.senderId === userId ? 'You' : 'Friend',
-            content: msg.content,
-            timestamp: new Date(msg.timestamp),
-          }));
-          setMessages(formattedMessages);
-        }
-      } catch (error) {
-        console.error('Error fetching messages:', error);
-      }
-    };
-    fetchMessages();
-  }, [userId]);
-
-  // Socket.io event listeners
-  useEffect(() => {
-    socket.on('connect', () => {
-      console.log('Connected to server');
-      if (sessionId) {
-        socket.emit('joinRoom', { roomId: sessionId, userId });
-      }
-    });
-
-    socket.on('receiveMessage', (data) => {
-      const newMessage: Message = {
-        id: data.id || uuidv4(),
-        sender: data.senderId === userId ? 'You' : 'Friend',
-        content: data.content,
-        timestamp: new Date(data.timestamp),
-      };
-      setMessages((prev) => [...prev, newMessage]);
-    });
-
-    return () => {
-      socket.off('receiveMessage');
-      socket.off('connect');
-    };
-  }, [userId, sessionId]);
-
   // Send message
   const handleSendMessage = () => {
     if (!newMessage.trim()) return;
@@ -289,6 +417,12 @@ function App() {
     setMessages((prev) => [...prev, message]);
     socket.emit('sendMessage', messageData);
     setNewMessage('');
+
+    setTimeout(() => {
+      if (chatContainerRef.current) {
+        chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
+      }
+    }, 100);
   };
 
   // File upload
